@@ -403,7 +403,9 @@ boolean			error_detected;
 boolean			game_quit;
 boolean			dont_move_forwards;
 
-char			extra_wad[256];
+char			extra_wad_1[256];
+char			extra_wad_2[256];
+char			extra_wad_3[256];
 char			target[MAXPATH];
 char			dehacked_file[256];
 char			path_tmp[MAXPATH];
@@ -412,6 +414,9 @@ extern int		use_vanilla_weapon_change;
 extern int		fsize;
 
 int			detailLevel;
+int			extra_wad_slot_1_loaded;
+int			extra_wad_slot_2_loaded;
+int			extra_wad_slot_3_loaded;
 int			load_extra_wad;
 
 #endif          // __DOOMDEF__
