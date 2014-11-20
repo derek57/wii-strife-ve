@@ -1971,19 +1971,40 @@ void D_DoomMain (void)
 		    disable_voices = 1;
 	    }
 	    else
+	    {
 		D_AddFile(target);
 
 		if(voices_wad_exists == 1 && (STRIFE_1_0_REGISTERED || STRIFE_1_X_REGISTERED))
 		    D_AddFile("usb:/apps/wiistrife/voices/voices.wad");
 		else
 		    disable_voices = 1;
+	    }
 
 	    if (load_extra_wad == 1)
 	    {
-		D_AddFile(extra_wad);
+		if(extra_wad_slot_1_loaded == 1)
+		{
+		    D_AddFile(extra_wad_1);
 
-		if(devparm)
-		    printf("  adding %s\n", extra_wad);
+		    if(devparm)
+			printf("  adding %s\n", extra_wad_1);
+		}
+
+		if(extra_wad_slot_2_loaded == 1)
+		{
+		    D_AddFile(extra_wad_2);
+
+		    if(devparm)
+			printf("  adding %s\n", extra_wad_2);
+		}
+
+		if(extra_wad_slot_3_loaded == 1)
+		{
+		    D_AddFile(extra_wad_3);
+
+		    if(devparm)
+			printf("  adding %s\n", extra_wad_3);
+		}
 	    }
 
 //	    break;

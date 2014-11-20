@@ -386,7 +386,7 @@ extern boolean menuactive;
 
 #define KEY_1               0x02
 
-void ChangeWeapon(void)
+void ChangeWeaponRight(void)
 {
     static player_t*	plyrweap;
     static event_t	kbevent;
@@ -415,6 +415,47 @@ void ChangeWeapon(void)
 	        break;
 	    }
         }
+        kbevent.type = ev_keydown;
+        kbevent.data1 = KEY_1 + num;
+
+        D_PostEvent(&kbevent);
+
+	dont_move_forwards = false;
+    }
+}
+
+void ChangeWeaponLeft(void)
+{
+    static player_t*	plyrweap;
+    static event_t	kbevent;
+
+    weapontype_t	num;
+
+    if (gamestate == GS_LEVEL && !(menuactive || automapactive))
+    {
+	plyrweap = &players[consoleplayer];
+
+	num = plyrweap->readyweapon;
+
+	while (1)
+	{
+	    dont_move_forwards = true;
+
+	    num--;
+
+	    if (num == -1)
+		num = wp_torpedo;
+
+	    if (plyrweap->weaponowned[num])
+	    {
+	        plyrweap->pendingweapon = num;
+
+	        break;
+	    }
+        }
+	if (num == wp_torpedo)
+	    num = wp_fist;
+
         kbevent.type = ev_keydown;
         kbevent.data1 = KEY_1 + num;
 
@@ -609,9 +650,9 @@ void G_BuildTiccmd (ticcmd_t* cmd, int maketic)
     	    forward -= forwardmove; 
 */
     }
-    if (joyymove > 0)
+    if (joyymove > 20)
         forward += forwardmve/*[speed]*/;
-    if (joyymove < 0)
+    if (joyymove < -20)
         forward -= forwardmve/*[speed]*/;
 
     if (/*gamekeydown[key_straferight] || mousebuttons[mousebstraferight]
@@ -673,8 +714,11 @@ void G_BuildTiccmd (ticcmd_t* cmd, int maketic)
 
         player_t* player = &players[consoleplayer];
 
-	if(data->btns_d & WPAD_CLASSIC_BUTTON_UP)
-	    ChangeWeapon();
+	if(data->btns_d & WPAD_CLASSIC_BUTTON_RIGHT)
+	    ChangeWeaponRight();
+
+	if(data->btns_d & WPAD_CLASSIC_BUTTON_LEFT)
+	    ChangeWeaponLeft();
 
 	if(data->btns_d & WPAD_CLASSIC_BUTTON_PLUS || mouselook == 0)
 	    cmd->buttons2 |= BT2_CENTERVIEW;
@@ -899,8 +943,8 @@ void G_BuildTiccmd (ticcmd_t* cmd, int maketic)
 */
     forward += mousey; 
 
-    if (/*joybuttons[joybuse] &&*/ joyiry && !paused && mouselook > 0)	// FOR PSP: mouselook, but...
-    {									// ...not when paused & if on
+    if (/*joybuttons[joybuse] &&*/ joyiry && !menuactive && mouselook > 0) // FOR PSP: mouselook,...
+    {									// ...but not when paused if on
 	// We'll directly change the viewing pitch of the console player.
 	float adj = ((joyiry * 0x4) << 16) / (float) 0x80000000*180*110.0/85.0;
 	float newlookdir = 0; // initialiser added to prevent compiler warning
