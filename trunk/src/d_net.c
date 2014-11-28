@@ -273,14 +273,13 @@ void D_CheckNetGame(void)
 
     DEH_printf("startmap: %i, skill: %i, enemies: %i, random: %i\n",
                startmap, startskill, !nomonsters, randomparm);
-*/
 
     if(devparm)
     	DEH_printf("player %i of %i (%i nodes)\n",
             	    consoleplayer+1, settings.num_players, settings.num_players);
 
     // Show players here; the server might have specified a time limit
-/*
+
     if (timelimit > 0 && deathmatch)
     {
         // Gross hack to work like Vanilla:

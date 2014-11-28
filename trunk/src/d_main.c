@@ -590,8 +590,11 @@ void D_DoomLoop (void)
     if (demorecording)
         G_BeginRecording ();
 
-    if(devparm)
+//    if(devparm)
+    if(usb)
 	debugfile = fopen("usb:/apps/wiistrife/debug.txt","w");
+    else if(sd)
+	debugfile = fopen("sd:/apps/wiistrife/debug.txt","w");
 
     main_loop_started = true;
 
@@ -1096,7 +1099,7 @@ void PrintDehackedBanners(void)
         }
     }
 }
-*/
+
 static struct 
 {
     char *description;
@@ -1107,7 +1110,7 @@ static struct
     { "Strife 1.31",         "1.31",      exe_strife_1_31 },
     { NULL,                  NULL,        0               }
 };
-
+*/
 // Initialize the game version
 
 static void InitGameVersion(void)
@@ -1161,7 +1164,7 @@ static void InitGameVersion(void)
         gameversion = exe_strife_1_31;
     }
 }
-
+/*
 void PrintGameVersion(void)
 {
     int i;
@@ -1179,7 +1182,7 @@ void PrintGameVersion(void)
 }
 
 // Function called at exit to display the ENDOOM screen
-/*
+
 static void D_Endoom(void)
 {
     byte *endoom;
@@ -1434,6 +1437,10 @@ static char *voices[2] =
 //
 // D_DoomMain
 //
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+
 void D_DoomMain (void)
 {
 /*
@@ -1443,7 +1450,13 @@ void D_DoomMain (void)
 
     W_CheckSize(0);
 */
-    FILE *fprw = fopen("usb:/apps/wiistrife/pspstrife.wad","rb");
+    FILE *fprw;
+    FILE *fpv;
+
+    if(usb)
+	fprw = fopen("usb:/apps/wiistrife/pspstrife.wad","rb");
+    else if(sd)
+	fprw = fopen("sd:/apps/wiistrife/pspstrife.wad","rb");
 
     if(fprw)
     {
@@ -1518,11 +1531,17 @@ void D_DoomMain (void)
     extern char calculated_md5_string[33];
     extern char known_md5_string_voices_iwad[33];
 
-    FILE *fpv = fopen("usb:/apps/wiistrife/voices/voices.wad","rb");
+    if(usb)
+	fpv = fopen("usb:/apps/wiistrife/voices/voices.wad","rb");
+    else if(sd)
+	fpv = fopen("sd:/apps/wiistrife/voices/voices.wad","rb");
 
     if(fpv)
     {
-	MD5_Check("usb:/apps/wiistrife/voices/voices.wad");
+	if(usb)
+	    MD5_Check("usb:/apps/wiistrife/voices/voices.wad");
+	else if(sd)
+	    MD5_Check("sd:/apps/wiistrife/voices/voices.wad");
 
 	if(strncmp(calculated_md5_string, known_md5_string_voices_iwad, 32) == 0)
 	{
@@ -1963,10 +1982,18 @@ void D_DoomMain (void)
 	    {
 		voices_wad_exists = 1;
 
-		D_AddFile("usb:/apps/wiistrife/IWAD/Reg/v12/strife1.wad");
+		if(usb)
+		    D_AddFile("usb:/apps/wiistrife/IWAD/Reg/v12/strife1.wad");
+		else if(sd)
+		    D_AddFile("sd:/apps/wiistrife/IWAD/Reg/v12/strife1.wad");
 
 		if(voices_wad_exists == 1 && (STRIFE_1_0_REGISTERED || STRIFE_1_X_REGISTERED))
-		    D_AddFile("usb:/apps/wiistrife/voices/voices.wad");
+		{
+		    if(usb)
+			D_AddFile("usb:/apps/wiistrife/voices/voices.wad");
+		    else if(sd)
+			D_AddFile("sd:/apps/wiistrife/voices/voices.wad");
+		}
 		else
 		    disable_voices = 1;
 	    }
@@ -1975,7 +2002,12 @@ void D_DoomMain (void)
 		D_AddFile(target);
 
 		if(voices_wad_exists == 1 && (STRIFE_1_0_REGISTERED || STRIFE_1_X_REGISTERED))
-		    D_AddFile("usb:/apps/wiistrife/voices/voices.wad");
+		{
+		    if(usb)
+			D_AddFile("usb:/apps/wiistrife/voices/voices.wad");
+		    else if(sd)
+			D_AddFile("sd:/apps/wiistrife/voices/voices.wad");
+		}
 		else
 		    disable_voices = 1;
 	    }
@@ -2012,7 +2044,10 @@ void D_DoomMain (void)
     }
 
 //    D_AddFile(iwadfile);
-    D_AddFile("usb:/apps/wiistrife/pspstrife.wad");			// REQUIRED FOR SPECIAL PSP STUFF
+    if(usb)
+	D_AddFile("usb:/apps/wiistrife/pspstrife.wad");			// REQUIRED FOR SPECIAL PSP STUFF
+    else if(sd)
+	D_AddFile("sd:/apps/wiistrife/pspstrife.wad");			// REQUIRED FOR SPECIAL PSP STUFF
 //    W_CheckCorrectIWAD(strife);		// DISABLED FOR PSP - sorry :-( I'LL TRY TO FIND A FIX
 //    modifiedgame = W_ParseCommandLine();
 
@@ -2154,8 +2189,10 @@ void D_DoomMain (void)
 //    D_IdentifyVersion();
     InitGameVersion();
     D_SetGameDescription();
-    savegamedir = M_GetSaveGameDir("/strife1.wad/");
+    savegamedir = M_GetSaveGameDir("strife1.wad");
 /*
+    printf("savegamedir: %s\n",savegamedir);	// ONLY FOR DEBUGGING
+
     // fraggle 20130405: I_InitTimer is needed here for the netgame
     // startup. Start low-level sound init here too.
     I_InitTimer();
@@ -2410,10 +2447,10 @@ void D_DoomMain (void)
     if(devparm) // [STRIFE]
         DEH_printf(" I_StartupTimer()\n");
     I_InitTimer();
-
+/*
     if(devparm)
         DEH_printf("  Play Voices = %d\n", disable_voices == 0);
-
+*/
     if(devparm) // [STRIFE]
         DEH_printf(" D_CheckNetGame: Checking network game status.\n");
     D_CheckNetGame ();
@@ -2454,9 +2491,9 @@ void D_DoomMain (void)
     if(devparm) // [STRIFE]
         DEH_printf(" D_CheckNetGame: Checking network game status.\n");
     D_CheckNetGame ();
-*/
-    PrintGameVersion();
 
+    PrintGameVersion();
+*/
     if(devparm)
         DEH_printf(" HU_Init: Setting up heads up display.\n");
     HU_Init ();

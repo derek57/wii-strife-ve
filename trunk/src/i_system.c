@@ -254,7 +254,7 @@ void I_BindVariables(void)
 
 void I_Quit (void)
 {
-    if (devparm)
+//    if (devparm)
 	fclose (debugfile);
 
     atexit_listentry_t *entry;
@@ -269,7 +269,7 @@ void I_Quit (void)
         entry = entry->next;
     }
 
-//    M_SaveDefaults();			// MOVED HERE CAUSE IT DOESN'T SEEMS TO SAVE ANY CFG FILE WHEN
+    M_SaveDefaults();			// MOVED HERE CAUSE IT DOESN'T SEEMS TO SAVE ANY CFG FILE WHEN
 					// THE GAME IS BEING QUITTED BY USING THE MAIN MENU ON THE WII
     exit(0);
 }
@@ -312,7 +312,7 @@ void I_Error (char *error, ...)
     va_end(argptr);
 //    fflush(stderr);
 
-    if(devparm)
+//    if(devparm)
 	fclose (debugfile);
 
     if (already_quitting)

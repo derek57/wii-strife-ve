@@ -35,6 +35,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "z_zone.h"
 #include "i_system.h"
@@ -67,10 +68,22 @@ void ClearTmp(void)
     struct dirent *f = NULL;
 
     if(savepathtemp == NULL)
-        I_Error("you fucked up savedir man!");
+    {
+//        I_Error("you fucked up savedir man!");
+        printf("you fucked up savedir man!");
+	sleep(3);
+	I_QuitSerialFail();
+    }
+
+//    printf("savepathtemp: %s", savepathtemp);
 
     if(!(sp2dir = opendir(savepathtemp)))
-        I_Error("ClearTmp: Couldn't open dir %s", savepathtemp);
+    {
+//        I_Error("ClearTmp: Couldn't open dir %s", savepathtemp);
+        printf("ClearTmp: Couldn't open dir %s", savepathtemp);
+	sleep(3);
+	I_QuitSerialFail();
+    }
 
     while((f = readdir(sp2dir)))
     {

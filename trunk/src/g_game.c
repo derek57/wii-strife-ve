@@ -269,18 +269,47 @@ static int      joyiry;
 static boolean  joyarray[MAX_JOY_BUTTONS + 1]; 
 static boolean *joybuttons = &joyarray[1];		// allow [-1] 
 
-int	joybdrop = 12;
-int	joybkeys = 14;		// key_invkey	=	(k)	=	(16384)	=	(Y)
-int	joybinvpop = 0;		// key_invpop	=	(z)	=	(1)	=	(A)
-int	joybmission = 13;	// key_mission	=	(w)	=	(8192)	=	(X)
-int     joybinvleft = 11;
-int     joybinvright = 10;
-int     joybinvuse = 2;
+int joy_a = 1;		// 0
+int joy_r = 2;		// 1
+int joy_plus = 4;	// 2
+int joy_l = 8;		// 3
+int joy_minus = 16;	// 4
+int joy_b = 32;		// 5
+int joy_left = 64;	// 6
+int joy_down = 128;	// 7
+int joy_right = 256;	// 8
+int joy_up = 512;	// 9
+int joy_zr = 1024;	// 10
+int joy_zl = 2048;	// 11
+int joy_home = 4096;	// 12
+int joy_x = 8192;	// 13
+int joy_y = 16384;	// 14
+
+int joybstrafe;
+
+int     joybinvright = 0;
 int     joybfire = 1;
+int     joybinvuse = 2;
 int     joybuse = 3;
-int     joybjump = 5;
-int     joybweapon = 9;
-int	joybstrafe;
+int	joybmenu = 4;
+int	joybinvpop = 5;
+int     joybleft = 6;
+int	joybmap = 7;
+int	joybright = 8;
+int	joybmission = 9;
+int	joybmapzoomout = 10;
+int	joybmapzoomin = 11;
+int	joybjump = 12;
+int	joybinvkey = 13;
+int     joybdrop = 14;
+
+extern fixed_t 	mtof_zoommul; // how far the window zooms in each tic (map coords)
+extern fixed_t 	ftom_zoommul; // how far the window zooms in each tic (fb coords)
+extern int	messageToPrint;
+extern boolean	messageNeedsInput;
+extern boolean	namingCharacter; 
+
+void AM_Start (void);
 
 static int      savegameslot = 6; // [STRIFE] initialized to 6
 static char     savedescription[32]; 
@@ -714,81 +743,170 @@ void G_BuildTiccmd (ticcmd_t* cmd, int maketic)
 
         player_t* player = &players[consoleplayer];
 
-	if(data->btns_d & WPAD_CLASSIC_BUTTON_RIGHT)
-	    ChangeWeaponRight();
-
-	if(data->btns_d & WPAD_CLASSIC_BUTTON_LEFT)
-	    ChangeWeaponLeft();
-
-	if(data->btns_d & WPAD_CLASSIC_BUTTON_PLUS || mouselook == 0)
-	    cmd->buttons2 |= BT2_CENTERVIEW;
-
-	if(data->btns_d & WPAD_CLASSIC_BUTTON_ZL)
+	if(data->btns_d)
 	{
-	    if(player->inventorycursor > 0)
-		player->inventorycursor--;
-	}
-	else if(data->btns_d & WPAD_CLASSIC_BUTTON_ZR)
-	{
-	    if(player->inventorycursor < player->numinventory - 1)
-		player->inventorycursor++;
-	}
-
-	if(data->btns_d & WPAD_CLASSIC_BUTTON_A)
-	{
-	    if(usergame)
+	    if(joybuttons[joybmenu])
 	    {
-		ev.type = ev_keydown;
-		ev.data1 = 'z';
-		D_PostEvent(&ev);
+		if (!menuactive)
+		{
+		    M_StartControlPanel ();
+		    S_StartSound(NULL,sfx_swtchn);
+		}
+		else
+		{
+		    if(gameversion == exe_strife_1_31) // [STRIFE]: 1.31 saving
+			namingCharacter = false;
+
+		    if(menuindialog) // [STRIFE] - Get out of dialog engine semi-gracefully
+			P_DialogDoChoice(-1);
+
+		    currentMenu->lastOn = itemOn;
+		    M_ClearMenus (0);
+		    S_StartSound(NULL,sfx_mtalht);
+		}
+
+		if (messageToPrint)
+		{
+		    if (messageNeedsInput)
+		    {
+			if(joybuttons[joybmenu])
+			{
+			    M_ClearMenus (0);
+			    messageToPrint = 0;
+			    menuactive = false;
+			    S_StartSound(NULL,sfx_mtalht);
+			}
+		    }
+		}
+	    }
+
+	    if(joybuttons[joybinvpop])
+	    {
+		if(usergame)
+		{
+		    ev.type = ev_keydown;
+		    ev.data1 = 'z';
+		    D_PostEvent(&ev);
+		}
+	    }
+
+	    if(joybuttons[joybinvkey])
+	    {
+		if(usergame)
+		{
+		    ev.type = ev_keydown;
+		    ev.data1 = 'k';
+		    D_PostEvent(&ev);
+		}
+	    }
+
+	    if(joybuttons[joybmission])
+	    {
+		if(usergame)
+		{
+		    ev.type = ev_keydown;
+		    ev.data1 = 'w';
+		    D_PostEvent(&ev);
+		}
+	    }
+
+	    if(joybuttons[joybright])
+		ChangeWeaponRight();
+
+	    if(joybuttons[joybleft])
+		ChangeWeaponLeft();
+
+	    if(joybuttons[joybinvright])
+	    {
+		if(player->inventorycursor < player->numinventory - 1)
+		    player->inventorycursor++;
+	    }
+
+	    if(joybuttons[joybuse] && joybuttons[joybinvright])
+	    {
+		if(player->inventorycursor > 0)
+		    player->inventorycursor--;
+	    }
+/*
+	    if(joybuttons[joybcenter])
+		cmd->buttons2 |= BT2_CENTERVIEW;
+*/
+	    if(joybuttons[joybmap])
+	    {
+		if (!automapactive)
+		{
+		    if(!menuactive)
+			AM_Start ();
+		}
+		else
+		{
+		    if(!menuactive)
+		    {
+			AM_Stop ();
+
+			extern int screenblocks;
+
+			R_SetViewSize (screenblocks, detailLevel);
+		    }
+		}
+	    }
+
+	    if(automapactive)
+	    {
+		if(joybuttons[joybmapzoomin])
+		{
+		    mtof_zoommul = M_ZOOMIN;
+		    ftom_zoommul = M_ZOOMOUT;
+		}
+
+		if(joybuttons[joybmapzoomout])
+		{
+		    mtof_zoommul = M_ZOOMOUT;
+		    ftom_zoommul = M_ZOOMIN;
+		}
 	    }
 	}
-	else if(data->btns_u & WPAD_CLASSIC_BUTTON_A)
-	{
-	    if(usergame)
-	    {
-		ev.type = ev_keyup;
-		ev.data1 = 'z';
-		D_PostEvent(&ev);
-	    }
-	}
+    }
 
-	if(data->btns_d & WPAD_CLASSIC_BUTTON_Y)
+    if(!joybuttons[joybinvkey])
+    {
+	if(usergame && !menuactive)
 	{
-	    if(usergame)
-	    {
-		ev.type = ev_keydown;
-		ev.data1 = 'k';
-		D_PostEvent(&ev);
-	    }
+	    event_t ev;
+	    ev.type = ev_keyup;
+	    ev.data1 = 'k';
+	    D_PostEvent(&ev);
 	}
-	else if(data->btns_u & WPAD_CLASSIC_BUTTON_Y)
-	{
-	    if(usergame)
-	    {
-		ev.type = ev_keyup;
-		ev.data1 = 'k';
-		D_PostEvent(&ev);
-	    }
-	}
+    }
 
-	if(data->btns_d & WPAD_CLASSIC_BUTTON_X)
+    if(!joybuttons[joybinvpop])
+    {
+	if(usergame && !menuactive)
 	{
-	    if(usergame)
-	    {
-		ev.type = ev_keydown;
-		ev.data1 = 'w';
-		D_PostEvent(&ev);
-	    }
+	    event_t ev;
+	    ev.type = ev_keyup;
+	    ev.data1 = 'z';
+	    D_PostEvent(&ev);
 	}
-	else if(data->btns_u & WPAD_CLASSIC_BUTTON_X)
+    }
+
+    if(!joybuttons[joybmission])
+    {
+	if(usergame && !menuactive)
 	{
-	    if(usergame)
-	    {
-		ev.type = ev_keyup;
-		ev.data1 = 'w';
-		D_PostEvent(&ev);
-	    }
+	    event_t ev;
+	    ev.type = ev_keyup;
+	    ev.data1 = 'w';
+	    D_PostEvent(&ev);
+	}
+    }
+
+    if(automapactive)
+    {
+	if(!(joybuttons[joybmapzoomin] || joybuttons[joybmapzoomout]))
+	{
+	    mtof_zoommul = FRACUNIT;
+	    ftom_zoommul = FRACUNIT;
 	}
     }
 
@@ -1268,21 +1386,21 @@ boolean G_Responder (event_t* ev)
 
     case ev_joystick: 
 //        SetJoyButtons(ev->data1);
-	joybuttons[0] = (ev->data1 & 1) > 0;
-        joybuttons[1] = (ev->data1 & 2) > 0;
-        joybuttons[2] = (ev->data1 & 4) > 0;
-        joybuttons[3] = (ev->data1 & 8) > 0;
-        joybuttons[4] = (ev->data1 & 16) > 0;
-        joybuttons[5] = (ev->data1 & 32) > 0;
-        joybuttons[6] = (ev->data1 & 64) > 0;
-        joybuttons[7] = (ev->data1 & 128) > 0;
-        joybuttons[8] = (ev->data1 & 256) > 0;
-        joybuttons[9] = (ev->data1 & 512) > 0;
-        joybuttons[10] = (ev->data1 & 1024) > 0;
-        joybuttons[11] = (ev->data1 & 2048) > 0;
-        joybuttons[12] = (ev->data1 & 4096) > 0;
-        joybuttons[13] = (ev->data1 & 8192) > 0;
-        joybuttons[14] = (ev->data1 & 16384) > 0;
+        joybuttons[0] = (ev->data1 & joy_a) > 0;
+        joybuttons[1] = (ev->data1 & joy_r) > 0;
+        joybuttons[2] = (ev->data1 & joy_plus) > 0;
+        joybuttons[3] = (ev->data1 & joy_l) > 0;
+        joybuttons[4] = (ev->data1 & joy_minus) > 0;
+        joybuttons[5] = (ev->data1 & joy_b) > 0;
+        joybuttons[6] = (ev->data1 & joy_left) > 0;
+        joybuttons[7] = (ev->data1 & joy_down) > 0;
+        joybuttons[8] = (ev->data1 & joy_right) > 0;
+        joybuttons[9] = (ev->data1 & joy_up) > 0;
+        joybuttons[10] = (ev->data1 & joy_zr) > 0;
+        joybuttons[11] = (ev->data1 & joy_zl) > 0;
+        joybuttons[12] = (ev->data1 & joy_home) > 0;
+        joybuttons[13] = (ev->data1 & joy_x) > 0;
+        joybuttons[14] = (ev->data1 & joy_y) > 0;
 	joyxmove = ev->data2; 
 	joyymove = ev->data3; 
         joyirx = ev->data4;
