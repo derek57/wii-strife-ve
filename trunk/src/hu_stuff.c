@@ -122,6 +122,7 @@ static boolean          headsupactive = false;
 
 static char hud_monsecstr[80];				// ADDED FOR PSP-STATS
 
+extern int		screenSize;
 // haleyjd 20130915 [STRIFE]: need nickname
 //extern char *nickname;
 
@@ -313,8 +314,12 @@ void HU_Drawer(void)
 //    const char* t; // cph - const				// ADDED FOR PSP-STATS
 
     if(!automapactive && !demoplayback && crosshair == 1)
-        V_DrawPatch(158, 82, W_CacheLumpName(DEH_String("XHAIR"), PU_CACHE));
-
+    {
+	if(screenSize < 8)
+	    V_DrawPatch(158, 82, W_CacheLumpName(DEH_String("XHAIR"), PU_CACHE));
+	else
+	    V_DrawPatch(158, 98, W_CacheLumpName(DEH_String("XHAIR"), PU_CACHE));
+    }
     HUlib_drawSText(&w_message);
 //    HUlib_drawIText(&w_chat);
     if (automapactive)

@@ -297,6 +297,7 @@ extern int dialogshowtext;
 extern int forwardmove;
 extern int sidemove;
 extern int turnspeed;
+extern int crosshair;
 
 extern int joy_up;
 extern int joy_down;
@@ -344,6 +345,7 @@ void M_BindBaseControls(void)
 */
     M_BindVariable("map_rotate",             &am_rotate);
     M_BindVariable("detail",                 &detailLevel);
+    M_BindVariable("xhair",                  &crosshair);
 //    M_BindVariable("btn_layout",             &button_layout);
 										// FIXME: IF ACTIVATED,
 //    M_BindVariable("vanilla_weapon_change",  &use_vanilla_weapon_change); 	// CRASHES GAME IF

@@ -137,8 +137,8 @@ int			messages_disabled = 0;
 int			key_controls_start_in_cfg_at_pos = 19;	// FOR PSP: ACTUALLY IT'S +2 !!!
 int			key_controls_end_in_cfg_at_pos = 32;	// FOR PSP: ACTUALLY IT'S +2 !!!
 */
-int			key_controls_start_in_cfg_at_pos = 17;	// FOR PSP: ACTUALLY IT'S +2 !!!
-int			key_controls_end_in_cfg_at_pos = 32;	// FOR PSP: ACTUALLY IT'S +2 !!!
+int			key_controls_start_in_cfg_at_pos = 18;	// FOR PSP: ACTUALLY IT'S +2 !!!
+int			key_controls_end_in_cfg_at_pos = 33;	// FOR PSP: ACTUALLY IT'S +2 !!!
 
 boolean			am_rotate;
 /*
@@ -1749,7 +1749,6 @@ void M_KeyBindingsClearControls (int ch)	// XXX (FOR PSP): NOW THIS IS RATHER IM
 
 void M_KeyBindingsClearAll (int choice)
 {
-    *doom_defaults_list[17].location = 0;
     *doom_defaults_list[18].location = 0;
     *doom_defaults_list[19].location = 0;
     *doom_defaults_list[20].location = 0;
@@ -1764,25 +1763,26 @@ void M_KeyBindingsClearAll (int choice)
     *doom_defaults_list[29].location = 0;
     *doom_defaults_list[30].location = 0;
     *doom_defaults_list[31].location = 0;
+    *doom_defaults_list[32].location = 0;
 }
 
 void M_KeyBindingsReset (int choice)
 {
-    *doom_defaults_list[17].location = CLASSIC_CONTROLLER_R;
-    *doom_defaults_list[18].location = CLASSIC_CONTROLLER_L;
-    *doom_defaults_list[19].location = CLASSIC_CONTROLLER_MINUS;
-    *doom_defaults_list[20].location = CLASSIC_CONTROLLER_LEFT;
-    *doom_defaults_list[21].location = CLASSIC_CONTROLLER_DOWN;
-    *doom_defaults_list[22].location = CLASSIC_CONTROLLER_RIGHT;
-    *doom_defaults_list[23].location = CLASSIC_CONTROLLER_ZL;
-    *doom_defaults_list[24].location = CLASSIC_CONTROLLER_ZR;
-    *doom_defaults_list[25].location = CLASSIC_CONTROLLER_HOME;
-    *doom_defaults_list[26].location = CLASSIC_CONTROLLER_PLUS;
-    *doom_defaults_list[27].location = CLASSIC_CONTROLLER_Y;
-    *doom_defaults_list[28].location = CLASSIC_CONTROLLER_X;
-    *doom_defaults_list[29].location = CLASSIC_CONTROLLER_A;
-    *doom_defaults_list[30].location = CLASSIC_CONTROLLER_B;
-    *doom_defaults_list[31].location = CLASSIC_CONTROLLER_UP;
+    *doom_defaults_list[18].location = CLASSIC_CONTROLLER_R;
+    *doom_defaults_list[19].location = CLASSIC_CONTROLLER_L;
+    *doom_defaults_list[20].location = CLASSIC_CONTROLLER_MINUS;
+    *doom_defaults_list[21].location = CLASSIC_CONTROLLER_LEFT;
+    *doom_defaults_list[22].location = CLASSIC_CONTROLLER_DOWN;
+    *doom_defaults_list[23].location = CLASSIC_CONTROLLER_RIGHT;
+    *doom_defaults_list[24].location = CLASSIC_CONTROLLER_ZL;
+    *doom_defaults_list[25].location = CLASSIC_CONTROLLER_ZR;
+    *doom_defaults_list[26].location = CLASSIC_CONTROLLER_HOME;
+    *doom_defaults_list[27].location = CLASSIC_CONTROLLER_PLUS;
+    *doom_defaults_list[28].location = CLASSIC_CONTROLLER_Y;
+    *doom_defaults_list[29].location = CLASSIC_CONTROLLER_X;
+    *doom_defaults_list[30].location = CLASSIC_CONTROLLER_A;
+    *doom_defaults_list[31].location = CLASSIC_CONTROLLER_B;
+    *doom_defaults_list[32].location = CLASSIC_CONTROLLER_UP;
 }
 
 void M_DrawKeyBindings(void)
@@ -1836,7 +1836,7 @@ void M_DrawKeyBindings(void)
 	else
 	{
 	    M_WriteText(195, (i*10+20),
-		Key2String(*(doom_defaults_list[i+FirstKey+17].location)));
+		Key2String(*(doom_defaults_list[i+FirstKey+18].location)));
 	}
     }
 }
@@ -3997,7 +3997,7 @@ boolean M_Responder (event_t* ev)
     if (askforkey && data->btns_d)		// KEY BINDINGS
     {
 	M_KeyBindingsClearControls(ev->data1);
-	*doom_defaults_list[keyaskedfor + 17 + FirstKey].location = ev->data1;
+	*doom_defaults_list[keyaskedfor + 18 + FirstKey].location = ev->data1;
 	askforkey = false;
 	return true;
     }
