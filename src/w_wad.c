@@ -616,6 +616,10 @@ void W_CheckCorrectIWAD(GameMission_t mission)
     }
 }
 */
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+
 void W_CheckSize(int wad)		// FOR THE PSP SOURCE PORT (TAKEN FROM PSPHEXEN BUT HEAVILY MODIFIED)
 {
 /*
@@ -691,7 +695,10 @@ void W_CheckSize(int wad)		// FOR THE PSP SOURCE PORT (TAKEN FROM PSPHEXEN BUT H
     {
 	FILE *fprw;
 
-	fprw = fopen("usb:/apps/wiistrife/pspstrife.wad", "r");
+	if(usb)
+	    fprw = fopen("usb:/apps/wiistrife/pspstrife.wad", "r");
+	else if(sd)
+	    fprw = fopen("sd:/apps/wiistrife/pspstrife.wad", "r");
 
 	if (fprw == NULL)
 	    printf(" ");
@@ -710,7 +717,10 @@ void W_CheckSize(int wad)		// FOR THE PSP SOURCE PORT (TAKEN FROM PSPHEXEN BUT H
     {
 	FILE *fprw;
 
-	fprw = fopen("usb:/apps/wiistrife/voices/voices.wad", "r");
+	if(usb)
+	    fprw = fopen("usb:/apps/wiistrife/voices/voices.wad", "r");
+	else if(sd)
+	    fprw = fopen("sd:/apps/wiistrife/voices/voices.wad", "r");
 
 	if (fprw == NULL)
 	    printf(" ");

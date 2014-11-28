@@ -298,6 +298,22 @@ extern int forwardmove;
 extern int sidemove;
 extern int turnspeed;
 
+extern int joy_up;
+extern int joy_down;
+extern int joy_left;
+extern int joy_right;
+extern int joy_zl;
+extern int joy_zr;
+extern int joy_l;
+extern int joy_r;
+extern int joy_plus;
+extern int joy_minus;
+extern int joy_home;
+extern int joy_a;
+extern int joy_b;
+extern int joy_x;
+extern int joy_y;
+
 void M_BindBaseControls(void)
 {
     M_BindVariable("sfx_volume",             &sfxVolume);
@@ -332,20 +348,21 @@ void M_BindBaseControls(void)
 										// FIXME: IF ACTIVATED,
 //    M_BindVariable("vanilla_weapon_change",  &use_vanilla_weapon_change); 	// CRASHES GAME IF
 										// WEAPON CHANGES
-    M_BindVariable("key_uparrow",            &key_up);
-    M_BindVariable("key_downarrow",          &key_down);
-    M_BindVariable("key_leftarrow",          &key_left);
-    M_BindVariable("key_rightarrow",         &key_right);
-    M_BindVariable("key_other",              &key_invleft);
-    M_BindVariable("key_triangle",           &key_invright);
-    M_BindVariable("key_cross",              &key_jump);
-    M_BindVariable("key_square",             &key_invpop);
-    M_BindVariable("key_circle",             &key_mission);
-    M_BindVariable("key_select",             &key_strafeleft);
-    M_BindVariable("key_start",              &key_invuse);
-    M_BindVariable("key_special",            &key_invkey);
-    M_BindVariable("key_lefttrigger",        &key_use);
-    M_BindVariable("key_righttrigger",       &key_fire);
+    M_BindVariable("key_fire",               &joy_r);
+    M_BindVariable("key_use",                &joy_l);
+    M_BindVariable("key_menu",               &joy_minus);
+    M_BindVariable("key_weapon_left",        &joy_left);
+    M_BindVariable("key_automap",            &joy_down);
+    M_BindVariable("key_weapon_right",       &joy_right);
+    M_BindVariable("key_automap_zoom_in",    &joy_zl);
+    M_BindVariable("key_automap_zoom_out",   &joy_zr);
+    M_BindVariable("key_select_inv_item",    &joy_a);
+    M_BindVariable("key_inventory_use",      &joy_plus);
+    M_BindVariable("key_inv_popup",          &joy_x);
+    M_BindVariable("key_inv_keys",           &joy_b);
+    M_BindVariable("key_mission_objs",       &joy_up);
+    M_BindVariable("key_jump",               &joy_home);
+    M_BindVariable("key_inventory_drop",     &joy_y);
 /*
     M_BindVariable("use_mouse",                 &usemouse);
     M_BindVariable("key_invDrop",        &key_invdrop);

@@ -370,10 +370,14 @@ typedef struct
 
 #define MAXPATH		0x108
 
-#define SavePathRoot1 "usb:/apps/wiistrife/savegames"
-#define SavePathRoot2 "usb:/apps/wiistrife/savegames/strife.wad"
-#define SavePathStrifeReg10 "usb:/apps/wiistrife/savegames/strife.wad/REG_V10"
-#define SavePathStrifeReg12 "usb:/apps/wiistrife/savegames/strife.wad/REG_V131"
+#define SavePathRoot1USB "usb:/apps/wiistrife/savegames"
+#define SavePathRoot2USB "usb:/apps/wiistrife/savegames/strife.wad"
+#define SavePathStrifeReg10USB "usb:/apps/wiistrife/savegames/strife.wad/REG_V10"
+#define SavePathStrifeReg12USB "usb:/apps/wiistrife/savegames/strife.wad/REG_V131"
+#define SavePathRoot1SD "sd:/apps/wiistrife/savegames"
+#define SavePathRoot2SD "sd:/apps/wiistrife/savegames/strife.wad"
+#define SavePathStrifeReg10SD "sd:/apps/wiistrife/savegames/strife.wad/REG_V10"
+#define SavePathStrifeReg12SD "sd:/apps/wiistrife/savegames/strife.wad/REG_V131"
 
 #ifndef VER_ID
 #define VER_ID "DVL"
@@ -389,15 +393,21 @@ typedef struct
 #define VERSIONTEXT "V2 +R ("VER_ID") "__TIME__""
 #endif
 
+#define M_ZOOMIN        ((int) (1.02*FRACUNIT))
+
+#define M_ZOOMOUT       ((int) (FRACUNIT/1.02))
+
+extern boolean sd;
+extern boolean usb;
+
 extern int mspeed;
 extern int mouseSensitivity;
 extern int usegamma;
 extern int mouselook;
 
-boolean display_ticker;
-
 FILE	*debugfile;
 
+boolean			display_ticker;
 boolean			print_resource_pwad_error;
 boolean			error_detected;
 boolean			game_quit;

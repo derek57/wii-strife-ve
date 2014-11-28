@@ -172,20 +172,21 @@ extern int key_invright, key_invuse;
 									// FIXME: IF ACTIVATED,
 //    CONFIG_VARIABLE_INT		(vanilla_weapon_change),	// CRASHES GAME IF
 									// WEAPON CHANGES
-    CONFIG_VARIABLE_INT		(key_uparrow),
-    CONFIG_VARIABLE_INT		(key_downarrow),
-    CONFIG_VARIABLE_INT		(key_leftarrow),
-    CONFIG_VARIABLE_INT		(key_rightarrow),
-    CONFIG_VARIABLE_INT		(key_other),
-    CONFIG_VARIABLE_INT		(key_triangle),
-    CONFIG_VARIABLE_INT		(key_cross),
-    CONFIG_VARIABLE_INT		(key_square),
-    CONFIG_VARIABLE_INT		(key_circle),
-    CONFIG_VARIABLE_INT		(key_select),
-    CONFIG_VARIABLE_INT		(key_start),
-    CONFIG_VARIABLE_INT		(key_special),
-    CONFIG_VARIABLE_INT		(key_lefttrigger),
-    CONFIG_VARIABLE_INT		(key_righttrigger),
+    CONFIG_VARIABLE_INT		(key_fire),
+    CONFIG_VARIABLE_INT		(key_use),
+    CONFIG_VARIABLE_INT		(key_menu),
+    CONFIG_VARIABLE_INT		(key_weapon_left),
+    CONFIG_VARIABLE_INT		(key_automap),
+    CONFIG_VARIABLE_INT		(key_weapon_right),
+    CONFIG_VARIABLE_INT		(key_automap_zoom_in),
+    CONFIG_VARIABLE_INT		(key_automap_zoom_out),
+    CONFIG_VARIABLE_INT		(key_select_inv_item),
+    CONFIG_VARIABLE_INT		(key_inventory_use),
+    CONFIG_VARIABLE_INT		(key_inv_popup),
+    CONFIG_VARIABLE_INT		(key_inv_keys),
+    CONFIG_VARIABLE_INT		(key_mission_objs),
+    CONFIG_VARIABLE_INT		(key_jump),
+    CONFIG_VARIABLE_INT		(key_inventory_drop),
 /*
 #ifdef FEATURE_SOUND
 
@@ -2037,10 +2038,10 @@ void M_LoadDefaults (void)
         doom_defaults.filename
             = M_StringJoin(configdir, default_main_config, NULL);
     }
-
+/*
     if(devparm)
     	printf("saving config in %s\n", doom_defaults.filename);
-
+*/
     //!
     // @arg <file>
     //
@@ -2175,6 +2176,9 @@ float M_GetFloatVariable(char *name)
 // Get the path to the default configuration dir to use, if NULL
 // is passed to M_SetConfigDir.
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wreturn-type"
+
 static char *GetDefaultConfigDir(void)
 {
 
@@ -2207,7 +2211,10 @@ static char *GetDefaultConfigDir(void)
 	if(devparm)
 	    printf("FROM M_CONFIG.O: HOME-DIR IS: %s\n", homedir);
 */
-        return strdup("usb:/apps/wiistrife/");
+	if(usb)
+	    return strdup("usb:/apps/wiistrife/");
+	else if(sd)
+	    return strdup("sd:/apps/wiistrife/");
     }
 }
 
@@ -2230,13 +2237,13 @@ void M_SetConfigDir(char *dir)
     {
         configdir = GetDefaultConfigDir();
     }
-
+/*
     if (strcmp(configdir, "") != 0)
     {
     	if(devparm)
     	    printf("Using %s for configuration and saves\n", configdir);
     }
-
+*/
     // Make the directory if it doesn't already exist:
 
     M_MakeDirectory(configdir);
@@ -2251,7 +2258,6 @@ char *M_GetSaveGameDir(char *iwadname)
 {
     char *savegamedir = NULL;
     char *savegameroot;
-    char *topdir;
 
     // If not "doing" a configuration directory (Windows), don't "do"
     // a savegame directory, either.
@@ -2262,30 +2268,56 @@ char *M_GetSaveGameDir(char *iwadname)
     }
     else
     {
-        // ~/.chocolate-doom/savegames
+        // ~/.chocolate-doom/savegames/
 
-        topdir = M_StringJoin(configdir, "savegames", NULL);
-        M_MakeDirectory(topdir);
+        savegamedir = malloc(strlen(configdir) + 30);
+        sprintf(savegamedir, "%ssavegames%c", configdir,
+                             DIR_SEPARATOR);
+
+        M_MakeDirectory(savegamedir);
 
         // eg. ~/.chocolate-doom/savegames/doom2.wad/
 
-//        savegamedir = M_StringJoin(topdir, DIR_SEPARATOR_S, iwadname,
-//                                   DIR_SEPARATOR_S, NULL);
+        sprintf(savegamedir + strlen(savegamedir), "%s%c",
+                iwadname, DIR_SEPARATOR);
 
-	savegameroot = SavePathRoot1;
-	M_MakeDirectory(savegameroot);
+	if(usb)
+	{
+	    savegameroot = SavePathRoot1USB;
 
-	savegameroot = SavePathRoot2;
-	M_MakeDirectory(savegameroot);
+	    M_MakeDirectory(savegameroot);
 
-	if(fsize == 28372168)
-	    savegamedir = SavePathStrifeReg10;
-	else if(fsize == 28377364)
-	    savegamedir = SavePathStrifeReg12;
+	    savegameroot = SavePathRoot2USB;
 
-	M_MakeDirectory(savegamedir);
+	    M_MakeDirectory(savegameroot);
+	}
+	else if(sd)
+	{
+	    savegameroot = SavePathRoot1SD;
 
-        free(topdir);
+	    M_MakeDirectory(savegameroot);
+
+	    savegameroot = SavePathRoot2SD;
+
+	    M_MakeDirectory(savegameroot);
+	}
+
+	if(usb)
+	{
+	    if(fsize == 28372168)
+		savegamedir = SavePathStrifeReg10USB;
+	    else if(fsize == 28377364)
+		savegamedir = SavePathStrifeReg12USB;
+	}
+	else if(sd)
+	{
+	    if(fsize == 28372168)
+		savegamedir = SavePathStrifeReg10SD;
+	    else if(fsize == 28377364)
+		savegamedir = SavePathStrifeReg12SD;
+	}
+
+        M_MakeDirectory(savegamedir);
     }
 
     return savegamedir;
