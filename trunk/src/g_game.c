@@ -818,16 +818,18 @@ void G_BuildTiccmd (ticcmd_t* cmd, int maketic)
 
 	    if(joybuttons[joybinvright])
 	    {
-		if(player->inventorycursor < player->numinventory - 1)
-		    player->inventorycursor++;
+	        if(player->inventorycursor < player->numinventory - 1)
+	            player->inventorycursor++;
+		else if(player->inventorycursor == player->numinventory - 1)	// ADDED FOR PSP
+		    player->inventorycursor = 0;				// (SAVES A KEY)
 	    }
-
+/*
 	    if(joybuttons[joybuse] && joybuttons[joybinvright])
 	    {
 		if(player->inventorycursor > 0)
 		    player->inventorycursor--;
 	    }
-/*
+
 	    if(joybuttons[joybcenter])
 		cmd->buttons2 |= BT2_CENTERVIEW;
 */
