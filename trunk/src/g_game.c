@@ -838,7 +838,10 @@ void G_BuildTiccmd (ticcmd_t* cmd, int maketic)
 		if (!automapactive)
 		{
 		    if(!menuactive)
-			AM_Start ();
+		    {
+			if(usergame)
+			    AM_Start ();
+		    }
 		}
 		else
 		{
