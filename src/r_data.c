@@ -556,6 +556,8 @@ void R_InitTextures (void)
 */
     }
 
+    printf("[");
+
     for (i=0 ; i<numtextures ; i++, directory++)
     {
         if (!(i&63))
