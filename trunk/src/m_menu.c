@@ -138,7 +138,7 @@ int			key_controls_start_in_cfg_at_pos = 19;	// FOR PSP: ACTUALLY IT'S +2 !!!
 int			key_controls_end_in_cfg_at_pos = 32;	// FOR PSP: ACTUALLY IT'S +2 !!!
 */
 int			key_controls_start_in_cfg_at_pos = 18;	// FOR PSP: ACTUALLY IT'S +2 !!!
-int			key_controls_end_in_cfg_at_pos = 33;	// FOR PSP: ACTUALLY IT'S +2 !!!
+int			key_controls_end_in_cfg_at_pos = 34;	// FOR PSP: ACTUALLY IT'S +2 !!!
 
 boolean			am_rotate;
 /*
@@ -498,6 +498,8 @@ char *stupidtable[] =
 #define CLASSIC_CONTROLLER_HOME		0x1000
 #define CLASSIC_CONTROLLER_X		0x2000
 #define CLASSIC_CONTROLLER_Y		0x4000
+#define CONTROLLER_1			0x8000
+#define CONTROLLER_2			0x10000
 
 char *Key2String (int ch)
 {
@@ -525,6 +527,8 @@ char *Key2String (int ch)
 	case CLASSIC_CONTROLLER_ZR:	return "ZR";
 	case CLASSIC_CONTROLLER_L:	return "LEFT TRIGGER";
 	case CLASSIC_CONTROLLER_R:	return "RIGHT TRIGGER";
+	case CONTROLLER_1:		return "1";
+	case CONTROLLER_2:		return "2";
     }
 
     // Handle letter keys
@@ -835,7 +839,7 @@ enum
     keybindings_special_1,
     keybindings_special_2,
     keybindings_special_3,
-    keybindings_empty,
+    keybindings_special_4,
 //    keybindings_layout,
     keybindings_clearall,
     keybindings_reset,
@@ -863,7 +867,7 @@ menuitem_t KeyBindingsMenu[]=
     {5,"",M_KeyBindingsSetKey,12},
     {5,"",M_KeyBindingsSetKey,13},
     {5,"",M_KeyBindingsSetKey,14},
-    {-1,"",0,'\0'},
+    {5,"",M_KeyBindingsSetKey,15},
 //    {2,"",M_KeyBindingsButtonLayout,'l'},
     {5,"",M_KeyBindingsClearAll,'c'},
     {5,"",M_KeyBindingsReset,'r'}
@@ -1764,6 +1768,7 @@ void M_KeyBindingsClearAll (int choice)
     *doom_defaults_list[30].location = 0;
     *doom_defaults_list[31].location = 0;
     *doom_defaults_list[32].location = 0;
+    *doom_defaults_list[33].location = 0;
 }
 
 void M_KeyBindingsReset (int choice)
@@ -1783,6 +1788,7 @@ void M_KeyBindingsReset (int choice)
     *doom_defaults_list[30].location = CLASSIC_CONTROLLER_A;
     *doom_defaults_list[31].location = CLASSIC_CONTROLLER_B;
     *doom_defaults_list[32].location = CLASSIC_CONTROLLER_UP;
+    *doom_defaults_list[33].location = CONTROLLER_1;
 }
 
 void M_DrawKeyBindings(void)
@@ -1816,6 +1822,7 @@ void M_DrawKeyBindings(void)
     M_WriteText(40, 140, DEH_String("MISSION OBJECTIVES"));
     M_WriteText(40, 150, DEH_String("JUMP"));
     M_WriteText(40, 160, DEH_String("INVENTORY DROP"));
+    M_WriteText(40, 170, DEH_String("RUN"));
 
 //    M_WriteText(40, 165, DEH_String("BUTTON LAYOUT:"));
 
@@ -1827,7 +1834,7 @@ void M_DrawKeyBindings(void)
     M_WriteText(40, 180, DEH_String("CLEAR ALL CONTROLS"));
     M_WriteText(40, 190, DEH_String("RESET TO DEFAULTS"));
 
-    for (i = 0; i < 15; i++)
+    for (i = 0; i < 16; i++)
     {
 	if (askforkey && keyaskedfor == i)
 	{

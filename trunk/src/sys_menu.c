@@ -472,7 +472,8 @@ void Menu_WadList(void)
 
     if (strcmp (WAD_DIRECTORY, gConfig.startupPath) != 0)
     {
-	sprintf(tmpPath, "%s:/%s", fdev->mount, gConfig.startupPath);
+//	sprintf(tmpPath, "%s:/%s", fdev->mount, gConfig.startupPath);
+	sprintf(tmpPath, "%s:/apps/wiistrife/", fdev->mount);
 
 	PushCurrentDir(tmpPath,0,0); // wiiNinja
     }
