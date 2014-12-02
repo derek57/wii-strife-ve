@@ -750,7 +750,7 @@ void G_BuildTiccmd (ticcmd_t* cmd, int maketic)
 */
     WPADData *data = WPAD_Data(0);
 
-    if(data->exp.type == WPAD_EXP_CLASSIC && !demoplayback)
+    if(data->exp.type == WPAD_EXP_CLASSIC)
     {
 	event_t ev;
 
@@ -793,94 +793,88 @@ void G_BuildTiccmd (ticcmd_t* cmd, int maketic)
 		}
 	    }
 
-	    if(joybuttons[joybinvpop])
+	    if(!demoplayback)
 	    {
-		if(usergame)
+		if(joybuttons[joybinvpop])
 		{
-		    ev.type = ev_keydown;
-		    ev.data1 = 'z';
-		    D_PostEvent(&ev);
-		}
-	    }
-
-	    if(joybuttons[joybinvkey])
-	    {
-		if(usergame)
-		{
-		    ev.type = ev_keydown;
-		    ev.data1 = 'k';
-		    D_PostEvent(&ev);
-		}
-	    }
-
-	    if(joybuttons[joybmission])
-	    {
-		if(usergame)
-		{
-		    ev.type = ev_keydown;
-		    ev.data1 = 'w';
-		    D_PostEvent(&ev);
-		}
-	    }
-
-	    if(joybuttons[joybright])
-		ChangeWeaponRight();
-
-	    if(joybuttons[joybleft])
-		ChangeWeaponLeft();
-
-	    if(joybuttons[joybinvright])
-	    {
-	        if(player->inventorycursor < player->numinventory - 1)
-	            player->inventorycursor++;
-		else if(player->inventorycursor == player->numinventory - 1)	// ADDED FOR PSP
-		    player->inventorycursor = 0;				// (SAVES A KEY)
-	    }
-/*
-	    if(joybuttons[joybuse] && joybuttons[joybinvright])
-	    {
-		if(player->inventorycursor > 0)
-		    player->inventorycursor--;
-	    }
-
-	    if(joybuttons[joybcenter])
-		cmd->buttons2 |= BT2_CENTERVIEW;
-*/
-	    if(joybuttons[joybmap])
-	    {
-		if (!automapactive)
-		{
-		    if(!menuactive)
+		    if(usergame)
 		    {
-			if(usergame)
-			    AM_Start ();
+			ev.type = ev_keydown;
+			ev.data1 = 'z';
+			D_PostEvent(&ev);
 		    }
 		}
-		else
+
+		if(joybuttons[joybinvkey])
 		{
-		    if(!menuactive)
+		    if(usergame)
 		    {
-			AM_Stop ();
-
-			extern int screenblocks;
-
-			R_SetViewSize (screenblocks, detailLevel);
+			ev.type = ev_keydown;
+			ev.data1 = 'k';
+			D_PostEvent(&ev);
 		    }
 		}
-	    }
 
-	    if(automapactive)
-	    {
-		if(joybuttons[joybmapzoomin])
+		if(joybuttons[joybmission])
 		{
-		    mtof_zoommul = M_ZOOMIN;
-		    ftom_zoommul = M_ZOOMOUT;
+		    if(usergame)
+		    {
+			ev.type = ev_keydown;
+			ev.data1 = 'w';
+			D_PostEvent(&ev);
+		    }
 		}
 
-		if(joybuttons[joybmapzoomout])
+		if(joybuttons[joybright])
+		    ChangeWeaponRight();
+
+		if(joybuttons[joybleft])
+		    ChangeWeaponLeft();
+
+		if(joybuttons[joybinvright])
 		{
-		    mtof_zoommul = M_ZOOMOUT;
-		    ftom_zoommul = M_ZOOMIN;
+		    if(player->inventorycursor < player->numinventory - 1)
+			player->inventorycursor++;
+		    else if(player->inventorycursor == player->numinventory - 1)// ADDED FOR PSP
+			player->inventorycursor = 0;				// (SAVES A KEY)
+		}
+
+		if(joybuttons[joybmap])
+		{
+		    if (!automapactive)
+		    {
+			if(!menuactive)
+			{
+			    if(usergame)
+				AM_Start ();
+			}
+		    }
+		    else
+		    {
+			if(!menuactive)
+			{
+			    AM_Stop ();
+
+			    extern int screenblocks;
+
+			    R_SetViewSize (screenblocks, detailLevel);
+			}
+		    }
+		}
+
+		if(automapactive)
+		{
+		    if(joybuttons[joybmapzoomin])
+		    {
+			mtof_zoommul = M_ZOOMIN;
+			ftom_zoommul = M_ZOOMOUT;
+		    }
+
+		    if(joybuttons[joybmapzoomout])
+		    {
+			mtof_zoommul = M_ZOOMOUT;
+			ftom_zoommul = M_ZOOMIN;
+		    }
 		}
 	    }
 	}

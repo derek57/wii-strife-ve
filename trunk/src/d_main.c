@@ -2077,7 +2077,7 @@ void D_DoomMain (void)
 	    	printf("\n");
 	    	printf("            PLEASE GET A KNOWN PROPER STRIFE IWAD FILE              ");
 	    	printf("\n");
-	    	printf("                 PRESS CROSS TO QUIT THE GAME NOW                   ");
+	    	printf("                   PRESS A TO QUIT THE GAME NOW                     ");
 	    	printf(" ================================================================== ");
 
 		skip_show_message_unknown:
@@ -2086,7 +2086,7 @@ void D_DoomMain (void)
 
 		u32 buttons = WaitButtons();
 
-		if (buttons & WPAD_BUTTON_A)
+		if (buttons & WPAD_CLASSIC_BUTTON_A)
 		    break;
 
 		WaitButtons();
