@@ -2357,7 +2357,7 @@ G_SaveGame
 */
 
 // On the PSP, the function G_DoSaveGame causes a real mess so it has been modified
-
+/*
 void G_DoSaveGame (char *path)
 { 
     char *current_path;
@@ -2446,16 +2446,16 @@ void G_DoSaveGame (char *path)
     {										// FOR PSP
         fwrite( buff, 1, n, out );						// FOR PSP
     }										// FOR PSP
-/*
-    if(devparm)
-    {
-	printf("FROM G_GAME.O:\n");
-	puts(savegame_file);
-	printf("SAVEGAME FILE\n");
-	puts(temp_savegame_file);
-	printf("TEMP SAVEGAME FILE\n");
-    }
-*/
+
+//    if(devparm)
+//    {
+//	printf("FROM G_GAME.O:\n");
+//	puts(savegame_file);
+//	printf("SAVEGAME FILE\n");
+//	puts(temp_savegame_file);
+//	printf("TEMP SAVEGAME FILE\n");
+//    }
+
     // haleyjd: free the savegame_file path
     Z_Free(savegame_file);
 
@@ -2478,6 +2478,91 @@ void G_DoSaveGame (char *path)
 
     // draw the pattern into the back screen
 
+    R_FillBackScreen ();
+} 
+*/
+void G_DoSaveGame (char *path)
+{ 
+    char *current_path;
+    char *savegame_file;
+    char *temp_savegame_file;
+    byte gamemapbytes[4];
+    char gamemapstr[33];
+
+    temp_savegame_file = P_TempSaveGameFile();
+    
+    // [STRIFE] custom save file path logic
+    memset(gamemapstr, 0, sizeof(gamemapstr));
+    M_snprintf(gamemapstr, sizeof(gamemapstr), "%d", gamemap);
+    savegame_file = M_SafeFilePath(path, gamemapstr);
+
+    // [STRIFE] write the "current" file, which tells which hub map
+    //   the save slot is currently on.
+    current_path = M_SafeFilePath(path, "current");
+    // haleyjd: endian-agnostic IO
+    gamemapbytes[0] = (byte)( gamemap        & 0xff);
+    gamemapbytes[1] = (byte)((gamemap >>  8) & 0xff);
+    gamemapbytes[2] = (byte)((gamemap >> 16) & 0xff);
+    gamemapbytes[3] = (byte)((gamemap >> 24) & 0xff);
+    M_WriteFile(current_path, gamemapbytes, 4);
+    Z_Free(current_path);
+
+    // Open the savegame file for writing.  We write to a temporary file
+    // and then rename it at the end if it was successfully written.
+    // This prevents an existing savegame from being overwritten by 
+    // a corrupted one, or if a savegame buffer overrun occurs.
+
+    save_stream = fopen(temp_savegame_file, "wb");
+
+    if (save_stream == NULL)
+    {
+        return;
+    }
+
+    savegame_error = false;
+
+    P_WriteSaveGameHeader(savedescription);
+ 
+    P_ArchivePlayers (); 
+    P_ArchiveWorld (); 
+    P_ArchiveThinkers (); 
+    P_ArchiveSpecials (); 
+
+    P_WriteSaveGameEOF();
+
+    // Enforce the same savegame size limit as in Vanilla Doom, 
+    // except if the vanilla_savegame_limit setting is turned off.
+    // [STRIFE]: Verified subject to same limit.
+
+    if (vanilla_savegame_limit && ftell(save_stream) > SAVEGAMESIZE)
+    {
+        I_Error ("Savegame buffer overrun");
+    }
+    
+    // Finish up, close the savegame file.
+
+    fclose(save_stream);
+
+    // Now rename the temporary savegame file to the actual savegame
+    // file, overwriting the old savegame if there was one there.
+
+    remove(savegame_file);
+    rename(temp_savegame_file, savegame_file);
+    
+    // haleyjd: free the savegame_file path
+    Z_Free(savegame_file);
+
+    gameaction = ga_nothing; 
+    //M_StringCopy(savedescription, "", sizeof(savedescription));
+
+    // [STRIFE]: custom message logic
+    if(!strcmp(path, savepath))
+    {
+        M_snprintf(savename, sizeof(savename), "%s saved.", character_name);
+        players[consoleplayer].message = savename;
+    }
+
+    // draw the pattern into the back screen
     R_FillBackScreen ();
 } 
  
