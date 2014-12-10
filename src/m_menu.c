@@ -162,7 +162,7 @@ int			showMessages = 1;
 
 // Blocky mode, has default, 0 = high, 1 = normal
 int			detailLevel = 0;
-int			screenblocks = 9;
+int			screenblocks = 10;
 
 // temp for screenblocks (0-9)
 int			screenSize;
@@ -310,6 +310,7 @@ void M_SfxVol(int choice);
 void M_Voices(int choice);
 void M_VoiceVol(int choice); // [STRIFE]
 void M_MusicVol(int choice);
+void M_Map(int choice);
 void M_God(int choice);
 void M_Noclip(int choice);
 void M_Weapons(int choice);
@@ -1098,6 +1099,7 @@ menu_t  SoundDef =
 //
 enum
 {
+    cheats_map,
     cheats_god,
     cheats_noclip,
     cheats_weapons,
@@ -1125,6 +1127,7 @@ enum
 
 menuitem_t CheatsMenu[]=
 {
+    {2,"",M_Map,'g'},
     {2,"",M_God,'g'},
     {2,"",M_Noclip,'n'},
     {2,"",M_Weapons,'w'}, 
@@ -1155,7 +1158,7 @@ menu_t  CheatsDef =
     &OptionsDef,
     CheatsMenu,
     M_DrawCheats,
-    80,30,       // [STRIFE] changed y coord 64 -> 35
+    80,20,       // [STRIFE] changed y coord 64 -> 35
     0
 };
 
@@ -2539,6 +2542,21 @@ void DetectState(void)
     }
 }
 
+void M_Map(int choice)
+{
+    if(/*!netgame && */!demoplayback && gamestate == GS_LEVEL
+	&& gameskill != sk_nightmare && players[consoleplayer].playerstate == PST_LIVE)
+    {
+	static player_t* player;
+	player = &players[consoleplayer];
+
+	P_GivePower(player, pw_allmap);
+
+	players[consoleplayer].message = DEH_String("Full Map Added");
+    }
+    DetectState();
+}
+
 void M_God(int choice)
 {
     if(/*!netgame && */!demoplayback && gamestate == GS_LEVEL
@@ -2916,8 +2934,9 @@ void M_Spin(int choice)
 
 void M_DrawCheats(void)
 {
-    V_DrawPatch (110, 10, W_CacheLumpName(DEH_String("M_CHEATS"), PU_CACHE));
+    V_DrawPatch (110, 0, W_CacheLumpName(DEH_String("M_CHEATS"), PU_CACHE));
 
+    M_WriteText(72, 20, DEH_String("SHOW UNVISITED MAP AREAS"));
     M_WriteText(72, 30, DEH_String("OMNIPOTENT (GOD)"));
 
     if (players[consoleplayer].cheats & CF_GODMODE)

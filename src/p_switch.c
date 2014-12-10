@@ -338,7 +338,8 @@ void P_ChangeSwitchTexture(line_t* line, int useAgain)
             if(sl->sound)
                 sound = sl->sound;
 
-            S_StartSound(buttonlist->soundorg, sound);
+	    // haleyjd 20141026: [STRIFE]: Rogue fixed wrong sound origin
+	    S_StartSound(&line->frontsector->soundorg, sound);
             sides[line->sidenum[0]].toptexture = switchlist[i^1];
 
             if(useAgain)
@@ -357,7 +358,8 @@ void P_ChangeSwitchTexture(line_t* line, int useAgain)
                 if(sl->sound)
                     sound = sl->sound;
 
-                S_StartSound(buttonlist->soundorg,sound);
+		// haleyjd 20141026: [STRIFE]: Rogue fixed wrong sound origin
+		S_StartSound(&line->frontsector->soundorg, sound);
                 sides[line->sidenum[0]].midtexture = switchlist[i^1];
 
                 // villsa [STRIFE] affect second side of line
@@ -399,7 +401,8 @@ void P_ChangeSwitchTexture(line_t* line, int useAgain)
                     if(sl->sound)
                         sound = sl->sound;
 
-                    S_StartSound(buttonlist->soundorg,sound);
+		    // haleyjd 20141026: [STRIFE]: Rogue fixed wrong sound origin
+		    S_StartSound(&line->frontsector->soundorg, sound);
                     sides[line->sidenum[0]].bottomtexture = switchlist[i^1];
 
                     if(useAgain)
