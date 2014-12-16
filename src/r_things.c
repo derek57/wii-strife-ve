@@ -446,6 +446,16 @@ R_DrawVisSprite
             dc_translation = translationtables - 256 + (translation >> (MF_TRANSSHIFT - 8));
         }
     }
+    else if(vis->mobjflags & MF_MVIS)
+    {
+	// haleyjd 20141215: [STRIFE] Objects which are *only* MF_MVIS (players
+	// using double Shadow Armors, in particular) are totally invisible.
+	// Upstreamed after discovered in SVE. Note this causes a
+	// vanilla-accurate glitch with Shadow Acolytes - if they die while
+	// MF_MVIS is set, A_Fall fails to remove it and their corpse will
+	// completely disappear (that's also fixed in SVE, but not here).
+	return;
+    }
     else if (translation)     // villsa [STRIFE] new translation tables
     {
         colfunc = transcolfunc;
@@ -461,7 +471,7 @@ R_DrawVisSprite
     // villsa [STRIFE] clip sprite's feet if needed
     if(vis->mobjflags & MF_FEETCLIPPED)
     {
-        sprbotscreen = sprtopscreen + FixedMul(spryscale, patch->height << FRACBITS);
+        sprbotscreen = sprtopscreen + FixedMul(spryscale, SHORT(patch->height) << FRACBITS);
         clip = (sprbotscreen - FixedMul(10*FRACUNIT, spryscale)) >> FRACBITS;
     }
     else
