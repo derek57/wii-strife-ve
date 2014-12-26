@@ -85,6 +85,7 @@ extern boolean		STRIFE_1_0_REGISTERED;
 extern boolean		STRIFE_1_X_REGISTERED;
 
 extern boolean		display_ticker;
+extern boolean		BorderNeedRefresh;
 
 extern int		cheating;
 extern int		mspeed;
@@ -4506,6 +4507,8 @@ void M_FPSCounter(int FramesPerSecond)
     {
 	M_WriteText(0, 30, fpsDisplay);
     }
+
+    BorderNeedRefresh = true;
 }
 
 //
