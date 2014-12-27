@@ -1011,8 +1011,12 @@ P_CrossSpecialLine
         I_StartVoice(crosslinestr);
 
         // load objective
-        DEH_snprintf(crosslinestr, sizeof(crosslinestr), "log%i", line->tag);
-        GiveObjective(crosslinestr, 0);
+        // [SVE]: Don't load the demo level logs unless we're playing the demo levels
+        if(gamemap >= 32 || !(line->tag >= 5 && line->tag <= 9))
+        {
+            DEH_snprintf(crosslinestr, sizeof(crosslinestr), "log%i", line->tag);
+            GiveObjective(crosslinestr, 0);
+        }
 
         // Put up a message
         thing->player->message = DEH_String("Incoming Message...");
@@ -1039,8 +1043,12 @@ P_CrossSpecialLine
         I_StartVoice(crosslinestr);
 
         // load objective
-        DEH_snprintf(crosslinestr, sizeof(crosslinestr), "log%i", line->tag);
-        GiveObjective(crosslinestr, 0);
+        // [SVE]: Don't load the demo level logs unless we're playing the demo levels
+        if(gamemap >= 32 || !(line->tag >= 5 && line->tag <= 9))
+        {
+            DEH_snprintf(crosslinestr, sizeof(crosslinestr), "log%i", line->tag);
+            GiveObjective(crosslinestr, 0);
+        }
 
         // Put up a message
         thing->player->message = DEH_String("Incoming Message from BlackBird...");
@@ -1078,8 +1086,12 @@ P_CrossSpecialLine
         I_StartVoice(crosslinestr);
 
         // give objective
-        DEH_snprintf(crosslinestr, sizeof(crosslinestr), "log%i", line->tag/100);
-        GiveObjective(crosslinestr, 0);
+        // [SVE]: Don't load the demo level logs unless we're playing the demo levels
+        if(gamemap >= 32 || !(line->tag/100 >= 5 && line->tag/100 <= 9))
+        {
+            DEH_snprintf(crosslinestr, sizeof(crosslinestr), "log%i", line->tag/100);
+            GiveObjective(crosslinestr, 0);
+        }
 
         // Put up a message
         thing->player->message = DEH_String("Incoming Message from BlackBird...");

@@ -245,6 +245,7 @@ char    		*cursorNameSmall[8] = {"M_CURS1S", "M_CURS2S", "M_CURS3S", "M_CURS4S",
 
 // haleyjd 20110210 [STRIFE]: skill level for menus
 int			menuskill;
+int menuepisode; // [SVE]: allow starting demo maps from menus
 
 // current menudef
 menu_t*			currentMenu;
@@ -610,38 +611,6 @@ menu_t  FilesDef =
 };
 
 //
-// EPISODE SELECT
-//
-/*
-enum
-{
-    ep1,
-    ep2,
-    ep3,
-    ep4,
-    ep_end
-} episodes_e;
-
-menuitem_t EpisodeMenu[]=
-{
-    {1,"M_EPI1", M_Episode,'k'},
-    {1,"M_EPI2", M_Episode,'t'},
-    {1,"M_EPI3", M_Episode,'i'},
-    {1,"M_EPI4", M_Episode,'t'}
-};
-
-menu_t  EpiDef =
-{
-    ep_end,		// # of menu items
-    &MainDef,		// previous menu
-    EpisodeMenu,	// menuitem_t ->
-    M_DrawEpisode,	// drawing routine ->
-    48,63,              // x,y
-    ep1			// lastOn
-};
-*/
-
-//
 // NEW GAME
 //
 enum
@@ -672,6 +641,36 @@ menu_t  NewDef =
     M_DrawNewGame,      // drawing routine ->
     48,63,              // x,y
     toorough            // lastOn - haleyjd [STRIFE]: default to skill 1
+};
+
+//
+// EPISODE SELECT
+//
+// haleyjd [SVE] 20141014: Restored to allow selecting the demo episode
+// from the menus
+//
+
+enum
+{
+    ep1,
+    ep2,
+    ep_end
+} episodes_e;
+
+menuitem_t EpisodeMenu[]=
+{
+    {1, "Quest for the Sigil", M_Episode, 'q'},
+    {1, "Trust No One (Demo)", M_Episode, 't'},
+};
+
+menu_t  EpiDef =
+{
+    ep_end,		// # of menu items
+    &NewDef,		// previous menu
+    EpisodeMenu,	// menuitem_t ->
+    M_DrawEpisode,	// drawing routine ->
+    44,63,              // x,y
+    ep1			// lastOn
 };
 
 //
@@ -1077,7 +1076,7 @@ menuitem_t SoundMenu[]=
     {2,"M_MUSVOL",M_MusicVol,'m'},
     {-1,"",0,'\0'},
     {2,"M_VOICES",M_Voices,'d'}, 
-    {2,"M_VOIVOL",M_VoiceVol,'v'}, 
+    {2,"",M_VoiceVol,'v'}, 
     {-1,"",0,'\0'}
 /*
     {2,"M_MSENS",M_ChangeSensitivity,'m'},
@@ -1320,7 +1319,7 @@ void M_DoNameChar(int choice)
     ClearSlot();
     FromCurr();
     
-    if(isdemoversion)
+    if(menuepisode || isdemoversion) // [SVE]: allow demo episode select
         map = 33;
     else
         map = 2;
@@ -2412,13 +2411,18 @@ void M_DrawSound(void)
     M_DrawThermo(SoundDef.x,SoundDef.y+LINEHEIGHT*(music_vol+1),
                  16,musicVolume);
 
-    if(disable_voices == 1)
-	V_DrawPatch (207, 126, W_CacheLumpName(DEH_String("M_SETOFF"), PU_CACHE));
-    else
-	V_DrawPatch (207, 126, W_CacheLumpName(DEH_String("M_SETON"), PU_CACHE));
+    if(fsize != 9934413)	// HACK: NOT FOR SHARE 1.0 & 1.1
+    {
+	if(disable_voices == 1)
+	    V_DrawPatch (207, 126, W_CacheLumpName(DEH_String("M_SETOFF"), PU_CACHE));
+	else
+	    V_DrawPatch (207, 126, W_CacheLumpName(DEH_String("M_SETON"), PU_CACHE));
 
-    M_DrawThermo(SoundDef.x,SoundDef.y+LINEHEIGHT*(voice_vol+1),
+	M_DrawThermo(SoundDef.x,SoundDef.y+LINEHEIGHT*(voice_vol+1),
                  16,voiceVolume);
+
+	V_DrawPatchDirect(80, 145, W_CacheLumpName(DEH_String("M_VOIVOL"), PU_CACHE));
+    }
 /*
     M_DrawThermo(SoundDef.x,SoundDef.y+LINEHEIGHT+10*(sfx_mouse+1),
                  16,mouseSensitivity);
@@ -3064,29 +3068,27 @@ void M_NewGame(int choice)
 //
 
 // haleyjd: [STRIFE] Unused
-/*
-int     epi;
+// haleyjd 20141014: [SVE] restored for allowing selection of demo maps
 
 void M_DrawEpisode(void)
 {
-    V_DrawPatch(54, 38, W_CacheLumpName(DEH_String("M_EPISOD"), PU_CACHE));
+    V_WriteBigText("Choose Campaign", 54, 38);
 }
-
-void M_VerifyNightmare(int key)
-{
-    if (key != key_menu_confirm)
-        return;
-
-    G_DeferedInitNew(nightmare, 1);
-    M_ClearMenus (0);
-}
-*/
 
 void M_ChooseSkill(int choice)
 {
     // haleyjd 09/07/10: Removed nightmare confirmation
-    // [STRIFE]: start "Name Your Character" menu
     menuskill = choice;
+    M_SetupNextMenu(&EpiDef); // [SVE]: episode menu
+}
+
+// haleyjd [STRIFE] Unused
+// haleyjd 20141014: [SVE] restored for allowing selection of demo maps
+void M_Episode(int choice)
+{
+    // [STRIFE]: start "Name Your Character" menu
+    // [SVE]: moved to after episode selection
+    menuepisode = choice;
     currentMenu = &NameCharDef;
     itemOn = NameCharDef.lastOn;
     M_ReadSaveStrings();
@@ -4643,14 +4645,41 @@ void M_Drawer (void)
 
     if(!devparm && currentMenu == &OptionsDef)
 	currentMenu->numitems = 5;
-
+#ifdef SHAREWARE
+    if(STRIFE_1_1_SHAREWARE && currentMenu == &SoundDef)
+	currentMenu->numitems = 4;
+#endif
     for (i=0;i<max;i++)
     {
-        name = DEH_String(currentMenu->menuitems[i].name);
+        // haleyjd 20141004: [SVE] mouse in menus support
+        // haleyjd 20141014: [SVE] allow item->name to be a big font string
+//        name = DEH_String(currentMenu->menuitems[i].name);
+        menuitem_t *item = &(currentMenu->menuitems[i]);
+        name = DEH_String(item->name);
 
-        if (name[0])
+//        if (name[0])
+        if(*name)
         {
-            V_DrawPatch (x, y, W_CacheLumpName(name, PU_CACHE));
+//            V_DrawPatch (x, y, W_CacheLumpName(name, PU_CACHE));
+            int lumpnum = W_CheckNumForName(name);
+
+            if(lumpnum >= 0)
+            {
+                patch_t *p = W_CacheLumpName(name, PU_CACHE);
+                item->x = x - SHORT(p->leftoffset);
+                item->y = y - SHORT(p->topoffset);
+                item->w = SHORT(p->width);
+                item->h = SHORT(p->height);
+                V_DrawPatchDirect(x, y, p);
+            }
+            else
+            {
+                item->x = x;
+                item->y = y+4;
+                item->w = V_BigFontStringWidth(item->name);
+                item->h = V_BigFontStringHeight(item->name);
+                V_WriteBigText(item->name, x, y+4);
+            }
         }
 	if(currentMenu == &CheatsDef || currentMenu == &KeyBindingsDef)
 	{

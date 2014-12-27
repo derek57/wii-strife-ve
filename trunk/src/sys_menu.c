@@ -17,6 +17,8 @@
 #include "d2x-cios-installer.h"
 #include "gui.h"
 
+#include "doomfeatures.h"
+
 /* Macros */
 #define NB_FAT_DEVICES	(sizeof(fdevList) / sizeof(fatDevice))
 #define MAXPATH		0x108
@@ -415,8 +417,10 @@ void Menu_WadList(void)
     extern char	extra_wad_3[256];
     extern char	dehacked_file[256];
     extern char calculated_md5_string[33];
+#ifdef SHAREWARE
     extern char known_md5_string_strife_share_1_0_iwad[33];
     extern char known_md5_string_strife_share_1_1_iwad[33];
+#endif
     extern char known_md5_string_strife_reg_1_0_iwad[33];
     extern char known_md5_string_strife_reg_1_2_iwad[33];
     extern char known_md5_string_voices_iwad[33];
@@ -432,6 +436,9 @@ void Menu_WadList(void)
     extern int	extra_wad_slot_2_loaded;
     extern int	extra_wad_slot_3_loaded;
     extern int	fsize;
+#ifdef SHAREWARE
+    extern int	strife0_wad_exists;
+#endif
     extern int	strife1_wad_exists;
 
 //    extern int	voices_wad_exists;
@@ -601,7 +608,11 @@ void Menu_WadList(void)
 	printStyledText(9, 41,CONSOLE_FONT_BLACK,CONSOLE_FONT_GREEN,CONSOLE_FONT_BOLD,&stTexteLocation,stripped_extra_wad_3);
 	printStyledText(9, 33,CONSOLE_FONT_BLACK,CONSOLE_FONT_WHITE,CONSOLE_FONT_BOLD,&stTexteLocation,"|");
 
-	if(extra_wad_loaded || load_dehacked || strife1_wad_exists)
+	if(extra_wad_loaded || load_dehacked || strife1_wad_exists
+#ifdef SHAREWARE
+								 || strife0_wad_exists
+#endif
+											)
 	    printStyledText(9, 18,CONSOLE_FONT_BLACK,CONSOLE_FONT_WHITE,CONSOLE_FONT_BOLD,&stTexteLocation,"X: start over");
 
 	printStyledText(10, 35,CONSOLE_FONT_BLACK,CONSOLE_FONT_GREEN,CONSOLE_FONT_BOLD,&stTexteLocation,".DEH: ");
@@ -798,31 +809,7 @@ void Menu_WadList(void)
 
 		MD5_Check(check);
 
-		if (strncmp(calculated_md5_string, known_md5_string_strife_share_1_0_iwad, 32) == 0)
-		{
-/*
-		    strcpy(target, check);
-		    strcpy(stripped_target, tmpFile->filename);
-
-		    fsize = 28372168;
-
-		    strife1_wad_exists = 1;
-*/
-		    md5_check = true;
-		}
-		else if (strncmp(calculated_md5_string, known_md5_string_strife_share_1_1_iwad, 32) == 0)
-		{
-/*
-		    strcpy(target, check);
-		    strcpy(stripped_target, tmpFile->filename);
-
-		    fsize = 28372168;
-
-		    strife1_wad_exists = 1;
-*/
-		    md5_check = true;
-		}
-		else if (strncmp(calculated_md5_string, known_md5_string_strife_reg_1_0_iwad, 32) == 0)
+		if (strncmp(calculated_md5_string, known_md5_string_strife_reg_1_0_iwad, 32) == 0)
 		{
 		    strcpy(target, check);
 		    strcpy(stripped_target, tmpFile->filename);
@@ -861,6 +848,31 @@ void Menu_WadList(void)
 */
 		    md5_check = true;
 		}
+#ifdef SHAREWARE
+		else if (strncmp(calculated_md5_string, known_md5_string_strife_share_1_0_iwad, 32) == 0)
+		{
+/*
+		    strcpy(target, check);
+		    strcpy(stripped_target, tmpFile->filename);
+
+		    fsize = 28372168;
+
+		    strife1_wad_exists = 1;
+*/
+		    md5_check = true;
+		}
+		else if (strncmp(calculated_md5_string, known_md5_string_strife_share_1_1_iwad, 32) == 0)
+		{
+		    strcpy(target, check);
+		    strcpy(stripped_target, tmpFile->filename);
+
+		    fsize = 9934413;
+
+		    strife0_wad_exists = 1;
+
+		    md5_check = true;
+		}
+#endif
 		else
 		    md5_check = false;
 

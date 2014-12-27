@@ -44,6 +44,9 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
+// [SVE]: kerning data for big font
+#include "kerning.h"
+
 // TODO: There are separate RANGECHECK defines for different games, but this
 // is common code. Fix this.
 #define RANGECHECK
@@ -936,3 +939,152 @@ void V_DrawMouseSpeedBox(int speed)
                  MOUSE_SPEED_BOX_HEIGHT - 2, red);
 }
 
+//=============================================================================
+//
+// haleyjd 20140928: [SVE] Big font support
+//
+
+static int bfkerntbl[128*128];
+
+patch_t *bigfont[BIG_FONTSIZE];
+
+//
+// V_LoadBigFont
+//
+
+void V_LoadBigFont(void)
+{
+    size_t i;
+
+    // load patches
+    for(i = 0; i < BIG_FONTSIZE; i++)
+    {
+        int lumpnum;
+        int charnum = BIG_FONTSTART + i;
+        char lumpname[9];
+
+        M_snprintf(lumpname, sizeof(lumpname), "BFONT%02d", charnum);
+        if((lumpnum = W_CheckNumForName(lumpname)) >= 0)
+            bigfont[i] = W_CacheLumpNum(lumpnum, PU_STATIC);
+    }
+
+    // init kerning table
+    for(i = 0; i < arrlen(bfkerntbl); i++)
+        bfkerntbl[i] = -1; // default step is -1
+
+    for(i = 0; i < numkernings; i++)
+    {
+        kerndata_t *kd = &kernings[i];
+        bfkerntbl[kd->first + (((unsigned int)kd->second) << 7)] = kd->offset;
+    }
+}
+
+//
+// V_WriteBigText
+//
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wchar-subscripts"
+
+void V_WriteBigText(const char *str, int x, int y)
+{
+    const char *rover;
+    char c;            // current char
+    char lastc = '\0'; // last char seen that wasn't a space
+    patch_t *patch;
+    int initx = x;
+
+    for(rover = str; *rover; rover++)
+    {
+        c = toupper(*rover);
+
+        if(c == ' ')
+        {
+            x += 8;
+            continue;
+        }
+        if(c == '\n')
+        {
+            y += 20;
+            x = initx;
+            lastc = '\0';
+            continue;
+        }
+
+        if(c < BIG_FONTSTART || c > BIG_FONTEND || !(patch = bigfont[c - BIG_FONTSTART]))
+            continue;
+
+        if(lastc) // kerning - move toward the left depending on the previous char
+            x += bfkerntbl[lastc + (((unsigned int)c) << 7)];
+
+        V_DrawPatch(x, y, patch);
+
+        x += SHORT(patch->width);
+        lastc = c;
+    }
+}
+
+//
+// V_BigFontStringWidth
+//
+
+int V_BigFontStringWidth(const char *str)
+{
+    const char *rover;
+    char c;            // current char
+    char lastc = '\0'; // last char seen that wasn't a space
+    patch_t *patch;
+    int widestwidth = 0;
+    int width = 0;
+
+    for(rover = str; *rover; rover++)
+    {
+        c = toupper(*rover);
+
+        if(c == ' ')
+        {
+            width += 8;
+            continue;
+        }
+        if(c == '\n')
+        {
+            if(width > widestwidth)
+                widestwidth = width;
+            width = 0;
+            lastc = '\0';
+            continue;
+        }
+
+        if(c < BIG_FONTSTART || c > BIG_FONTEND || !(patch = bigfont[c - BIG_FONTSTART]))
+            continue;
+
+        if(lastc)
+            width += bfkerntbl[lastc + (((unsigned int)c) << 7)];
+        width += SHORT(patch->width);
+
+        lastc = c;
+    }
+
+    if(width > widestwidth)
+        widestwidth = width;
+
+    return widestwidth;
+}
+
+//
+// V_BigFontStringHeight
+//
+
+int V_BigFontStringHeight(const char *str)
+{
+    const char *rover;
+    int height = 20; // always at least 20px
+
+    for(rover = str; *rover; rover++)
+    {
+        if(*rover == '\n')
+            height += 20; // +20 for every linebreak
+    }
+
+    return height;
+}

@@ -73,6 +73,8 @@ musicinfo_t *S_music = NULL;		// FOR PSP: (SHAREWARE RESTRICTIONS)
 musicinfo_t *S_music = S_musicFull;		// FOR PSP: (SHAREWARE RESTRICTIONS)
 #endif
 
+extern boolean isregistered;
+
 typedef struct
 {
     // sound information (if null, channel avail.)
@@ -575,6 +577,41 @@ static voiceinfo_t *S_getVoice(const char *name, int lumpnum)
     return voice;
 }
 
+// [SVE]: this table helps fix up the demo maps
+static const char *demoVoices[][2] =
+{
+    { "VOC2", "VOC1002" },
+    { "VOC4", "VOC223"  },
+    { "VOC6", "VOC205"  },
+    { "VOC7", "VOC225"  },
+    { "VOC8", "VOC233"  },
+    { "VOC9", "VOC237"  }
+};
+
+//
+// S_replaceDemoVoice
+//
+// haleyjd 20140906: [SVE] Remap some voice lumps when we are playing the
+// demo levels in the retail version of the game so that what's going on
+// makes sense. The vast majority of the Blackbird dialogs were re-recorded
+// with improved phrasing or just provided in a higher sample rate, so we use
+// those where they exist. Otherwise, the lumps have been added to SVE.wad.
+//
+static const char *S_replaceDemoVoice(const char *lumpname)
+{
+    int i;
+
+    if(!lumpname)
+        return lumpname;
+
+    for(i = 0; i < arrlen(demoVoices); i++)
+    {
+        if(!strncasecmp(lumpname, demoVoices[i][0], 8))
+            return demoVoices[i][1];
+    }
+    return lumpname;
+}
+
 //
 // I_StartVoice
 //
@@ -600,6 +637,10 @@ void I_StartVoice(const char *lumpname)
     // user has disabled voices?
     if(disable_voices)
         return;
+
+    // haleyjd 20140906: [SVE] check for demo redirection
+    if(/*!classicmode &&*/ isregistered && gamemap >= 32 && gamemap <= 34)
+        lumpname = S_replaceDemoVoice(lumpname);
 
     // have a voice playing already? stop it.
     if(i_voicehandle >= 0)
@@ -805,6 +846,8 @@ void S_ChangeMusic(int musicnum, int looping)
         M_snprintf(namebuf, sizeof(namebuf), "d_%s", DEH_String(music->name));
         music->lumpnum = W_GetNumForName(namebuf);
     }
+
+//    printf("%s\n",music->name);	// FOR DEBUGGING
 
     music->data = W_CacheLumpNum(music->lumpnum, PU_STATIC);
 

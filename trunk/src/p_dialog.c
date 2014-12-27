@@ -41,6 +41,7 @@
 #include "p_inter.h"
 
 #include "doomfeatures.h"
+#include "i_system.h"
 
 //
 // Defines and Macros
@@ -48,6 +49,7 @@
 
 // haleyjd: size of the original Strife mapdialog_t structure.
 #define ORIG_MAPDIALOG_SIZE 0x5EC
+#define DEMO_MAPDIALOG_SIZE 0x5D0
 
 #define DIALOG_INT(field, ptr)    \
     field = ((int)ptr[0]        | \
@@ -447,6 +449,92 @@ static void P_ParseDialogLump(byte *lump, mapdialog_t **dialogs,
 }
 
 //
+// P_ParseDemoDialogLump
+//
+// haleyjd 20140906: [SVE] Proper support for the demo levels' dialogs.
+//
+static void P_ParseDemoDialogLump(byte *lump, mapdialog_t **dialogs, 
+                                  int numdialogs, int tag)
+{
+    int i;
+    byte *rover = lump;
+
+    *dialogs = Z_Malloc(numdialogs * sizeof(mapdialog_t), tag, NULL);
+
+    for(i = 0; i < numdialogs; i++)
+    {
+        int j;
+        int voicenumber;
+        mapdialog_t *curdialog = &((*dialogs)[i]);
+
+        DIALOG_INT(curdialog->speakerid,    rover);
+        DIALOG_INT(curdialog->dropitem,     rover);
+        DIALOG_INT(voicenumber,             rover);
+        DIALOG_STR(curdialog->name,         rover, MDLG_NAMELEN);
+        DIALOG_STR(curdialog->text,         rover, MDLG_TEXTLEN);
+
+        // fix up missing fields in the demo format
+        if(voicenumber > 0)
+            M_snprintf(curdialog->voice, MDLG_LUMPLEN, "VOC%d", voicenumber);
+        else
+            memset(curdialog->voice, 0, MDLG_LUMPLEN);
+        curdialog->jumptoconv = 0;
+        for(j = 0; j < MDLG_MAXITEMS; j++)
+            curdialog->checkitem[j] = 0;
+        memset(curdialog->backpic, 0, MDLG_LUMPLEN);
+
+        // copy choices
+        for(j = 0; j < 5; j++)
+        {
+            mapdlgchoice_t *curchoice = &(curdialog->choices[j]);
+            DIALOG_INT(curchoice->giveitem,         rover);
+            DIALOG_INT(curchoice->needitems[0],     rover);
+            DIALOG_INT(curchoice->needitems[1],     rover);
+            DIALOG_INT(curchoice->needitems[2],     rover);
+            DIALOG_INT(curchoice->needamounts[0],   rover);
+            DIALOG_INT(curchoice->needamounts[1],   rover);
+            DIALOG_INT(curchoice->needamounts[2],   rover);
+            DIALOG_STR(curchoice->text,             rover, MDLG_CHOICELEN);
+            DIALOG_STR(curchoice->textok,           rover, MDLG_MSGLEN);
+            DIALOG_INT(curchoice->next,             rover);
+            DIALOG_INT(curchoice->objective,        rover);
+            DIALOG_STR(curchoice->textno,           rover, MDLG_MSGLEN);
+        }
+    }
+}
+
+typedef enum
+{
+    DIALOG_FMT_RELEASE,
+    DIALOG_FMT_DEMO,
+    DIALOG_FMT_ERROR
+} dialogfmt_e;
+
+//
+// P_getDialogFormat
+//
+// haleyjd 20140906: [SVE] Determine dialog format.
+//
+static dialogfmt_e P_getDialogFormat(int lumpnum, int *numdialogs)
+{
+    int lumplen = W_LumpLength(lumpnum);
+
+    if(lumplen % ORIG_MAPDIALOG_SIZE == 0)
+    {
+        *numdialogs = lumplen / ORIG_MAPDIALOG_SIZE;
+        return DIALOG_FMT_RELEASE;
+    }
+    else if(lumplen % DEMO_MAPDIALOG_SIZE == 0)
+    {
+        *numdialogs = lumplen / DEMO_MAPDIALOG_SIZE;
+        return DIALOG_FMT_DEMO;
+    }
+
+    I_Error("P_getDialogFormat: unknown dialog record size");
+    return DIALOG_FMT_ERROR;
+}
+
+//
 // P_DialogLoad
 //
 // [STRIFE] New function
@@ -465,9 +553,23 @@ void P_DialogLoad(void)
     else
     {
         byte *leveldialogptr = W_CacheLumpNum(lumpnum, PU_STATIC);
+/*
         numleveldialogs = W_LumpLength(lumpnum) / ORIG_MAPDIALOG_SIZE;
         P_ParseDialogLump(leveldialogptr, &leveldialogs, numleveldialogs, 
                           PU_LEVEL);
+*/
+        dialogfmt_e fmt = P_getDialogFormat(lumpnum, &numleveldialogs);
+        switch(fmt)
+        {
+        case DIALOG_FMT_RELEASE:
+            P_ParseDialogLump(leveldialogptr, &leveldialogs, numleveldialogs, PU_LEVEL);
+            break;
+        case DIALOG_FMT_DEMO:
+            P_ParseDemoDialogLump(leveldialogptr, &leveldialogs, numleveldialogs, PU_LEVEL);
+            break;
+        default:
+            break;
+        }
         Z_Free(leveldialogptr); // haleyjd: free the original lump
     }
 
@@ -475,14 +577,30 @@ void P_DialogLoad(void)
     if(!script0loaded)
     {
         byte *script0ptr;
+        dialogfmt_e fmt;
 
         script0loaded = true; 
         // BUG: Rogue should have used W_GetNumForName here...
-        lumpnum = W_CheckNumForName(DEH_String("script00")); 
+//        lumpnum = W_CheckNumForName(DEH_String("script00")); 
+        lumpnum = W_GetNumForName(DEH_String("script00"));
         script0ptr = W_CacheLumpNum(lumpnum, PU_STATIC);
+/*
         numscript0dialogs = W_LumpLength(lumpnum) / ORIG_MAPDIALOG_SIZE;
         P_ParseDialogLump(script0ptr, &script0dialogs, numscript0dialogs,
                           PU_STATIC);
+*/
+        fmt = P_getDialogFormat(lumpnum, &numscript0dialogs);
+        switch(fmt)
+        {
+        case DIALOG_FMT_RELEASE:
+            P_ParseDialogLump(script0ptr, &script0dialogs, numscript0dialogs, PU_STATIC);
+            break;
+        case DIALOG_FMT_DEMO:
+            P_ParseDemoDialogLump(script0ptr, &script0dialogs, numscript0dialogs, PU_STATIC);
+            break;
+        default:
+            break;
+        }
         Z_Free(script0ptr); // haleyjd: free the original lump
     }
 }
@@ -1117,6 +1235,7 @@ static void P_DialogDrawer(void)
 
 	    dialog_active = true; // FIX FOR THE WII: DISABLES THE JUMPING WHILE USING DIALOG ITEMS
 	}
+/*
 #ifdef SHAREWARE
 	if(STRIFE_1_0_SHAREWARE || STRIFE_1_1_SHAREWARE)		// FOR PSP: SHAREWARE INFO
 	{
@@ -1134,6 +1253,7 @@ static void P_DialogDrawer(void)
 	    y = M_WriteText(20, 128, "ENJOY THE FULL VERSION OF THE GAME.");
 	}
 #endif
+*/
         height = 20 * dialogmenu.numitems;
 
         finaly = 175 - height;     // preferred height

@@ -114,5 +114,18 @@ void V_LoadXlaTable(void);
 
 void V_DrawMouseSpeedBox(int speed);
 
+// [SVE]: big font
+
+#define BIG_FONTSTART '!'
+#define BIG_FONTEND 'Z'
+#define BIG_FONTSIZE (BIG_FONTEND - BIG_FONTSTART + 1)
+
+extern patch_t *bigfont[BIG_FONTSIZE];
+
+void V_LoadBigFont(void);
+void V_WriteBigText(const char *str, int x, int y);
+int  V_BigFontStringWidth(const char *str);
+int  V_BigFontStringHeight(const char *str);
+
 #endif
 

@@ -80,15 +80,14 @@ musicinfo_t S_musicDemo[] =
 {					// FOR PSP: (SHAREWARE RESTRICTIONS - ORDER INCORRECT)
     MUSIC(NULL),
     MUSIC("strife"),
-    MUSIC("fmintr"),
-    MUSIC("fmstl"),
-    MUSIC("fmfast"),
+    MUSIC("map1"),	// OK
+    MUSIC("map2"),	// OK
+    MUSIC("map3"),	// OK
+    MUSIC("fmfast"),	// OK
+    MUSIC("fmintr"),	// OK
     MUSIC("fmact"),
-    MUSIC("fmdrne"),
-    MUSIC("map1"),
-    MUSIC("map2"),
-    MUSIC("map3")
-
+    MUSIC("fmstl"),
+    MUSIC("fmdrne")
 };
 #endif
 
