@@ -799,52 +799,68 @@ void R_ExecuteSetViewSize (void)
 void R_Init (void)
 {
     R_InitData ();
-    if(devparm)
+    if(devparm
+#ifdef SHAREWARE
+		|| STRIFE_1_1_SHAREWARE
+#endif
+					)
         printf (".");
     else
         D_IntroTick(); // [STRIFE] tick intro
 
     R_InitPointToAngle ();
-    if(devparm)
+    if(devparm
+#ifdef SHAREWARE
+		|| STRIFE_1_1_SHAREWARE
+#endif
+					)
         printf (".");
 
     R_InitTables ();
     // viewwidth / viewheight / detailLevel are set by the defaults
-    if(devparm)
+    if(devparm
+#ifdef SHAREWARE
+		|| STRIFE_1_1_SHAREWARE
+#endif
+					)
         printf (".");
 
     R_SetViewSize (screenblocks, detailLevel);
     R_InitPlanes ();
-    if(devparm)
+    if(devparm
+#ifdef SHAREWARE
+		|| STRIFE_1_1_SHAREWARE
+#endif
+					)
         printf (".");
     
     R_InitLightTables ();
 
-    if(devparm)
+//    if(devparm)
     {
 #ifdef SHAREWARE
 	if(STRIFE_1_0_SHAREWARE || STRIFE_1_1_SHAREWARE)
 	    printf (".");
 #endif
     }
-    else
+//    else
 	D_IntroTick();
 
     R_InitSkyMap ();
 
-    if(devparm)
+//    if(devparm)
     {
 #ifdef SHAREWARE
 	if(STRIFE_1_0_SHAREWARE || STRIFE_1_1_SHAREWARE)
 	    printf (".");
 #endif
     }
-    else
+//    else
 	D_IntroTick();
 
     R_InitTranslationTables ();
 
-    if(devparm)
+//    if(devparm)
     {
 #ifdef SHAREWARE
 	if(STRIFE_1_0_SHAREWARE || STRIFE_1_1_SHAREWARE)
@@ -852,7 +868,7 @@ void R_Init (void)
 #endif
 	printf("]");
     }
-    else
+//    else
 	D_IntroTick();
 
     framecount = 0;

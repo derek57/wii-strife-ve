@@ -33,7 +33,7 @@ typedef struct
     // 0 = no cursor here, 1 = ok, 2 = arrows ok
     short	status;
     
-    char	name[10];
+    char	name[20];
     
     // choice = menu item #.
     // if status = 2,
@@ -42,6 +42,12 @@ typedef struct
     
     // hotkey in menu
     char	alphaKey;			
+
+    // haleyjd 20141004: [SVE] mouse support
+    int    x;
+    int    y;
+    int    w;
+    int    h;
 } menuitem_t;
 
 typedef struct menu_s

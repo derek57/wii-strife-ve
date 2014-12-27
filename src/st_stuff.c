@@ -73,6 +73,12 @@
 #include "hu_lib.h"     // [STRIFE]
 #include "hu_stuff.h"
 
+#include "doomfeatures.h"
+
+#ifdef SHAREWARE
+extern boolean STRIFE_1_0_SHAREWARE;
+#endif
+
 //
 // STATUS BAR DATA
 //
@@ -1500,7 +1506,10 @@ static void ST_loadUnloadGraphics(load_callback_t callback)
     callback(DEH_String("INVPOP2"),  &invpop2);
     callback(DEH_String("INVPBAK"),  &invpbak);
     callback(DEH_String("INVPBAK2"), &invpbak2);
-    callback(DEH_String("INVCURS"),  &invcursor);
+#ifdef SHAREWARE
+    if(!STRIFE_1_0_SHAREWARE)				// FOR PSP: (NOT AVAILABLE IN SHAREWARE v1.0)
+#endif
+    	callback(DEH_String("INVCURS"),  &invcursor);
 }
 
 static void ST_loadCallback(char *lumpname, patch_t **variable)

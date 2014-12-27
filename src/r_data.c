@@ -564,14 +564,14 @@ void R_InitTextures (void)
         {
             // [STRIFE]: tick intro if not in devparm
 
-	    if(devparm)
+//	    if(devparm)
 	    {
 #ifdef SHAREWARE
 		if(STRIFE_1_0_SHAREWARE || STRIFE_1_1_SHAREWARE)
 		    printf (".");
 #endif
 	    }
-	    else
+//	    else
 		D_IntroTick();
 
         }
@@ -699,7 +699,11 @@ void R_InitSpriteLumps (void)
         if(!(i&63))
         {
             // [STRIFE] tick intro if not in devparm
-            if(devparm)
+            if(devparm 
+#ifdef SHAREWARE
+			|| STRIFE_1_1_SHAREWARE
+#endif
+						)
                 printf (".");
             else
                 D_IntroTick();
@@ -737,33 +741,37 @@ void R_InitColormaps (void)
 void R_InitData (void)
 {
     R_InitTextures ();
-    if(devparm)
+    if(devparm
+#ifdef SHAREWARE
+		|| STRIFE_1_1_SHAREWARE
+#endif
+					)
         printf (".");
     else
         D_IntroTick(); // [STRIFE] tick intro
 
     R_InitFlats ();
 
-    if(devparm)
+//    if(devparm)
     {
 #ifdef SHAREWARE
 	if(STRIFE_1_0_SHAREWARE || STRIFE_1_1_SHAREWARE)
 	    printf (".");
 #endif
     }
-    else
+//    else
 	D_IntroTick();
 
     R_InitSpriteLumps ();
 
-    if(devparm)
+//    if(devparm)
     {
 #ifdef SHAREWARE
 	if(STRIFE_1_0_SHAREWARE || STRIFE_1_1_SHAREWARE)
 	    printf (".");
 #endif
     }
-    else
+//    else
 	D_IntroTick();
 
     R_InitColormaps ();

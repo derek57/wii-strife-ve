@@ -372,10 +372,12 @@ typedef struct
 
 #define SavePathRoot1USB "usb:/apps/wiistrife/savegames"
 #define SavePathRoot2USB "usb:/apps/wiistrife/savegames/strife.wad"
+#define SavePathStrifeShare11USB "usb:/apps/wiistrife/savegames/strife.wad/SHR_V11"
 #define SavePathStrifeReg10USB "usb:/apps/wiistrife/savegames/strife.wad/REG_V10"
 #define SavePathStrifeReg12USB "usb:/apps/wiistrife/savegames/strife.wad/REG_V131"
 #define SavePathRoot1SD "sd:/apps/wiistrife/savegames"
 #define SavePathRoot2SD "sd:/apps/wiistrife/savegames/strife.wad"
+#define SavePathStrifeShare11SD "sd:/apps/wiistrife/savegames/strife.wad/SHR_V11"
 #define SavePathStrifeReg10SD "sd:/apps/wiistrife/savegames/strife.wad/REG_V10"
 #define SavePathStrifeReg12SD "sd:/apps/wiistrife/savegames/strife.wad/REG_V131"
 
