@@ -109,7 +109,7 @@ static boolean		askforkey = false;
 
 int			cheeting;
 int			map = 0;
-int			spot = 0;
+//int			spot = 0;
 int			musnum = 1;
 int			crosshair = 0;
 int			button_layout = 0;
@@ -266,6 +266,7 @@ void M_LoadGame(int choice);
 void M_SaveGame(int choice);
 void M_Options(int choice);
 void M_EndGame(int choice);
+void M_StartCast(int choice); // [SVE]
 void M_ReadThis(int choice);
 void M_ReadThis2(int choice);
 void M_ReadThis3(int choice); // [STRIFE]
@@ -459,8 +460,11 @@ char *mustext[] =			// ADDED FOR PSP
 	"TRAINING FACILITY",
 	"UNKNOWN MUSIC TITLE #1",	// LEFTOVERS FROM ROGUE???
 	"UNKNOWN MUSIC TITLE #2",	// LEFTOVERS FROM ROGUE???
+	"UNKNOWN MUSIC (DEMO VERSION)",	// DEMO ADDITIONS
+	"SANCTUARY (DEMO VERSION)",	// DEMO ADDITIONS
+	"FRONT BASE (DEMO VERSION)",	// DEMO ADDITIONS
 };
-
+/*
 char *spottext[] =			// FOR PSP (BUT DOESN'T WORK (YET))
 {
 	" ",
@@ -475,7 +479,7 @@ char *spottext[] =			// FOR PSP (BUT DOESN'T WORK (YET))
 	"09",
 	"10",
 };
-
+*/
 char *stupidtable[] =
 {
     "A","B","C","D","E",
@@ -589,6 +593,7 @@ enum
     savegame,
     endgame,
     cheats,
+    startcast,
     files_end
 } files_e;
 
@@ -597,7 +602,8 @@ menuitem_t FilesMenu[]=
     {1,"M_LOADG",M_LoadGame,'l'},
     {1,"M_SAVEG",M_SaveGame,'s'},
     {1,"M_ENDGAM",M_EndGame,'e'},
-    {1,"M_CHEATS",M_Cheats,'c'}
+    {1,"M_CHEATS",M_Cheats,'c'},
+    {1,"Show Cast",M_StartCast,'x'} // [SVE]
 };
 
 menu_t  FilesDef =
@@ -1319,11 +1325,16 @@ void M_DoNameChar(int choice)
     ClearSlot();
     FromCurr();
     
-    if(menuepisode || isdemoversion) // [SVE]: allow demo episode select
+    if(menuepisode)			// [SVE]: allow demo episode select
+    {					// HACK AGAINST [SVE]: add more demo style
         map = 33;
+	isdemoversion = true;		// HACK AGAINST [SVE]: add more demo style
+    }					// HACK AGAINST [SVE]: add more demo style
     else
+    {					// HACK AGAINST [SVE]: add more demo style
         map = 2;
-
+	isdemoversion = false;		// HACK AGAINST [SVE]: add more demo style
+    }					// HACK AGAINST [SVE]: add more demo style
     G_DeferedInitNew(menuskill, map);
     M_ClearMenus(0);
 }
@@ -1667,6 +1678,14 @@ void M_DrawReadThis3(void)
 
 void M_GameFiles(int choice)
 {
+    // haleyjd 20141031: [SVE] make cast call context sensitive
+    if(usergame)
+        FilesDef.numitems = files_end - 1;
+    else
+        FilesDef.numitems = files_end;
+    if(FilesDef.lastOn >= FilesDef.numitems)
+        FilesDef.lastOn = 0;
+
     M_SetupNextMenu(&FilesDef);
 }
 
@@ -2866,6 +2885,7 @@ void M_RiftNow(int choice)
     }
     DetectState();
 }
+/*
 					// THIS WAS SUPPOSED TO BE FOR THE PSP SOURCE PORT, BUT...
 void M_Scoot(int choice)		// ...IT DOESN'T WORK AS EXPECTED (YET)
 {
@@ -2882,7 +2902,6 @@ void M_Scoot(int choice)		// ...IT DOESN'T WORK AS EXPECTED (YET)
     }
     DetectState();
 }
-
 					// THIS WAS SUPPOSED TO BE FOR THE PSP SOURCE PORT, BUT...
 void M_ScootNow(int choice)		// ...IT DOESN'T WORK AS EXPECTED (YET)
 {
@@ -2898,7 +2917,7 @@ void M_ScootNow(int choice)		// ...IT DOESN'T WORK AS EXPECTED (YET)
     }
     DetectState();
 }
-
+*/
 void M_Spin(int choice)
 {
     if(/*!netgame && */!demoplayback && gamestate == GS_LEVEL
@@ -2913,7 +2932,7 @@ void M_Spin(int choice)
     	case 1:
 	    if	   (STRIFE_1_0_REGISTERED || STRIFE_1_X_REGISTERED)
 	    {
-		if (musnum < 34)
+		if (musnum < 37)
 		    musnum++;
 	    }
 #ifdef SHAREWARE
@@ -2993,9 +3012,10 @@ void M_DrawCheats(void)
     M_WriteText(72, 136, DEH_String("RIFT (WARP TO MAP):"));
     M_WriteText(72, 160, DEH_String("EXECUTE WARPING"));
 
-//    M_WriteText(72, 160, DEH_String("WARP TO SPOT:"));
-//    M_WriteText(72, 170, DEH_String("EXECUTE WARPING TO SPOT"));	// FOR PSP: (DOESN'T WORK)
-
+/*
+    M_WriteText(72, 160, DEH_String("WARP TO SPOT:"));
+    M_WriteText(72, 170, DEH_String("EXECUTE WARPING TO SPOT"));	// FOR PSP: (DOESN'T WORK)
+*/
     M_WriteText(72, 180, DEH_String("SPIN (PLAY MUSIC TITLE):"));
 
     if     (map == 0 && (STRIFE_1_0_REGISTERED || STRIFE_1_X_REGISTERED))
@@ -3005,12 +3025,12 @@ void M_DrawCheats(void)
 	    map = 32;
 #endif
     M_WriteText(72, 145, maptext[map]);
-
+/*
     if( spot == 0)
 	spot =  1;
 
-//    M_WriteText(230, 160, spottext[spot]);				// FOR PSP: (DOESN'T WORK (YET))
-
+    M_WriteText(230, 160, spottext[spot]);				// FOR PSP: (DOESN'T WORK (YET))
+*/
     if (musnum == 0)
 	musnum =  1;
 
@@ -3292,7 +3312,31 @@ void M_FinishReadThis(int choice)
 }
 */
 
-#if 0
+// haleyjd [SVE]: Implemented cast call!
+
+void M_CheckStartCast(void);
+
+static void M_CastCallResponse(int ch)
+{
+//    if (key != key_menu_confirm)
+    if (ch != key_menu_forward)
+        return;
+    M_CheckStartCast();
+}
+
+void M_StartCast(int choice)
+{
+    boolean i_seejoysticks = true;
+
+    if(usergame)
+    {
+        M_StartMessage(DEH_String("You have to end your game first."), NULL, false);
+        return;
+    }
+    M_StartMessage(i_seejoysticks ? CASTPROMPTGP : CASTPROMPT, M_CastCallResponse, true);
+}
+
+#if 1
 extern void F_StartCast(void);
 
 //
@@ -3302,14 +3346,8 @@ extern void F_StartCast(void);
 //   call from within the menu system... not functional even in
 //   the earliest demo version.
 //
-void M_CheckStartCast()
+void M_CheckStartCast(void)
 {
-    if(usergame)
-    {
-        M_StartMessage(DEH_String("You have to end your game first."), NULL, false);
-        return;
-    }
-
     F_StartCast();
     M_ClearMenus(0);
 }

@@ -1444,6 +1444,12 @@ void P_DialogStart(player_t *player)
     if(player == &players[consoleplayer])
        S_StartSound(0, sfx_radio);
 
+    if(gamemap > 31 && (linetarget->type == MT_SHOPKEEPER_W ||	// HACK AGAINST [SVE]: add more demo style
+			linetarget->type == MT_SHOPKEEPER_B ||	// HACK AGAINST [SVE]: add more demo style
+			linetarget->type == MT_SHOPKEEPER_A ||	// HACK AGAINST [SVE]: add more demo style
+			linetarget->type == MT_SHOPKEEPER_M))	// HACK AGAINST [SVE]: add more demo style
+	S_StartSound(0, sfx_welcum);				// HACK AGAINST [SVE]: add more demo style
+
     linetarget->target = player->mo;         // target the player
     dialogtalker->reactiontime = 2;          // set reactiontime
     dialogtalkerangle = dialogtalker->angle; // remember original angle

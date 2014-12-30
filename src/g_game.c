@@ -207,7 +207,7 @@ extern char		savegamestrings[10][SAVESTRINGSIZE];
 
 // Used for prev/next weapon keys.
 // STRIFE-TODO: Check this table makes sense.
-
+/*
 static const struct
 {
     weapontype_t weapon;
@@ -224,13 +224,11 @@ static const struct
     { wp_torpedo,               wp_mauler },
     { wp_mauler,                wp_mauler },
     { wp_sigil,                 wp_sigil },
-/*
-    { wp_poisonbow,             wp_poisonbow },
-    { wp_wpgrenade,             wp_wpgrenade },
-    { wp_torpedo,               wp_torpedo },
-*/
+//    { wp_poisonbow,             wp_poisonbow },
+//    { wp_wpgrenade,             wp_wpgrenade },
+//    { wp_torpedo,               wp_torpedo },
 };
-
+*/
 #define SLOWTURNTICS	6 
  
 //#define NUMKEYS		256 
@@ -338,7 +336,7 @@ int G_CmdChecksum (ticcmd_t* cmd)
 		 
     return sum; 
 } 
-
+/*
 static boolean WeaponSelectable(weapontype_t weapon)
 {
     player_t *player;
@@ -376,7 +374,8 @@ static boolean WeaponSelectable(weapontype_t weapon)
     return true;
 }
 
-/*static */int G_NextWeapon(int direction)
+
+static int G_NextWeapon(int direction)
 {
     weapontype_t weapon;
     int i;
@@ -412,7 +411,7 @@ static boolean WeaponSelectable(weapontype_t weapon)
 }
 
 boolean keys_showing = false;
-
+*/
 extern boolean automapactive;
 extern boolean menuactive;
 
@@ -2115,6 +2114,10 @@ void G_RiftPlayer(void)
 //
 boolean G_RiftCheat(int riftSpotNum)
 {
+    // [SVE]: don't scoot to uninitialized spots
+    if(!riftSpotInit[riftSpotNum - 1])
+        return false;
+
     return P_TeleportMove(players[0].mo,
                           riftSpots[riftSpotNum - 1].x << FRACBITS,
                           riftSpots[riftSpotNum - 1].y << FRACBITS);
@@ -2631,6 +2634,11 @@ G_InitNew
         paused = false; 
         S_ResumeSound (); 
     } 
+
+    if(map > 31)			// HACK AGAINST [SVE]: add more demo style
+	isdemoversion = true;		// HACK AGAINST [SVE]: add more demo style
+    else				// HACK AGAINST [SVE]: add more demo style
+	isdemoversion = false;		// HACK AGAINST [SVE]: add more demo style
 
     if (skill > sk_nightmare) 
         skill = sk_nightmare;

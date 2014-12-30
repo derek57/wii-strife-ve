@@ -180,9 +180,9 @@
 #define HUSTR_30        "AREA 30: Abandoned Front Base"
 #define HUSTR_31        "AREA 31: Training Facility"
 
-#define HUSTR_32        "AREA  1: Sanctuary"
-#define HUSTR_33        "AREA  2: Town"
-#define HUSTR_34        "AREA  3: Movement Base"
+#define HUSTR_32        "DEMO  1: Sanctuary"
+#define HUSTR_33        "DEMO  2: Town"
+#define HUSTR_34        "DEMO  3: Movement Base"
 /*
 // haleyjd 20110219: [STRIFE] replaced all with Strife chat macros:
 #define HUSTR_CHATMACRO1        "Fucker!"
@@ -571,6 +571,21 @@
 "As you step off the transport, you hear\n"\
 "the stomp of a cyberdemon's iron shoe."
 
+//
+// HACK AGAINST [SVE]: add more demo style
+//
+#define DEMOTEXT \
+"Congratulations!\n"\
+"You have completed the Strife demo."
+//
+// HACK AGAINST [SVE]: add more demo style
+//
+
+// [SVE]
+#define PRESSYN 	"press y or n."
+#define PRESSGPCC       "press confirm or cancel."
+#define CASTPROMPT   "Want to see the cast?\n\n(Spoiler alert!)\n\n" PRESSYN
+#define CASTPROMPTGP "Want to see the cast?\n\n(Spoiler alert!)\n\n" PRESSGPCC
 
 
 //

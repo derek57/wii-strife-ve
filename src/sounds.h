@@ -73,6 +73,9 @@ typedef enum
     mus_fight2,
     mus_happy,
     mus_end,
+    mus_fmstl,	// HACK AGAINST [SVE]: add more demo style
+    mus_map1,	// HACK AGAINST [SVE]: add more demo style
+    mus_map3,	// HACK AGAINST [SVE]: add more demo style
     NUMMUSIC
 } musicenum_t;
 
@@ -219,6 +222,17 @@ typedef enum
     sfx_drchno,
     sfx_drchnc,
     sfx_valve,
+    sfx_oof2,	// HACK AGAINST [SVE]: add more demo style
+    sfx_ambpp2,	// HACK AGAINST [SVE]: add more demo style
+    sfx_drlmt2,	// HACK AGAINST [SVE]: add more demo style
+    sfx_drlmt3,	// HACK AGAINST [SVE]: add more demo style
+    sfx_drlwu2,	// HACK AGAINST [SVE]: add more demo style
+    sfx_drsmt2,	// HACK AGAINST [SVE]: add more demo style
+    sfx_drsmt3,	// HACK AGAINST [SVE]: add more demo style
+    sfx_ratac2,	// HACK AGAINST [SVE]: add more demo style
+    sfx_rebac2,	// HACK AGAINST [SVE]: add more demo style
+    sfx_wdrip2,	// HACK AGAINST [SVE]: add more demo style
+    sfx_welcum,	// HACK AGAINST [SVE]: add more demo style
     NUMSFX
 } sfxenum_t;
 

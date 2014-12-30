@@ -64,21 +64,25 @@ char         *slideshow_panel;
 unsigned int  slideshow_tics;
 int           slideshow_state;
 
-// haleyjd 09/13/10: [STRIFE] All this is unused.
+boolean scroll_finished = false;					// ADDED FOR DEMO
+
+// haleyjd   09/13/10: [STRIFE] All this is unused...
+// nitr8  [2014/12/30] ...until now.
+
+#define	TEXTSPEED	3						// REACTIVATED FOR DEMO
+//#define	TEXTWAIT	250
+
+typedef struct								// REACTIVATED FOR DEMO
+{									// REACTIVATED FOR DEMO
+    GameMission_t mission;						// REACTIVATED FOR DEMO
+    int episode, level;							// REACTIVATED FOR DEMO
+    char *background;							// REACTIVATED FOR DEMO
+    char *text;								// REACTIVATED FOR DEMO
+} textscreen_t;								// REACTIVATED FOR DEMO
+
+static textscreen_t textscreens[] =					// REACTIVATED FOR DEMO
+{									// REACTIVATED FOR DEMO
 /*
-#define	TEXTSPEED	3
-#define	TEXTWAIT	250
-
-typedef struct
-{
-    GameMission_t mission;
-    int episode, level;
-    char *background;
-    char *text;
-} textscreen_t;
-
-static textscreen_t textscreens[] =
-{
     { doom,      1, 8,  "FLOOR4_8",  E1TEXT},
     { doom,      2, 8,  "SFLR6_1",   E2TEXT},
     { doom,      3, 8,  "MFLR8_4",   E3TEXT},
@@ -104,11 +108,12 @@ static textscreen_t textscreens[] =
     { pack_plut, 1, 30, "RROCK17",   P4TEXT},
     { pack_plut, 1, 15, "RROCK13",   P5TEXT},
     { pack_plut, 1, 31, "RROCK19",   P6TEXT},
-};
-
-char*	finaletext;
-char*	finaleflat;
 */
+    { strife,    1, 34, "PANEL7",    DEMOTEXT},				// ADDED FOR DEMO
+};									// REACTIVATED FOR DEMO
+
+char*	finaletext;							// REACTIVATED FOR DEMO
+char*	finaleflat;							// REACTIVATED FOR DEMO
 
 void	F_StartCast (void);
 void	F_CastTicker (void);
@@ -173,6 +178,7 @@ void F_StartFinale (void)
     // haleyjd 20111006: see below...
     patch_t *panel;
 #endif
+    size_t i;								// ADDED FOR DEMO
 
     gameaction = ga_nothing;
     gamestate = GS_FINALE;
@@ -181,7 +187,7 @@ void F_StartFinale (void)
     wipegamestate = -1; // [STRIFE]
 
     // [STRIFE] Setup the slide show
-    slideshow_panel = DEH_String("PANEL0");
+//    slideshow_panel = DEH_String("PANEL0");				// MODIFIED FOR DEMO
 
     // haleyjd 20111006: These two lines of code *are* in vanilla Strife; 
     // however, there, they were completely inconsequential due to the dirty
@@ -197,17 +203,37 @@ void F_StartFinale (void)
     switch(gamemap)
     {
     case 3:  // Macil's exposition on the Programmer
+	finalestage = F_STAGE_TEXT;					// ADDED FOR DEMO
+	finalecount = 0;						// ADDED FOR DEMO
+	slideshow_tics = 7;						// ADDED FOR DEMO
+	slideshow_panel = DEH_String("PANEL0");				// ADDED FOR DEMO
+	S_ChangeMusic(mus_dark, 1);					// ADDED FOR DEMO
         slideshow_state = SLIDE_PROGRAMMER1;
         break;
     case 9:  // Super hack for death of Programmer
+	finalestage = F_STAGE_TEXT;					// ADDED FOR DEMO
+	finalecount = 0;						// ADDED FOR DEMO
+	slideshow_tics = 7;						// ADDED FOR DEMO
+	slideshow_panel = DEH_String("PANEL0");				// ADDED FOR DEMO
+	S_ChangeMusic(mus_dark, 1);					// ADDED FOR DEMO
         slideshow_state = SLIDE_EXITHACK; 
         break;
     case 10: // Macil's exposition on the Sigil
+	finalestage = F_STAGE_TEXT;					// ADDED FOR DEMO
+	finalecount = 0;						// ADDED FOR DEMO
+	slideshow_tics = 7;						// ADDED FOR DEMO
+	slideshow_panel = DEH_String("PANEL0");				// ADDED FOR DEMO
+	S_ChangeMusic(mus_dark, 1);					// ADDED FOR DEMO
         slideshow_state = SLIDE_SIGIL1;
         break;
     case 29: // Endings
 //        if(!netgame)
         {
+	    finalestage = F_STAGE_TEXT;					// ADDED FOR DEMO
+	    finalecount = 0;						// ADDED FOR DEMO
+	    slideshow_tics = 7;						// ADDED FOR DEMO
+	    slideshow_panel = DEH_String("PANEL0");			// ADDED FOR DEMO
+	    S_ChangeMusic(mus_dark, 1);					// ADDED FOR DEMO
             if(players[0].health <= 0)            // Bad ending 
                 slideshow_state = SLIDE_BADEND1;  // - Humanity goes extinct
             else
@@ -227,23 +253,52 @@ void F_StartFinale (void)
         }
         break;
     case 34: // For the demo version ending
-        slideshow_state = SLIDE_EXIT;
-        
-        // haleyjd 20130301: Somebody noticed the demo levels were missing the
-        // ending they used to have in the demo version EXE, I guess. But the
-        // weird thing is, this will only trigger if you run with strife0.wad,
-        // and no released version thereof actually works with the 1.31 EXE
-        // due to differing dialog formats... was there to be an updated demo
-        // that never got released?!
-        if(gameversion == exe_strife_1_31 && isdemoversion)
-            slideshow_state = SLIDE_DEMOEND1;
-        break;
-    }
+	{								// ADDED FOR DEMO
+//	    slideshow_state = SLIDE_EXIT;				// MODIFIED FOR DEMO
 
-    S_ChangeMusic(mus_dark, 1);
-    slideshow_tics = 7;
-    finalestage = F_STAGE_TEXT;
-    finalecount = 0;
+    	    // haleyjd 20130301: Somebody noticed the demo levels were missing the
+    	    // ending they used to have in the demo version EXE, I guess. But the
+    	    // weird thing is, this will only trigger if you run with strife0.wad,
+    	    // and no released version thereof actually works with the 1.31 EXE
+    	    // due to differing dialog formats... was there to be an updated demo
+    	    // that never got released?!
+
+//	    if(gameversion == exe_strife_1_31 && isdemoversion)		// MODIFIED FOR DEMO
+
+	    // Find the right screen and set the text and background
+
+	    scroll_finished = false;					// ADDED FOR DEMO
+	    slideshow_tics = 0;						// ADDED FOR DEMO
+	    slideshow_panel = DEH_String("PANEL7");			// ADDED FOR DEMO
+	    slideshow_state = SLIDE_DEMOEND1;				// ADDED FOR DEMO
+
+	    for (i=0; i<arrlen(textscreens); ++i)			// ADDED FOR DEMO
+	    {								// ADDED FOR DEMO
+		textscreen_t *screen = &textscreens[i];			// ADDED FOR DEMO
+
+		finaletext = screen->text;				// ADDED FOR DEMO
+		finaleflat = screen->background;			// ADDED FOR DEMO
+	    }								// ADDED FOR DEMO
+
+	    // Do dehacked substitutions of strings
+  
+	    finaletext = DEH_String(finaletext);			// ADDED FOR DEMO
+	    finaleflat = DEH_String(finaleflat);			// ADDED FOR DEMO
+    
+	    finalestage = F_STAGE_TEXT;					// ADDED FOR DEMO
+	    finalecount = 0;						// ADDED FOR DEMO
+
+	    S_StopMusic();						// ADDED FOR DEMO
+	}								// ADDED FOR DEMO
+	break;
+    }
+/*
+    S_ChangeMusic(mus_dark, 1);						// MODIFIED FOR DEMO
+
+    slideshow_tics = 7;							// MODIFIED FOR DEMO
+    finalestage = F_STAGE_TEXT;						// MODIFIED FOR DEMO
+    finalecount = 0;							// MODIFIED FOR DEMO
+*/
 }
 
 //
@@ -273,6 +328,83 @@ void F_WaitTicker(void)
         gamestate   = GS_FINALE;
         finalestage = 0;
         finalecount = 0;
+    }
+}
+
+//
+// F_DrawPatchCol
+//
+void
+F_DrawPatchCol
+( int		x,
+  patch_t*	patch,
+  int		col )
+{
+    column_t*	column;
+    byte*	source;
+    byte*	dest;
+    byte*	desttop;
+//    int		count;						// CHANGED FOR HIRES (ORIGINAL)
+    int		count, f;						// CHANGED FOR HIRES
+	
+    column = (column_t *)((byte *)patch + LONG(patch->columnofs[col]));
+    desttop = I_VideoBuffer + x;
+
+    // step through the posts in a column
+    while (column->topdelta != 0xff )
+    {
+	for (f = 0; f <= hires; f++)					// ADDED FOR HIRES
+	{								// ADDED FOR HIRES
+	    source = (byte *)column + 3;
+//	    dest = desttop + column->topdelta*SCREENWIDTH;		// CHANGED FOR HIRES (ORIGINAL)
+	    dest = desttop + column->topdelta*(SCREENWIDTH << hires)
+			    + (x * hires) + f;				// CHANGED FOR HIRES
+	    count = column->length;
+
+	    while (count--)
+	    {
+		if (hires)						// ADDED FOR HIRES
+		{							// ADDED FOR HIRES
+		    *dest = *source;					// ADDED FOR HIRES
+		    dest += SCREENWIDTH;				// ADDED FOR HIRES
+		}							// ADDED FOR HIRES
+		*dest = *source++;
+		dest += SCREENWIDTH;
+	    }
+	}								// ADDED FOR HIRES
+	column = (column_t *)(  (byte *)column + column->length + 4 );
+    }
+}
+
+
+//
+// F_BunnyScroll
+//
+void F_BunnyScroll (void)						// FUNCTION RE-ADDED FOR DEMO
+{
+    signed int  scrolled;
+    int		x;
+    patch_t*	p1;
+    patch_t*	p2;
+
+    p1 = W_CacheLumpName (DEH_String("vellogo"), PU_LEVEL);
+    p2 = W_CacheLumpName (DEH_String("credit"),  PU_LEVEL);
+
+    V_MarkRect (0, 0, SCREENWIDTH, SCREENHEIGHT);
+
+    scrolled = (320 - ((signed int) finalecount-230)/2);
+    if (scrolled > 320)
+	scrolled = 320;
+    if (scrolled < 0)
+	scrolled = 0;
+		
+//    for ( x=0 ; x<SCREENWIDTH ; x++)					// (ORIGINAL)
+    for ( x=0 ; x<ORIGWIDTH ; x++)					// CHANGED FOR HIRES
+    {
+	if (x+scrolled < 320)
+	    F_DrawPatchCol (x, p1, x+scrolled);
+	else
+	    F_DrawPatchCol (x, p2, x+scrolled - 320);
     }
 }
 
@@ -411,16 +543,22 @@ static void F_DoSlideShow(void)
         break;
 
     case SLIDE_DEMOEND1: // state #25 - only exists in 1.31
-        slideshow_panel = DEH_String("PANEL7");
-        slideshow_tics = 175;
+//        slideshow_panel = DEH_String("PANEL7");			// MODIFIED FOR DEMO
+        finalecount = 0;						// ADDED FOR DEMO
+        wipegamestate = -1;						// ADDED FOR DEMO
+        slideshow_tics = 430;						// MOD. FOR DEMO: INC. BY +255
+	S_ChangeMusic(mus_drone, 1);					// ADDED FOR DEMO
         slideshow_state = SLIDE_DEMOEND2;
         break;
     case SLIDE_DEMOEND2: // state #26 - ditto
-        slideshow_panel = DEH_String("VELLOGO");
-        slideshow_tics = 175;
+//        slideshow_panel = DEH_String("VELLOGO");			// MODIFIED FOR DEMO
+        wipegamestate = -1;						// ADDED FOR DEMO
+        S_StartMusic(mus_fast);						// ADDED FOR DEMO
+        finalecount = 0;						// ADDED FOR DEMO
+        finalestage = F_STAGE_ARTSCREEN;				// ADDED FOR DEMO
+        slideshow_tics = 1000;						// MOD. FOR DEMO: INC. BY +825
         slideshow_state = SLIDE_EXIT; // Go to end credits
         break;
-
     case SLIDE_EXITHACK: // state -99: super hack state
         gamestate = GS_LEVEL;
         P_DialogStartP1();
@@ -432,7 +570,12 @@ static void F_DoSlideShow(void)
     case SLIDE_EXIT: // state -1: proceed to next finale stage
         finalecount = 0;
         finalestage = F_STAGE_ARTSCREEN;
-        wipegamestate = -1;
+
+	if(gamemap != 34)						// ADDED FOR DEMO
+	    wipegamestate = -1;						
+	else								// ADDED FOR DEMO
+	    scroll_finished = true;					// ADDED FOR DEMO
+
         S_StartMusic(mus_fast);
         // haleyjd 20130301: The ONLY glitch fixed in 1.31 of Strife
         // *would* be something this insignificant, of course!
@@ -451,8 +594,10 @@ static void F_DoSlideShow(void)
         // wipegamestate if menuactive is true.
         finalecount = 0;
         finalestage = F_STAGE_ARTSCREEN;
-        if(menuactive)
-            wipegamestate = -1;
+/*
+        if(menuactive)							// UNSURE... DUNNO... (??) :-/
+            wipegamestate = -1;						// UNSURE... DUNNO... (??) :-/
+*/
         S_StartMusic(mus_fast);
         slideshow_state = SLIDE_CHOCO; // remain here.
         break;
@@ -482,14 +627,22 @@ void F_Ticker (void)
     if (finalecount > 50) // [STRIFE] No commercial check
     {
         // go on to the next level
-        for (i=0 ; i<MAXPLAYERS ; i++)
-            if (players[i].cmd.buttons)
-                break;
+	if(gamemap != 34)						// ADDED FOR THE WII PORT
+	{								// ADDED FOR THE WII PORT
+            for (i=0 ; i<MAXPLAYERS ; i++)
+		if (players[i].cmd.buttons)
+		    break;
 
-        if (i < MAXPLAYERS)
-            finalecount = slideshow_tics; // [STRIFE]
+	    if (i < MAXPLAYERS)
+		finalecount = slideshow_tics; // [STRIFE]
+	}								// ADDED FOR THE WII PORT
     }
-    
+
+    if(slideshow_state > 25)							// ADDED FOR DEMO
+    {										// ADDED FOR DEMO
+	if(finalecount == 15)							// ADDED FOR DEMO
+	    S_StartSound(NULL, sfx_mislht);					// ADDED FOR DEMO
+    }										// ADDED FOR DEMO
     // advance animation
     finalecount++;
 
@@ -520,16 +673,19 @@ void F_Ticker (void)
 #include "hu_stuff.h"
 extern	patch_t *hu_font[HU_FONTSIZE];
 
-/*
+
 //
 // F_TextWrite
 //
-void F_TextWrite (void)
+void F_TextWrite (void)							// REACTIVATED FOR DEMO
 {
-    byte*	src;
-    byte*	dest;
+/*
+    byte*	src;							// MODIFIED FOR DEMO
+    byte*	dest;							// MODIFIED FOR DEMO
+*/
+    patch_t *patch;
     
-    int		x,y,w;
+    int		/*x,y,*/w;						// MODIFIED FOR DEMO
     signed int	count;
     char*	ch;
     int		c;
@@ -537,30 +693,34 @@ void F_TextWrite (void)
     int		cy;
     
     // erase the entire screen to a tiled background
-    src = W_CacheLumpName ( finaleflat , PU_CACHE);
-    dest = I_Video_Buffer;
-	
-    for (y=0 ; y<SCREENHEIGHT ; y++)
-    {
-	for (x=0 ; x<SCREENWIDTH/64 ; x++)
-	{
-	    memcpy (dest, src+((y&63)<<6), 64);
-	    dest += 64;
-	}
-	if (SCREENWIDTH&63)
-	{
-	    memcpy (dest, src+((y&63)<<6), SCREENWIDTH&63);
-	    dest += (SCREENWIDTH&63);
-	}
-    }
+/*
+    src = W_CacheLumpName ( finaleflat , PU_CACHE);			// MODIFIED FOR DEMO
+    dest = I_VideoBuffer;						// MODIFIED FOR DEMO
 
-    V_MarkRect (0, 0, SCREENWIDTH, SCREENHEIGHT);
-    
+    for (y=0 ; y<SCREENHEIGHT ; y++)					// MODIFIED FOR DEMO
+    {									// MODIFIED FOR DEMO
+	for (x=0 ; x<SCREENWIDTH/64 ; x++)				// MODIFIED FOR DEMO
+	{								// MODIFIED FOR DEMO
+	    memcpy (dest, src+((y&63)<<6), 64);				// MODIFIED FOR DEMO
+	    dest += 64;							// MODIFIED FOR DEMO
+	}								// MODIFIED FOR DEMO
+	if (SCREENWIDTH&63)						// MODIFIED FOR DEMO
+	{								// MODIFIED FOR DEMO
+	    memcpy (dest, src+((y&63)<<6), SCREENWIDTH&63);		// MODIFIED FOR DEMO
+	    dest += (SCREENWIDTH&63);					// MODIFIED FOR DEMO
+	}								// MODIFIED FOR DEMO
+    }									// MODIFIED FOR DEMO
+*/
+    patch = (patch_t *)W_CacheLumpName(finaleflat, PU_CACHE);		// ADDED FOR DEMO
+    V_DrawPatch (0, 0, patch);						// ADDED FOR DEMO
+
+    V_MarkRect (0, 0, SCREENWIDTH, SCREENHEIGHT);			// UNSURE... DUNNO... (??) :-/
+
     // draw some of the text onto the screen
     cx = 10;
     cy = 10;
     ch = finaletext;
-	
+
     count = ((signed int) finalecount - 10) / TEXTSPEED;
     if (count < 0)
 	count = 0;
@@ -575,24 +735,24 @@ void F_TextWrite (void)
 	    cy += 11;
 	    continue;
 	}
-		
+
 	c = toupper(c) - HU_FONTSTART;
 	if (c < 0 || c> HU_FONTSIZE)
 	{
 	    cx += 4;
 	    continue;
 	}
-		
+
 	w = SHORT (hu_font[c]->width);
-	if (cx+w > SCREENWIDTH)
+//	if (cx+w > SCREENWIDTH)					// (ORIGINAL)
+	if (cx+w > ORIGWIDTH)					// CHANGED FOR HIRES
 	    break;
 	V_DrawPatch(cx, cy, hu_font[c]);
 	cx+=w;
     }
-	
 }
-*/
 
+// CAST ROUTINE TAKEN FROM STRIFE: VETERAN EDITION
 //
 // Final DOOM 2 animation
 // Casting by id Software.
@@ -602,28 +762,30 @@ typedef struct
 {
     int         isindemo; // [STRIFE] Changed from name, which is in mobjinfo
     mobjtype_t  type;
+    char       *name;
 } castinfo_t;
 
 // haleyjd: [STRIFE] A new cast order was defined, however it is unused in any
 // of the released versions of Strife, even including the demo version :(
-castinfo_t      castorder[] = {
-    { 1, MT_PLAYER     },
-    { 1, MT_BEGGAR1    },
-    { 1, MT_PEASANT2_A },
-    { 1, MT_REBEL1     },
-    { 1, MT_GUARD1     },
-    { 1, MT_CRUSADER   },
-    { 1, MT_RLEADER2   },
-    { 0, MT_SENTINEL   },
-    { 0, MT_STALKER    },
-    { 0, MT_PROGRAMMER },
-    { 0, MT_REAVER     },
-    { 0, MT_PGUARD     },
-    { 0, MT_INQUISITOR },
-    { 0, MT_PRIEST     },
-    { 0, MT_SPECTRE_A  },
-    { 0, MT_BISHOP     },
-    { 0, MT_ENTITY     },
+castinfo_t      castorder[] = 
+{
+    { 1, MT_PLAYER,     "THE MERCENARY"  },
+    { 1, MT_BEGGAR1,    "BEGGAR"         },
+    { 1, MT_PEASANT2_A, "PEASANT"        },
+    { 1, MT_REBEL1,     "REBEL"          },
+    { 1, MT_RLEADER2,   "MACIL"          },
+    { 1, MT_GUARD1,     "ACOLYTE"        },
+    { 1, MT_CRUSADER,   "CRUSADER"       },
+    { 0, MT_SENTINEL,   "SENTINEL"       },
+    { 0, MT_STALKER,    "STALKER"        },
+    { 0, MT_REAVER,     "REAVER"         },
+    { 0, MT_PGUARD,     "TEMPLAR"        },
+    { 0, MT_INQUISITOR, "INQUISITOR"     },
+    { 0, MT_PROGRAMMER, "THE PROGRAMMER" },
+    { 0, MT_BISHOP,     "THE BISHOP"     },
+    { 0, MT_PRIEST,     "THE LOREMASTER" },
+    { 0, MT_SPECTRE_A,  "SPECTRE"        },
+    { 0, MT_SUBENTITY,  "THE ONE GOD???" },
     { 1, NUMMOBJTYPES  }
 };
 
@@ -638,7 +800,8 @@ boolean		castattacking;
 //
 // F_StartCast
 //
-// haleyjd 09/13/10: [STRIFE] Heavily modified, yet unused.
+// haleyjd   09/13/10: [STRIFE] Heavily modified, yet unused...
+// nitr8  [2014/12/30] ...until now.
 // Evidence suggests this was meant to be started from a menu item.
 // See m_menu.c for more info.
 //
@@ -660,26 +823,46 @@ void F_StartCast (void)
     castframes = 0;
     castonmelee = 0;
     castattacking = false;
+    S_ChangeMusic(mus_action, 1);
+    I_StartVoice(NULL); // sorry Macil, be quiet for a sec :P
 }
 
+//
+// haleyjd 20141116: [SVE] Don't go to weird gib states during the cast call.
+//
+static boolean F_IsWeirdGibState(int nextstate)
+{
+    switch(nextstate)
+    {
+    case S_RGIB_07: // MT_PLAYER
+    case S_GIBS_08: // MT_PEASANT2_A
+    case S_GIBS_20: // MT_GUARD1
+        return true;
+    default:
+        return false;
+    }
+}
 
 //
 // F_CastTicker
 //
-// [STRIFE] Heavily modified, but unused.
-// haleyjd 09/13/10: Yeah, I bothered translating this even though it isn't
+// [STRIFE] Heavily modified, but unused...
+// nitr8  [2014/12/30] ...until now.
+// haleyjd   09/13/10: Yeah, I bothered translating this even though it isn't
 // going to be seen, in part because I hope some Strife port or another will
 // pick it up and finish it, adding it as the optional menu item it was 
 // meant to be, or just adding it as part of the ending sequence.
 //
 void F_CastTicker (void)
 {
-    int         st;
+    int st;
+    int type;
 
     if (--casttics > 0)
         return;                  // not time to change state yet
 
-    if (caststate->tics == -1 || caststate->nextstate == S_NULL)
+    if (caststate->tics == -1 || caststate->nextstate == S_NULL ||
+        F_IsWeirdGibState(caststate->nextstate))
     {
         // switch from deathstate to next monster
         castnum++;
@@ -691,11 +874,24 @@ void F_CastTicker (void)
                 castnum = 0;
         }
         // [STRIFE] Break on type == NUMMOBJTYPES rather than name == NULL
-        if (castorder[castnum].type == NUMMOBJTYPES)
+        if(castorder[castnum].type == NUMMOBJTYPES)
             castnum = 0;
-        if (mobjinfo[castorder[castnum].type].seesound)
-            S_StartSound (NULL, mobjinfo[castorder[castnum].type].seesound);
-        caststate = &states[mobjinfo[castorder[castnum].type].seestate];
+        type = castorder[castnum].type;
+        if(mobjinfo[type].seesound && type != MT_PEASANT2_A && 
+            type != MT_REBEL1 && type != MT_RLEADER2)
+        {
+            S_StartSound(NULL, mobjinfo[castorder[castnum].type].seesound);
+        }
+        st = mobjinfo[castorder[castnum].type].seestate;
+
+        // see state hacks
+        switch(st)
+        {
+        case S_SPID_03: st = S_SPID_18; break;
+        default:
+            break;
+        }
+        caststate = &states[st];
         castframes = 0;
     }
     else
@@ -706,6 +902,19 @@ void F_CastTicker (void)
         if (caststate == &states[S_PLAY_05])    // villsa [STRIFE] - updated
             goto stopattack;	// Oh, gross hack!
         st = caststate->nextstate;
+
+        // next state hacks
+        switch(st)
+        {
+        case S_SPID_03: st = S_SPID_18; break;
+        case S_ROB2_11:
+            if(castonmelee)
+                st = S_ROB2_01;
+            break;
+        default:
+            break;
+        }
+
         caststate = &states[st];
         castframes++;
 
@@ -720,6 +929,57 @@ void F_CastTicker (void)
         else
             sfx = mobjinfo[castorder[castnum].type].attacksound;
 
+        // sound hacks
+        switch(st)
+        {
+        case S_PEAS_10: sfx = sfx_meatht; break;
+        case S_HMN1_20: 
+        case S_HMN1_21: 
+        case S_LEAD_13:
+        case S_LEAD_18:
+        case S_AGRD_18:
+        case S_AGRD_19:
+        case S_AGRD_20: sfx = sfx_rifle;  break;
+        case S_ROB1_11: sfx = sfx_revbld; break;
+        case S_ROB1_14: sfx = sfx_reavat; break;
+        case S_PGRD_13: sfx = sfx_revbld; break;
+        case S_PGRD_15: sfx = sfx_pgrdat; break;
+        case S_ROB2_10:
+            if(castonmelee)
+            {
+                sfx = sfx_rlaunc;
+                break;
+            }
+            // fall-through
+        case S_ROB2_11:
+        case S_ROB2_12:
+        case S_ROB2_13:
+        case S_ROB2_14:
+        case S_ROB2_15:
+        case S_ROB2_16:
+        case S_ROB2_17: sfx = sfx_flburn; break;
+        case S_MLDR_10: sfx = sfx_rlaunc; break;
+        case S_PRST_11: sfx = sfx_revbld; break;
+        case S_PRST_14: sfx = sfx_chain;  break;
+        case S_ALN1_14: sfx = sfx_revbld; break;
+        case S_ALN1_17: sfx = sfx_sglhit; break;
+        case S_MNAL_35: sfx = sfx_revbld; break;
+        case S_MNAL_38: sfx = sfx_sglhit; break;
+        case S_SEWR_04: sfx = sfx_plasma; break;
+        case S_SPID_10: sfx = sfx_spdatk; break;
+        case S_SPID_18:
+        case S_SPID_22: sfx = sfx_spdwlk; break;
+        case S_ROB3_02:
+        case S_ROB3_08: sfx = sfx_inqact; break;
+        case S_ROB3_12: sfx = sfx_reavat; break;
+        case S_ROB3_15: sfx = sfx_phoot;  break;
+        case S_PRGR_03: sfx = sfx_progac; break;
+        case S_PRGR_13: sfx = sfx_revbld; break;
+        case S_PRGR_17: sfx = sfx_sglhit; break;
+        default:
+            break;
+        }
+
         if (sfx)
             S_StartSound (NULL, sfx);
     }
@@ -729,9 +989,14 @@ void F_CastTicker (void)
         // go into attack frame
         castattacking = true;
         if (castonmelee)
-            caststate=&states[mobjinfo[castorder[castnum].type].meleestate];
+        {
+            if(castorder[castnum].type == MT_INQUISITOR)
+                caststate = &states[S_ROB3_14];
+            else
+                caststate = &states[mobjinfo[castorder[castnum].type].meleestate];
+        }
         else
-            caststate=&states[mobjinfo[castorder[castnum].type].missilestate];
+            caststate = &states[mobjinfo[castorder[castnum].type].missilestate];
         castonmelee ^= 1;
         if (caststate == &states[S_NULL])
         {
@@ -751,10 +1016,17 @@ stopattack:
             castattacking = false;
             castframes = 0;
             caststate = &states[mobjinfo[castorder[castnum].type].seestate];
+            if(caststate == &states[S_SPID_03])
+                caststate = &states[S_SPID_18];
+            if(caststate == &states[S_PRGR_02])
+                caststate = &states[S_PRGR_06];
         }
     }
 
-    casttics = caststate->tics;
+    if(caststate == &states[S_MLDR_27])
+        casttics = 30;
+    else
+        casttics = caststate->tics;
     if (casttics > 50) // [STRIFE] Cap tics
         casttics = 50;
     else if (casttics == -1)
@@ -771,8 +1043,12 @@ stopattack:
 //
 boolean F_CastResponder (event_t* ev)
 {
-    if (ev->type != ev_keydown)
-        return false;
+//    if (ev->type != ev_keydown)
+    if (ev->type == ev_joystick) 
+    {
+	if ((ev->data1 & 1) == 0) 
+	    return false;
+    }
 
     if (castdeath)
         return true;                    // already in dying frames
@@ -794,7 +1070,8 @@ boolean F_CastResponder (event_t* ev)
 //
 // F_CastPrint
 //
-// [STRIFE] Verified unmodified, and unused.
+// [STRIFE] Verified unmodified, and unused...
+// nitr8  [2014/12/30] ...until now.
 //
 void F_CastPrint (char* text)
 {
@@ -850,36 +1127,144 @@ void F_CastPrint (char* text)
 // partway finished of this function from the binary, as there is no
 // trace of it. This means we cannot know for sure what the cast call
 // would have looked like. :(
-/*
+
 //
 // F_CastDrawer
 //
 void F_CastDrawer (void)
 {
-    spritedef_t*	sprdef;
-    spriteframe_t*	sprframe;
-    int			lump;
-    boolean		flip;
-    patch_t*		patch;
+    spritedef_t   *sprdef;
+    spriteframe_t *sprframe;
+    int            lump;
+    boolean        flip;
+    patch_t       *patch;
+    int           x = 160, y = 170;
     
     // erase the entire screen to a background
-    V_DrawPatch (0, 0, W_CacheLumpName (DEH_String("BOSSBACK"), PU_CACHE));
+    V_DrawPatch(0, 0, W_CacheLumpName(DEH_String("HELP0"), PU_CACHE));
 
-    F_CastPrint (DEH_String(castorder[castnum].name));
-    
     // draw the current frame in the middle of the screen
     sprdef = &sprites[caststate->sprite];
-    sprframe = &sprdef->spriteframes[ caststate->frame & FF_FRAMEMASK];
+    sprframe = &sprdef->spriteframes[caststate->frame & FF_FRAMEMASK];
     lump = sprframe->lump[0];
     flip = (boolean)sprframe->flip[0];
-			
-    patch = W_CacheLumpNum (lump+firstspritelump, PU_CACHE);
-    if (flip)
-	V_DrawPatchFlipped(160, 170, patch);
+
+    if(castorder[castnum].type == MT_SUBENTITY && !castdeath)
+        y = 196;
+
+    patch = W_CacheLumpNum(lump+firstspritelump, PU_CACHE);
+    if(flip)
+        V_DrawPatchFlipped(x, y, patch);
     else
-	V_DrawPatch(160, 170, patch);
+        V_DrawPatch(x, y, patch);
+
+    // title
+    V_WriteBigText("Cast of Characters", 
+                   160 - V_BigFontStringWidth("Cast of Characters")/2, 8);
+
+    // name
+    F_CastPrint(DEH_String(castorder[castnum].name));
 }
 
+// haleyjd   09/13/10: [STRIFE] Unused...
+// nitr8  [2014/12/30] ...until now.
+
+static void F_ArtScreenDrawer(void)					// REACTIVATED FOR DEMO
+{
+/*
+    char *lumpname;							// MODIFIED FOR DEMO
+    
+    if (gameepisode == 3)						// MODIFIED FOR DEMO
+    {									// MODIFIED FOR DEMO
+*/
+	if(finalecount == 15)						// ADDED FOR DEMO
+	    S_StartSound(NULL, sfx_mislht);				// ADDED FOR DEMO
+
+        F_BunnyScroll();
+/*
+    }									// MODIFIED FOR DEMO
+    else								// MODIFIED FOR DEMO
+    {									// MODIFIED FOR DEMO
+        switch (gameepisode)						// MODIFIED FOR DEMO
+        {								// MODIFIED FOR DEMO
+            case 1:							// MODIFIED FOR DEMO
+                if (gamemode == retail)					// MODIFIED FOR DEMO
+                {							// MODIFIED FOR DEMO
+                    lumpname = "CREDIT";				// MODIFIED FOR DEMO
+                }							// MODIFIED FOR DEMO
+                else							// MODIFIED FOR DEMO
+                {							// MODIFIED FOR DEMO
+                    lumpname = "HELP2";					// MODIFIED FOR DEMO
+                }							// MODIFIED FOR DEMO
+                break;							// MODIFIED FOR DEMO
+            case 2:							// MODIFIED FOR DEMO
+                lumpname = "VICTORY2";					// MODIFIED FOR DEMO
+                break;							// MODIFIED FOR DEMO
+            case 4:							// MODIFIED FOR DEMO
+                lumpname = "ENDPIC";					// MODIFIED FOR DEMO
+                break;							// MODIFIED FOR DEMO
+            default:							// MODIFIED FOR DEMO
+                return;							// MODIFIED FOR DEMO
+        }								// MODIFIED FOR DEMO
+
+        lumpname = DEH_String(lumpname);				// MODIFIED FOR DEMO
+
+        V_DrawPatch (0, 0, W_CacheLumpName(lumpname, PU_CACHE));	// MODIFIED FOR DEMO
+    }									// MODIFIED FOR DEMO
+*/
+}
+
+
+//
+// F_Drawer
+//
+// [STRIFE]
+// haleyjd 09/13/10: Modified for slideshow, demo version, etc.
+//
+void F_Drawer (void)
+{
+    switch (finalestage)
+    {
+    case F_STAGE_CAST:
+        // Cast didn't have a drawer in any released version
+        F_CastDrawer();
+        break;
+    case F_STAGE_TEXT:
+        // Draw slideshow panel
+	if(gamemap == 34)						// ADDED FOR DEMO
+            F_TextWrite();						// ADDED FOR DEMO
+	else								// ADDED FOR DEMO
+        {
+            patch_t *slide =
+		    W_CacheLumpName(slideshow_panel, PU_CACHE);
+            V_DrawPatch(0, 0, slide);
+        }
+        break;
+    case F_STAGE_ARTSCREEN:
+        if(gamemap <= 29)
+        {
+            // draw credits
+            patch_t *credits =
+		    W_CacheLumpName(DEH_String("CREDIT"), PU_CACHE);
+            V_DrawPatch(0, 0, credits);
+        }
+        else if(gamemap == 34 && !scroll_finished)			// MODIFIED FOR DEMO
+            // demo version - does nothing meaningful
+	    // in the final version
+            F_ArtScreenDrawer();					// ADDED FOR DEMO
+//            F_DrawMap34End();						// MODIFIED FOR DEMO
+	else if(scroll_finished)					// ADDED FOR DEMO
+	{								// ADDED FOR DEMO
+            patch_t *vellogo =						// ADDED FOR DEMO
+		    W_CacheLumpName(DEH_String("VELLOGO"), PU_CACHE);	// ADDED FOR DEMO
+            V_DrawPatch(0, 0, vellogo);					// ADDED FOR DEMO
+	}								// ADDED FOR DEMO
+        break;
+    }
+}
+
+
+/*
 #ifdef STRIFE_DEMO_CODE
 //
 // F_DrawPatchCol
@@ -917,8 +1302,7 @@ F_DrawPatchCol
 	column = (column_t *)(  (byte *)column + column->length + 4 );
     }
 }
-#endif
-*/
+
 //
 // F_DrawMap34End
 //
@@ -929,17 +1313,16 @@ F_DrawPatchCol
 // one will currently be used, as full demo version support isn't looking
 // likely right now.
 //
+
 void F_DrawMap34End (void)
 {
-/*
     signed int  scrolled;
     int         x;
+    patch_t*    p1;
+    patch_t*    p2;
 
-//    patch_t*    p1;
-//    patch_t*    p2;
-
-//    p1 = W_CacheLumpName (DEH_String("credit"),  PU_LEVEL);
-//    p2 = W_CacheLumpName (DEH_String("vellogo"), PU_LEVEL);
+    p1 = W_CacheLumpName (DEH_String("credit"),  PU_LEVEL);
+    p2 = W_CacheLumpName (DEH_String("vellogo"), PU_LEVEL);
 
     V_MarkRect (0, 0, SCREENWIDTH, SCREENHEIGHT);
 
@@ -951,15 +1334,14 @@ void F_DrawMap34End (void)
         scrolled = 0;
 
 //#ifdef STRIFE_DEMO_CODE
-//    for ( x=0 ; x<SCREENWIDTH ; x++)
-//    {
-//        if (x+scrolled < 320)
-//            F_DrawPatchCol (x, p1, x+scrolled);
-//        else
-//            F_DrawPatchCol (x, p2, x+scrolled - 320);
-//    }
+    for ( x=0 ; x<SCREENWIDTH ; x++)
+    {
+        if (x+scrolled < 320)
+            F_DrawPatchCol (x, p1, x+scrolled);
+        else
+            F_DrawPatchCol (x, p2, x+scrolled - 320);
+    }
 //#else
-
     // wtf this is supposed to do, I have no idea!
     x = 1;
     do
@@ -968,85 +1350,7 @@ void F_DrawMap34End (void)
     }
     while(x < 320);
 //#endif
+}
+#endif
 */
-    V_DrawPatch(0, 0, W_CacheLumpName("DENDBACK", PU_CACHE));
-}
-
-// haleyjd 09/13/10: [STRIFE] Unused.
-/*
-static void F_ArtScreenDrawer(void)
-{
-    char *lumpname;
-    
-    if (gameepisode == 3)
-    {
-        F_BunnyScroll();
-    }
-    else
-    {
-        switch (gameepisode)
-        {
-            case 1:
-                if (gamemode == retail)
-                {
-                    lumpname = "CREDIT";
-                }
-                else
-                {
-                    lumpname = "HELP2";
-                }
-                break;
-            case 2:
-                lumpname = "VICTORY2";
-                break;
-            case 4:
-                lumpname = "ENDPIC";
-                break;
-            default:
-                return;
-        }
-
-        lumpname = DEH_String(lumpname);
-
-        V_DrawPatch (0, 0, W_CacheLumpName(lumpname, PU_CACHE));
-    }
-}
-*/
-
-//
-// F_Drawer
-//
-// [STRIFE]
-// haleyjd 09/13/10: Modified for slideshow, demo version, etc.
-//
-void F_Drawer (void)
-{
-    switch (finalestage)
-    {
-    case F_STAGE_CAST:
-        // Cast didn't have a drawer in any released version
-        //F_CastDrawer();
-        break;
-    case F_STAGE_TEXT:
-        // Draw slideshow panel
-        {
-            patch_t *slide = W_CacheLumpName(slideshow_panel, PU_CACHE);
-            V_DrawPatch(0, 0, slide);
-        }
-        break;
-    case F_STAGE_ARTSCREEN:
-        if(gamemap <= 29)
-        {
-            // draw credits
-            patch_t *credits = W_CacheLumpName(DEH_String("CREDIT"), PU_CACHE);
-            V_DrawPatch(0, 0, credits);
-        }
-        else if(gamemap == 34)
-        {
-            // demo version - does nothing meaningful in the final version
-            F_DrawMap34End();
-        }
-        break;
-    }
-}
 
