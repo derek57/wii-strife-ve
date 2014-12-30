@@ -707,7 +707,7 @@ void W_CheckSize(int wad)		// FOR THE PSP SOURCE PORT (TAKEN FROM PSPHEXEN BUT H
 	    fseek(fprw, 0, 2);		// file pointer at the end of file
 	    fsizerw = ftell(fprw);	// take a position of file pointer un size variable
 
-	    if(fsizerw != 2127111)
+	    if(fsizerw != 2351568)
 		print_resource_pwad_error = true;
 
 	    fclose(fprw);

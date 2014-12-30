@@ -37,38 +37,38 @@
 musicinfo_t S_musicFull[] =
 {					// FOR PSP: (SHAREWARE RESTRICTIONS)
     MUSIC(NULL),
-    MUSIC("logo"),
+    MUSIC("logo"),	// DEMO
     MUSIC("action"),
-    MUSIC("tavern"),
+    MUSIC("tavern"),	// DEMO
     MUSIC("danger"),
-    MUSIC("fast"),
-    MUSIC("intro"),
+    MUSIC("fast"),	// DEMO
+    MUSIC("intro"),	// DEMO
     MUSIC("darker"),
     MUSIC("strike"),
     MUSIC("slide"),
     MUSIC("tribal"),
     MUSIC("march"),
-    MUSIC("danger"),
+    MUSIC("danger"),	// DOUBLE
     MUSIC("mood"),
     MUSIC("castle"),
-    MUSIC("darker"),
-    MUSIC("action"),
+    MUSIC("darker"),	// DOUBLE
+    MUSIC("action"),	// DOUBLE
     MUSIC("fight"),
     MUSIC("spense"),
-    MUSIC("slide"),
-    MUSIC("strike"),
+    MUSIC("slide"),	// DOUBLE
+    MUSIC("strike"),	// DOUBLE
     MUSIC("dark"),
     MUSIC("tech"),
-    MUSIC("slide"),
-    MUSIC("drone"),
+    MUSIC("slide"),	// DOUBLE
+    MUSIC("drone"),	// DEMO
     MUSIC("panthr"),
     MUSIC("sad"),
     MUSIC("instry"),
-    MUSIC("tech"),
-    MUSIC("action"),
-    MUSIC("instry"),
-    MUSIC("drone"),
-    MUSIC("fight"),
+    MUSIC("tech"),	// DOUBLE
+    MUSIC("action"),	// DOUBLE
+    MUSIC("instry"),	// DOUBLE
+    MUSIC("drone"),	// DOUBLE
+    MUSIC("fight"),	// DOUBLE
     MUSIC("happy"),
     MUSIC("end"),
     MUSIC("fmstl"),	// HACK AGAINST [SVE]: add more demo style
