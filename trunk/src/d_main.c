@@ -1514,7 +1514,7 @@ void D_DoomMain (void)
     }
 
     if(devparm)
-	fsize = 9934413;
+	fsize = 28377364;
 
     if(fsize == 9934413)	// FILE SIZE OF STRIFE0.WAD FOR v1.1
     {
@@ -2029,9 +2029,9 @@ void D_DoomMain (void)
 		    voices_wad_exists = 1;
 
 		if(usb)
-		    D_AddFile("usb:/apps/wiistrife/IWAD/Share/v11/strife0.wad");
+		    D_AddFile("usb:/apps/wiistrife/IWAD/Reg/v12/strife1.wad");
 		else if(sd)
-		    D_AddFile("sd:/apps/wiistrife/IWAD/Share/v11/strife0.wad");
+		    D_AddFile("sd:/apps/wiistrife/IWAD/Reg/v12/strife1.wad");
 
 		if(voices_wad_exists == 1 && (STRIFE_1_0_REGISTERED || STRIFE_1_X_REGISTERED))
 		{
@@ -2437,7 +2437,12 @@ void D_DoomMain (void)
 */
     {
         // Not loading a game
-        startloadgame = -1;
+/*
+	if(devparm)
+	    startloadgame = 2;
+	else
+*/
+	    startloadgame = -1;
     }
 /*
     if (W_CheckNumForName("SS_START") >= 0

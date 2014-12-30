@@ -1080,7 +1080,7 @@ void I_BeginRead(void)
     WiiLightControl (WII_LIGHT_ON);
 */
     if(screenSize > 6) 						// THIS WORKS PRETTY GOOD FOR PSP, AND
-	V_DrawPatch(SCREENWIDTH - LOADING_DISK_W + 2, 0, disk);	// IS ALSO A FIX FOR THE WII
+	V_DrawPatch(ORIGWIDTH - LOADING_DISK_W + 18, 0, disk);		// IS ALSO A FIX FOR THE WII
 }
 
 void I_EndRead(void)
@@ -1111,7 +1111,7 @@ void I_EndRead(void)
     WiiLightControl (WII_LIGHT_OFF);
 */
     if(screenSize > 6) 						// THIS WORKS PRETTY GOOD FOR PSP, AND
-	V_DrawPatch(SCREENWIDTH - LOADING_DISK_W + 2, 0, disk);	// IS ALSO A FIX FOR THE WII
+	V_DrawPatch(ORIGWIDTH - LOADING_DISK_W + 18, 0, disk);		// IS ALSO A FIX FOR THE WII
 }
 
 // Ending of I_FinishUpdate() when in software scaling mode.

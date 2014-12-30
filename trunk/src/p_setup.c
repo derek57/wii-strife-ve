@@ -112,6 +112,8 @@ mapthing_t	playerstarts[MAXPLAYERS];
 // haleyjd 08/24/10: [STRIFE] rift spots for player spawning
 mapthing_t      riftSpots[MAXRIFTSPOTS];
 
+// [SVE]: track which are valid, for scoot cheat.
+boolean		riftSpotInit[MAXRIFTSPOTS];
 
 
 
@@ -330,6 +332,10 @@ void P_LoadThings (int lump)
     data = W_CacheLumpNum (lump,PU_STATIC);
     numthings = W_LumpLength (lump) / sizeof(mapthing_t);
 
+    // [SVE]: clear out riftSpotInit array
+    for(i = 0; i < MAXRIFTSPOTS; i++)
+        riftSpotInit[i] = false;
+
     mt = (mapthing_t *)data;
     for (i=0 ; i<numthings ; i++, mt++)
     {
@@ -374,6 +380,7 @@ void P_LoadThings (int lump)
             int riftSpotNum = spawnthing.type - 118;
             riftSpots[riftSpotNum] = spawnthing;
             riftSpots[riftSpotNum].type = 1;
+            riftSpotInit[riftSpotNum] = true; // [SVE]
         }
         else if(spawnthing.type >= 9001 && spawnthing.type < 9011)
         {

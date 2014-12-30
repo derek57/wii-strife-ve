@@ -2307,18 +2307,24 @@ char *M_GetSaveGameDir(char *iwadname)
 
 	if(usb)
 	{
+#ifdef SHAREWARE
 	    if(fsize == 9934413)
 		savegamedir = SavePathStrifeShare11USB;
-	    else if(fsize == 28372168)
+	    else
+#endif
+	    if(fsize == 28372168)
 		savegamedir = SavePathStrifeReg10USB;
 	    else if(fsize == 28377364)
 		savegamedir = SavePathStrifeReg12USB;
 	}
 	else if(sd)
 	{
+#ifdef SHAREWARE
 	    if(fsize == 9934413)
 		savegamedir = SavePathStrifeShare11SD;
-	    else if(fsize == 28372168)
+	    else
+#endif
+	    if(fsize == 28372168)
 		savegamedir = SavePathStrifeReg10SD;
 	    else if(fsize == 28377364)
 		savegamedir = SavePathStrifeReg12SD;

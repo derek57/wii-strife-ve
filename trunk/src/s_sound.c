@@ -252,6 +252,11 @@ void S_Start(void)
     else
         mnum = -30;
 
+    if(gamemap == 32)		// HACK AGAINST [SVE]: add more demo style
+        mnum = 4;		// HACK AGAINST [SVE]: add more demo style
+    else if(gamemap == 34)	// HACK AGAINST [SVE]: add more demo style
+	mnum = 3;		// HACK AGAINST [SVE]: add more demo style
+
     S_ChangeMusic(gamemap + mnum, true);
 }
 
@@ -427,6 +432,30 @@ void S_StartSound(void *origin_p, int sfx_id)
         // the bad sound. Because it invokes multiple undefined behaviors and 
         // is of basically no consequence, it has deliberately not been ported.
         I_Error("Bad sfx #: %d", sfx_id);
+    }
+
+    if(gamemap > 31)			// HACK AGAINST [SVE]: add more demo style
+    {
+	if(sfx_id == sfx_ambppl)
+	    sfx_id = sfx_ambpp2;
+	else if(sfx_id == sfx_drlmtc)
+	    sfx_id = sfx_drlmt2;
+	else if(sfx_id == sfx_drlmto)
+	    sfx_id = sfx_drlmt3;
+	else if(sfx_id == sfx_drlwud)
+	    sfx_id = sfx_drlwu2;
+	else if(sfx_id == sfx_drsmtc)
+	    sfx_id = sfx_drsmt2;
+	else if(sfx_id == sfx_drsmto)
+	    sfx_id = sfx_drsmt3;
+	else if(sfx_id == sfx_oof)
+	    sfx_id = sfx_oof2;
+	else if(sfx_id == sfx_ratact)
+	    sfx_id = sfx_ratac2;
+	else if(sfx_id == sfx_rebact)
+	    sfx_id = sfx_rebac2;
+	else if(sfx_id == sfx_wdrip)
+	    sfx_id = sfx_wdrip2;
     }
 
     sfx = &S_sfx[sfx_id];

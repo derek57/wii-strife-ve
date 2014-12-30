@@ -70,7 +70,10 @@ musicinfo_t S_musicFull[] =
     MUSIC("drone"),
     MUSIC("fight"),
     MUSIC("happy"),
-    MUSIC("end")
+    MUSIC("end"),
+    MUSIC("fmstl"),	// HACK AGAINST [SVE]: add more demo style
+    MUSIC("map1"),	// HACK AGAINST [SVE]: add more demo style
+    MUSIC("map3")	// HACK AGAINST [SVE]: add more demo style
 
 
 };
@@ -239,6 +242,17 @@ sfxinfo_t S_sfx[] =
   SOUND("airlck",    98),
   SOUND("drchno",    98),
   SOUND("drchnc",    98),
-  SOUND("valve",     98)
+  SOUND("valve",     98),
+  SOUND("oof2",      96),	// HACK AGAINST [SVE]: add more demo style
+  SOUND("ambpp2",    218),	// HACK AGAINST [SVE]: add more demo style
+  SOUND("drlmt2",    98),	// HACK AGAINST [SVE]: add more demo style
+  SOUND("drlmt3",    98),	// HACK AGAINST [SVE]: add more demo style
+  SOUND("drlwu2",    98),	// HACK AGAINST [SVE]: add more demo style
+  SOUND("drsmt2",    98),	// HACK AGAINST [SVE]: add more demo style
+  SOUND("drsmt3",    98),	// HACK AGAINST [SVE]: add more demo style
+  SOUND("ratac2",    99),	// HACK AGAINST [SVE]: add more demo style
+  SOUND("rebac2",    200),	// HACK AGAINST [SVE]: add more demo style
+  SOUND("wdrip2",    201),	// HACK AGAINST [SVE]: add more demo style
+  SOUND("welcum",    78),	// HACK AGAINST [SVE]: add more demo style
 };
 

@@ -230,6 +230,9 @@ extern  mapthing_t      playerstarts[MAXPLAYERS];
 #define MAXRIFTSPOTS 16
 extern  mapthing_t      riftSpots[MAXRIFTSPOTS];
 
+// [SVE]
+extern boolean          riftSpotInit[MAXRIFTSPOTS];
+
 // Intermission stats.
 // Parameters for world map / intermission.
 extern  wbstartstruct_t		wminfo;	
