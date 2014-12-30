@@ -740,10 +740,14 @@ void D_DoAdvanceDemo (void)
     case -2: // title screen
         pagetic = 6*TICRATE;
         gamestate = GS_DEMOSCREEN;
-        pagename = DEH_String("TITLEPIC");
 
-	if(fsize != 9934413)
+	if(!isdemoversion)
+	{
+	    pagename = DEH_String("TITLEPIC");
 	    S_StartMusic(mus_logo);
+	}
+	else if(isdemoversion)
+    	    pagename = DEH_String("TITLEPI2");
 
         demosequence = -1; // start intro cinematic
         return;
@@ -751,19 +755,23 @@ void D_DoAdvanceDemo (void)
         pagetic = 10;
         gamestate = GS_DEMOSCREEN;
 
-	if(STRIFE_1_0_REGISTERED || STRIFE_1_X_REGISTERED) // FOR PSP: (NOT AVAIL. IN SHAREWARE v1.0)
+	if(!isdemoversion)
     	    pagename = DEH_String("PANEL0");
-#ifdef SHAREWARE
-	else if(STRIFE_1_1_SHAREWARE)
+	else if(isdemoversion)
     	    pagename = DEH_String("HELP0");
-#endif
+
         S_StartSound(NULL, sfx_rb2act);
         wipegamestate = -1;
         break;
     case 0: // Rogue logo
         pagetic = 4*TICRATE;
         gamestate = GS_DEMOSCREEN;
-        pagename = DEH_String("RGELOGO");
+
+	if(!isdemoversion)
+	    pagename = DEH_String("RGELOGO");
+	else if(isdemoversion)
+    	    pagename = DEH_String("RGELOGO2");
+
         wipegamestate = -1;
         break;
     case 1:
@@ -804,9 +812,10 @@ void D_DoAdvanceDemo (void)
         I_StartVoice(DEH_String("pro6")); // Movement is born! Born of lifelong 
         break;                            // STRIFE!
     case 7: // titlepic again - unused...
+	    // nitr8 [2014/12/30] ...until now.
         pagetic = 9*TICRATE;
         gamestate = GS_DEMOSCREEN;
-        pagename = DEH_String("TITLEPIC");
+        pagename = DEH_String("TITLEPI2");
         wipegamestate = -1;
         break;
     case 8: // demo
@@ -815,6 +824,7 @@ void D_DoAdvanceDemo (void)
 //        G_DeferedPlayDemo(("demo1"));
         break;
     case 9: // velocity logo? - unused...
+	    // nitr8 [2014/12/30] ...until now.
         pagetic = 6*TICRATE;
         gamestate = GS_DEMOSCREEN;
         pagename = DEH_String("vellogo");
@@ -833,8 +843,13 @@ void D_DoAdvanceDemo (void)
     ++demosequence;
 
     if(demosequence > 11)
-        demosequence = -2;
-    if(demosequence == 7 || demosequence == 9)
+    {
+	if(!isdemoversion)
+	    demosequence = -2;
+	else
+	    demosequence = 0;
+    }
+    if((demosequence == 7 || demosequence == 9) && !isdemoversion)
         ++demosequence;
 }
 
@@ -2161,7 +2176,7 @@ void D_DoomMain (void)
     }
 
     // haleyjd 20110206 [STRIFE]: -devparm implies -nograph
-    if(devparm || STRIFE_1_1_SHAREWARE)	// FOR PSP: (NOT AVAIL. IN SHAREWARE)
+    if(devparm)
         showintro = false;
 
     // add any files specified on the command line with -file wadfile

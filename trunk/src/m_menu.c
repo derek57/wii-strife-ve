@@ -460,9 +460,9 @@ char *mustext[] =			// ADDED FOR PSP
 	"TRAINING FACILITY",
 	"UNKNOWN MUSIC TITLE #1",	// LEFTOVERS FROM ROGUE???
 	"UNKNOWN MUSIC TITLE #2",	// LEFTOVERS FROM ROGUE???
-	"UNKNOWN MUSIC (DEMO VERSION)",	// DEMO ADDITIONS
-	"SANCTUARY (DEMO VERSION)",	// DEMO ADDITIONS
-	"FRONT BASE (DEMO VERSION)",	// DEMO ADDITIONS
+	"UNKNOWN MUSIC (DEMO VER.)",	// DEMO ADDITIONS
+	"SANCTUARY (DEMO VER.)",	// DEMO ADDITIONS
+	"FRONT BASE (DEMO VER.)",	// DEMO ADDITIONS
 };
 /*
 char *spottext[] =			// FOR PSP (BUT DOESN'T WORK (YET))
@@ -1661,7 +1661,10 @@ void M_DrawReadThis2(void)
 {
     inhelpscreens = true;
 
-    V_DrawPatch(0, 0, W_CacheLumpName(DEH_String("HELP2"), PU_CACHE));
+    if(!isdemoversion)
+	V_DrawPatch(0, 0, W_CacheLumpName(DEH_String("HELP2"), PU_CACHE));
+    else
+	V_DrawPatch(0, 0, W_CacheLumpName(DEH_String("HELP22"), PU_CACHE));
 }
 
 
@@ -1673,7 +1676,10 @@ void M_DrawReadThis3(void)
 {
     inhelpscreens = true;
     
-    V_DrawPatch(0, 0, W_CacheLumpName(DEH_String("HELP3"), PU_CACHE));
+    if(!isdemoversion)
+	V_DrawPatch(0, 0, W_CacheLumpName(DEH_String("HELP3"), PU_CACHE));
+    else
+	V_DrawPatch(0, 0, W_CacheLumpName(DEH_String("HELP32"), PU_CACHE));
 }
 
 void M_GameFiles(int choice)
@@ -2851,21 +2857,15 @@ void M_Rift(int choice)
     	switch(choice)
     	{
     	case 0:
-#ifdef SHAREWARE
-    	    if   ((map >=  2 && (STRIFE_1_0_REGISTERED || STRIFE_1_X_REGISTERED))
-	    ||    (map >= 33 && (STRIFE_1_0_SHAREWARE  || STRIFE_1_1_SHAREWARE)))
-#else
-    	    if    (map >=  2 && (STRIFE_1_0_REGISTERED || STRIFE_1_X_REGISTERED))
-#endif
+    	    if   ((map >=  2 && !isdemoversion)
+	    ||    (map >= 33 && isdemoversion))
 		   map--;
     	    break;
     	case 1:
 	    if    (map <  34)	// FOR PSP: STRIFE v1.0 Shareware includes MAP35 & MAP36, but...
 	    {			// ...the IWAD is missing some textures (maybe they are DEV-MAPS?)
-#ifdef SHAREWARE
-		if(map ==  0 && (STRIFE_1_0_SHAREWARE  || STRIFE_1_1_SHAREWARE))
+		if(map ==  0 && isdemoversion)
 		   map  = 32;
-#endif
     	    	   map++;
 	    }
     	    break;
@@ -2926,27 +2926,62 @@ void M_Spin(int choice)
     	switch(choice)
     	{
     	case 0:
-    	    if	   (musnum >  1)
-    	            musnum--;
+    	    if(musnum >  1)
+	    {
+		musnum--;
+		if(isdemoversion)
+		{
+		    if(musnum == 34)
+			musnum = 24;
+		    else if(musnum == 23)
+			musnum = 6;
+		    else if(musnum == 4)
+			musnum = 3;
+		    else if(musnum == 2)
+			musnum = 1;
+		}
+		else
+		{
+		    if(musnum == 32)
+			musnum = 27;
+		    else if(musnum == 23)
+			musnum = 22;
+		    else if(musnum == 20)
+			musnum = 18;
+		    else if(musnum == 16)
+			musnum = 14;
+		    else if(musnum == 12)
+			musnum = 11;
+		}
+	    }
     	    break;
     	case 1:
-	    if	   (STRIFE_1_0_REGISTERED || STRIFE_1_X_REGISTERED)
-	    {
-		if (musnum < 37)
-		    musnum++;
+	    if (musnum < 37 && isdemoversion)
+	    {					// 2 MUSIC FILES ARE STILL MISSING HERE (DEMO HAS 10)
+		musnum++;
+		if(musnum == 2)
+		    musnum = 3;
+		else if(musnum == 4)
+		    musnum = 5;
+		else if(musnum == 7)
+		    musnum = 24;
+		else if(musnum == 25)
+		    musnum = 35;
 	    }
-#ifdef SHAREWARE
-	    else if(STRIFE_1_0_SHAREWARE)
+	    else if(musnum < 34 && !isdemoversion)
 	    {
-		if (musnum < 10)
-		    musnum++;
+		musnum++;
+		if (musnum == 12)
+		    musnum = 13;
+		else if (musnum == 15)
+		    musnum = 17;
+		else if (musnum == 19)
+		    musnum = 21;
+		else if (musnum == 23)
+		    musnum = 24;
+		else if (musnum == 28)
+		    musnum = 33;
 	    }
-	    else if(STRIFE_1_1_SHAREWARE)
-	    {
-		if (musnum <  9)
-		    musnum++;
-	    }
-#endif
     	    break;
     	}
 
@@ -2960,22 +2995,32 @@ void M_DrawCheats(void)
 {
     V_DrawPatch (110, 0, W_CacheLumpName(DEH_String("M_CHEATS"), PU_CACHE));
 
-    M_WriteText(72, 20, DEH_String("SHOW UNVISITED MAP AREAS"));
-    M_WriteText(72, 30, DEH_String("OMNIPOTENT (GOD)"));
+    M_WriteText(72, 20, DEH_String("SHOW UNSEEN MAP AREAS"));
+
+    if(!isdemoversion)
+	M_WriteText(72, 30, DEH_String("OMNIPOTENT (GOD)"));
+    else
+	M_WriteText(72, 30, DEH_String("IBGOD (GOD)"));
 
     if (players[consoleplayer].cheats & CF_GODMODE)
 	M_WriteText(215, 30, DEH_String("ON"));
     else
 	M_WriteText(215, 30, DEH_String("OFF"));
 
-    M_WriteText(72, 40, DEH_String("ELVIS (NOCLIP)"));
+    if(!isdemoversion)
+	M_WriteText(72, 40, DEH_String("ELVIS (NOCLIP)"));
+    else
+	M_WriteText(72, 40, DEH_String("SPIRIT (NOCLIP)"));
 
     if (players[consoleplayer].cheats & CF_NOCLIP)
 	M_WriteText(215, 40, DEH_String("ON"));
     else
 	M_WriteText(215, 40, DEH_String("OFF"));
 
-    M_WriteText(72, 110, DEH_String("TOPO (MAP)"));
+    if(!isdemoversion)
+	M_WriteText(72, 110, DEH_String("TOPO (MAP)"));
+    else
+	M_WriteText(72, 110, DEH_String("IDDT (MAP)"));
 
     if(!cheating)
 	M_WriteText(215, 110, DEH_String("OFF"));
@@ -2984,46 +3029,85 @@ void M_DrawCheats(void)
     else if (cheating && cheeting==2)	  
 	M_WriteText(215, 110, DEH_String("ALL"));
 
-    M_WriteText(72, 50, DEH_String("BOOMSTIX"));
-    M_WriteText(193, 50, DEH_String("(GUNS)"));
+    if(!isdemoversion)
+    {
+	M_WriteText(72, 50, DEH_String("BOOMSTIX"));
+	M_WriteText(193, 50, DEH_String("(GUNS)"));
+    }
+    else
+	M_WriteText(72, 50, DEH_String("GUNS"));
 
-    M_WriteText(72, 60, DEH_String("JIMMY"));
+    if(!isdemoversion)
+	M_WriteText(72, 60, DEH_String("JIMMY"));
+    else
+	M_WriteText(72, 60, DEH_String("OPEN"));
+
     M_WriteText(194, 60, DEH_String("(KEYS)"));
 
-    M_WriteText(72, 70, DEH_String("DONNYTRUMP"));
+    if(!isdemoversion)
+	M_WriteText(72, 70, DEH_String("DONNYTRUMP"));
+    else
+	M_WriteText(72, 70, DEH_String("MONEY"));
+
     M_WriteText(193, 70, DEH_String("(GOLD)"));
 
-    M_WriteText(72, 80, DEH_String("STONECOLD"));
+    if(!isdemoversion)
+	M_WriteText(72, 80, DEH_String("STONECOLD"));
+    else
+	M_WriteText(72, 80, DEH_String("KILLEM"));
+
     M_WriteText(171, 80, DEH_String("(KILL ALL)"));
 
-    M_WriteText(72, 90, DEH_String("LEGO"));
-    M_WriteText(148, 90, DEH_String("(SIGIL PARTS)"));
+    if(!isdemoversion)
+    {
+	M_WriteText(72, 90, DEH_String("LEGO"));
+	M_WriteText(148, 90, DEH_String("(SIGIL PARTS)"));
+    }
+    else
+	M_WriteText(72, 90, DEH_String("- NOT AVAIL. IN TEASER -"));
 
-    M_WriteText(72, 100, DEH_String("PUMPUP"));
+    if(!isdemoversion)
+	M_WriteText(72, 100, DEH_String("PUMPUP"));
+    else
+	M_WriteText(72, 100, DEH_String("LISTIT"));
+
     M_WriteText(188, 100, DEH_String("(ITEMS)"));
 
 //    M_WriteText(72, 110, DEH_String("GPS"));		// FOR PSP: IT WORKS, BUT IS NOT REALLY NEEDED
 
-    M_WriteText(72, 120, DEH_String("GRIPPER"));
+    if(!isdemoversion)
+	M_WriteText(72, 120, DEH_String("GRIPPER"));
+    else
+	M_WriteText(72, 120, DEH_String("STIC"));
+
     M_WriteText(143, 120, DEH_String("(SLOW SPEED)"));
 
 //    M_WriteText(72, 130, DEH_String("DOTS"));		// FOR PSP: IT WORKS, BUT IS NOT REALLY NEEDED
 
-    M_WriteText(72, 136, DEH_String("RIFT (WARP TO MAP):"));
+    if(!isdemoversion)
+	M_WriteText(72, 136, DEH_String("RIFT (WARP TO MAP):"));
+    else
+	M_WriteText(72, 136, DEH_String("GOTO (WARP TO MAP):"));
+
     M_WriteText(72, 160, DEH_String("EXECUTE WARPING"));
 
 /*
     M_WriteText(72, 160, DEH_String("WARP TO SPOT:"));
     M_WriteText(72, 170, DEH_String("EXECUTE WARPING TO SPOT"));	// FOR PSP: (DOESN'T WORK)
 */
-    M_WriteText(72, 180, DEH_String("SPIN (PLAY MUSIC TITLE):"));
+    if(!isdemoversion)
+	M_WriteText(72, 180, DEH_String("SPIN (PLAY MUSIC TITLE):"));
+    else
+	M_WriteText(72, 180, DEH_String("IDMUS (PLAY MUSIC NUM):"));
 
-    if     (map == 0 && (STRIFE_1_0_REGISTERED || STRIFE_1_X_REGISTERED))
+    if(map == 0)
+    {
+	if(!isdemoversion)
 	    map =  1;
-#ifdef SHAREWARE
-    else if(map == 0 && (STRIFE_1_0_SHAREWARE  || STRIFE_1_1_SHAREWARE ))
+	else
 	    map = 32;
-#endif
+    }
+
     M_WriteText(72, 145, maptext[map]);
 /*
     if( spot == 0)
@@ -3035,6 +3119,17 @@ void M_DrawCheats(void)
 	musnum =  1;
 
     M_WriteText(72, 190, mustext[musnum]);
+
+    if(!isdemoversion)
+    {
+	if(musnum == 2 || musnum == 4 || musnum == 7 || musnum == 25)
+	    musnum++;
+    }
+    else
+    {
+	if(musnum == 12 || musnum == 15 || musnum == 19 || musnum == 23 || musnum == 28)
+	    musnum++;
+    }
 }
 
 void M_Cheats(int choice)
@@ -4331,20 +4426,6 @@ boolean M_Responder (event_t* ev)
         return false;
     }
 
-    // NEW STATUS TYPES	VS. OLD STATUS TYPES:
-    //
-    //		-1	=	ITT_EMPTY
-    //		 1	=	ITT_EFUNC
-    //		 2	=	ITT_LRFUNC
-    //
-    // NOT AVAILABLE IN CHOCOLATE (YET):
-    //
-    //		 3	=	ITT_SETMENU
-    //		 4	=	ITT_INERT
-    //
-    //		 5	=	ITT_SETKEY	// SPECIAL FUNCTION FOR CUSTOMIZING KEY BINDINGS
-
-
     // Keys usable within menu
 
     if (ch == key_menu_down)
@@ -4365,7 +4446,10 @@ boolean M_Responder (event_t* ev)
 		    FirstKey++;
 		}
 	    }
-            else itemOn++;
+            else
+		itemOn++;
+	    if(currentMenu == &CheatsDef && itemOn == 7 && isdemoversion)
+		itemOn++;
             S_StartSound(NULL, sfx_pstop);
         } while(currentMenu->menuitems[itemOn].status==-1);
 
@@ -4378,6 +4462,7 @@ boolean M_Responder (event_t* ev)
         do
         {
             if (!itemOn)
+	    {
 		if (FirstKey == 0)		// FOR PSP (if too menu items) ;-)
 		{
                     itemOn = currentMenu->numitems-1;
@@ -4387,7 +4472,11 @@ boolean M_Responder (event_t* ev)
 		{
 		    FirstKey--;
 		}
-            else itemOn--;
+	    }
+            else
+		itemOn--;
+	    if(currentMenu == &CheatsDef && itemOn == 7 && isdemoversion)
+		itemOn--;
             S_StartSound(NULL, sfx_pstop);
         } while(currentMenu->menuitems[itemOn].status==-1);
 
@@ -4736,6 +4825,15 @@ void M_Drawer (void)
 	    V_DrawPatch(x + CURSORXOFF, currentMenu->y - 5 + itemOn*LINEHEIGHT,
 		              W_CacheLumpName(DEH_String(cursorName[whichCursor]),
 		                              PU_CACHE));
+	}
+	if(currentMenu == &EpiDef && itemOn > 0)
+	{
+	    M_WriteText(49, 120, DEH_String("THIS MODE TRIES TO EMULATE THE"));
+	    M_WriteText(49, 130, DEH_String("BEHAVIOR OF THE ORIGINAL STRIFE"));
+	    M_WriteText(49, 140, DEH_String("TEASER DEMO AS CLOSE TO THE"));
+	    M_WriteText(49, 150, DEH_String("ORIGINAL AS POSSIBLE, INCLUDING:"));
+	    M_WriteText(49, 160, DEH_String("SOUND, MUSIC, MENU, SLIDESHOWS,"));
+	    M_WriteText(49, 170, DEH_String("THE FINALE & PLAYER MESSAGES."));
 	}
     }
 }
