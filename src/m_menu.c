@@ -421,6 +421,7 @@ char *maptext[] =			// ADDED FOR PSP
 	"SANCTUARY (DEMO VER.)",
 	"TOWN (DEMO VER.)",
 	"MOVEMENT BASE (DEMO VER.)",
+	"MAP35 (DEVELOPER MAP)",
 };
 
 char *mustext[] =			// ADDED FOR PSP
@@ -603,7 +604,8 @@ menuitem_t FilesMenu[]=
     {1,"M_SAVEG",M_SaveGame,'s'},
     {1,"M_ENDGAM",M_EndGame,'e'},
     {1,"M_CHEATS",M_Cheats,'c'},
-    {1,"Show Cast",M_StartCast,'x'} // [SVE]
+//    {1,"Show Cast",M_StartCast,'x'} // [SVE]
+    {1,"M_CAST",M_StartCast,'x'}
 };
 
 menu_t  FilesDef =
@@ -665,8 +667,12 @@ enum
 
 menuitem_t EpisodeMenu[]=
 {
+/*
     {1, "Quest for the Sigil", M_Episode, 'q'},
     {1, "Trust No One (Demo)", M_Episode, 't'},
+*/
+    {1, "M_QUEST", M_Episode, 'q'},
+    {1, "M_TRUST", M_Episode, 't'},
 };
 
 menu_t  EpiDef =
@@ -2862,11 +2868,13 @@ void M_Rift(int choice)
 		   map--;
     	    break;
     	case 1:
-	    if    (map <  34)	// FOR PSP: STRIFE v1.0 Shareware includes MAP35 & MAP36, but...
+	    if    (map <  35)	// FOR PSP: STRIFE v1.0 Shareware includes MAP35 & MAP36, but...
 	    {			// ...the IWAD is missing some textures (maybe they are DEV-MAPS?)
 		if(map ==  0 && isdemoversion)
 		   map  = 32;
     	    	   map++;
+		if(map == 35 && !isdemoversion)
+		   map =  34;
 	    }
     	    break;
     	}
@@ -3119,7 +3127,7 @@ void M_DrawCheats(void)
 	musnum =  1;
 
     M_WriteText(72, 190, mustext[musnum]);
-
+/*
     if(!isdemoversion)
     {
 	if(musnum == 2 || musnum == 4 || musnum == 7 || musnum == 25)
@@ -3130,6 +3138,7 @@ void M_DrawCheats(void)
 	if(musnum == 12 || musnum == 15 || musnum == 19 || musnum == 23 || musnum == 28)
 	    musnum++;
     }
+*/
 }
 
 void M_Cheats(int choice)
@@ -3187,7 +3196,8 @@ void M_NewGame(int choice)
 
 void M_DrawEpisode(void)
 {
-    V_WriteBigText("Choose Campaign", 54, 38);
+//    V_WriteBigText("Choose Campaign", 54, 38);
+    V_DrawPatch (50, 38, W_CacheLumpName(DEH_String("M_CCMPGN"), PU_CACHE));
 }
 
 void M_ChooseSkill(int choice)

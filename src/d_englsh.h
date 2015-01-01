@@ -183,6 +183,8 @@
 #define HUSTR_32        "DEMO  1: Sanctuary"
 #define HUSTR_33        "DEMO  2: Town"
 #define HUSTR_34        "DEMO  3: Movement Base"
+
+#define HUSTR_35        "MAP35: Development Map"
 /*
 // haleyjd 20110219: [STRIFE] replaced all with Strife chat macros:
 #define HUSTR_CHATMACRO1        "Fucker!"

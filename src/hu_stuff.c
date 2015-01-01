@@ -183,7 +183,9 @@ char *mapnames[] =
     // Demo version maps
     HUSTR_32,
     HUSTR_33,
-    HUSTR_34
+    HUSTR_34,
+
+    HUSTR_35
 };
 
 //
