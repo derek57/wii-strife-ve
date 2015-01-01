@@ -609,7 +609,7 @@ static voiceinfo_t *S_getVoice(const char *name, int lumpnum)
 // [SVE]: this table helps fix up the demo maps
 static const char *demoVoices[][2] =
 {
-    { "VOC2", "VOC1002" },
+    { "VOC2", "VOC2_2" },
     { "VOC4", "VOC223"  },
     { "VOC6", "VOC205"  },
     { "VOC7", "VOC225"  },
