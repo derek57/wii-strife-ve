@@ -422,6 +422,7 @@ char *maptext[] =			// ADDED FOR PSP
 	"TOWN (DEMO VER.)",
 	"MOVEMENT BASE (DEMO VER.)",
 	"MAP35 (DEVELOPER MAP)",
+	"MAP36 (DEVELOPER MAP)",
 };
 
 char *mustext[] =			// ADDED FOR PSP
@@ -2868,7 +2869,7 @@ void M_Rift(int choice)
 		   map--;
     	    break;
     	case 1:
-	    if    (map <  35)	// FOR PSP: STRIFE v1.0 Shareware includes MAP35 & MAP36, but...
+	    if    (map <  36)	// FOR PSP: STRIFE v1.0 Shareware includes MAP35 & MAP36, but...
 	    {			// ...the IWAD is missing some textures (maybe they are DEV-MAPS?)
 		if(map ==  0 && isdemoversion)
 		   map  = 32;

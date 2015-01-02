@@ -185,7 +185,8 @@ char *mapnames[] =
     HUSTR_33,
     HUSTR_34,
 
-    HUSTR_35
+    HUSTR_35,
+    HUSTR_36
 };
 
 //
