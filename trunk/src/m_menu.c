@@ -606,7 +606,7 @@ menuitem_t FilesMenu[]=
     {1,"M_ENDGAM",M_EndGame,'e'},
     {1,"M_CHEATS",M_Cheats,'c'},
 //    {1,"Show Cast",M_StartCast,'x'} // [SVE]
-    {1,"M_CAST",M_StartCast,'x'}
+    {1,"M_SHWCST",M_StartCast,'x'}
 };
 
 menu_t  FilesDef =

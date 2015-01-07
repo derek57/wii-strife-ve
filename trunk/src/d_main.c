@@ -85,6 +85,11 @@
 #include "video.h"
 #include "gui.h"
 
+// [SVE] svillarreal
+#include "hu_stuff.h"
+
+extern	patch_t *hu_font[HU_FONTSIZE];
+
 //#include "w_merge.h"
 
 //#define printf pspDebugScreenPrintf
@@ -661,6 +666,27 @@ int             demosequence;
 int             pagetic;
 char                    *pagename;
 
+// From the original instruction manual:
+static char storytext[] =
+   "You are a wandering mercenary led to\n"
+   "the small town of Tarnhill by rumors\n"
+   "of conflict between the Order, a\n"
+   "well-equipped religious monarchy,\n"
+   "and the Front, the rag tag\n"
+   "resistance movement. While searching\n"
+   "for the Front you decided to take a\n"
+   "brief rest somewhere that you\n"
+   "thought was safe. The Order's\n"
+   "Acolytes have been rounding up all\n"
+   "suspicious characters in the area.\n"
+   "Yes, you happen to be one of them.\n"
+   "What they didn't expect, though, is\n"
+   "the knife you keep concealed for\n"
+   "situations just like this one... ";
+
+#define TEXTSPEED 3
+static int storycount;
+
 
 //
 // D_PageTicker
@@ -672,8 +698,93 @@ void D_PageTicker (void)
 {
     if (--pagetic < 0)
         D_AdvanceDemo ();
+
+    if(!strcmp(pagename, "BACKPIC"))
+        ++storycount;
 }
 
+//
+// D_TextWrite
+//
+// haleyjd 20141027: [SVE] Do backstory text
+//
+void D_TextWrite (void)							// REACTIVATED FOR DEMO
+{
+/*
+    byte*	src;							// MODIFIED FOR DEMO
+    byte*	dest;							// MODIFIED FOR DEMO
+*/
+    patch_t *patch;
+    
+    int		/*x,y,*/w;						// MODIFIED FOR DEMO
+    signed int	count;
+    char*	ch;
+    int		c;
+    int		cx;
+    int		cy;
+    
+    // erase the entire screen to a tiled background
+/*
+    src = W_CacheLumpName ( finaleflat , PU_CACHE);			// MODIFIED FOR DEMO
+    dest = I_VideoBuffer;						// MODIFIED FOR DEMO
+
+    for (y=0 ; y<SCREENHEIGHT ; y++)					// MODIFIED FOR DEMO
+    {									// MODIFIED FOR DEMO
+	for (x=0 ; x<SCREENWIDTH/64 ; x++)				// MODIFIED FOR DEMO
+	{								// MODIFIED FOR DEMO
+	    memcpy (dest, src+((y&63)<<6), 64);				// MODIFIED FOR DEMO
+	    dest += 64;							// MODIFIED FOR DEMO
+	}								// MODIFIED FOR DEMO
+	if (SCREENWIDTH&63)						// MODIFIED FOR DEMO
+	{								// MODIFIED FOR DEMO
+	    memcpy (dest, src+((y&63)<<6), SCREENWIDTH&63);		// MODIFIED FOR DEMO
+	    dest += (SCREENWIDTH&63);					// MODIFIED FOR DEMO
+	}								// MODIFIED FOR DEMO
+    }									// MODIFIED FOR DEMO
+*/
+    patch = (patch_t *)W_CacheLumpName("BACKPIC", PU_CACHE);		// ADDED FOR DEMO
+    V_DrawPatch (0, 0, patch);						// ADDED FOR DEMO
+
+    patch = (patch_t *)W_CacheLumpName("M_STORY", PU_CACHE);		// ADDED FOR DEMO
+    V_DrawPatch (10, 0, patch);						// ADDED FOR DEMO
+
+    V_MarkRect (0, 0, SCREENWIDTH, SCREENHEIGHT);			// UNSURE... DUNNO... (??) :-/
+
+    // draw some of the text onto the screen
+    cx = 10;
+    cy = 30;
+    ch = storytext;
+
+    count = ((signed int) storycount - 10) / TEXTSPEED;
+    if (count < 0)
+	count = 0;
+    for ( ; count ; count-- )
+    {
+	c = *ch++;
+	if (!c)
+	    break;
+	if (c == '\n')
+	{
+	    cx = 10;
+	    cy += 11;
+	    continue;
+	}
+
+	c = toupper(c) - HU_FONTSTART;
+	if (c < 0 || c> HU_FONTSIZE)
+	{
+	    cx += 4;
+	    continue;
+	}
+
+	w = SHORT (hu_font[c]->width);
+//	if (cx+w > SCREENWIDTH)					// (ORIGINAL)
+	if (cx+w > ORIGWIDTH)					// CHANGED FOR HIRES
+	    break;
+	V_DrawPatch(cx, cy, hu_font[c]);
+	cx+=w;
+    }
+}
 
 
 //
@@ -684,6 +795,9 @@ void D_PageTicker (void)
 void D_PageDrawer (void)
 {
     V_DrawPatch (0, 0, W_CacheLumpName(pagename, PU_CACHE));
+
+    if(!strcmp(pagename, "BACKPIC"))
+        D_TextWrite();
 }
 
 
@@ -819,9 +933,17 @@ void D_DoAdvanceDemo (void)
         wipegamestate = -1;
         break;
     case 8: // demo
+        // [SVE]
+        storycount = 0;
+        S_ChangeMusic(mus_dark, 1);
+        pagename = "BACKPIC";
+        pagetic = 58*TICRATE;
+        wipegamestate = -1;
+        /*
         ClearTmp();
         pagetic = 9*TICRATE;
-//        G_DeferedPlayDemo(("demo1"));
+        G_DeferedPlayDemo(DEH_String("demo1"));
+        */
         break;
     case 9: // velocity logo? - unused...
 	    // nitr8 [2014/12/30] ...until now.
@@ -833,7 +955,12 @@ void D_DoAdvanceDemo (void)
     case 10: // credits
         gamestate = GS_DEMOSCREEN;
         pagetic = 12*TICRATE;
-        pagename = DEH_String("CREDIT");
+
+	if(isdemoversion)
+	    pagename = DEH_String("CREDIT2");
+	else
+	    pagename = DEH_String("CREDIT");
+
         wipegamestate = -1;
         break;
     default:
