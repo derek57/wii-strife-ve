@@ -388,7 +388,11 @@ void F_BunnyScroll (void)						// FUNCTION RE-ADDED FOR DEMO
     patch_t*	p2;
 
     p1 = W_CacheLumpName (DEH_String("vellogo"), PU_LEVEL);
-    p2 = W_CacheLumpName (DEH_String("credit"),  PU_LEVEL);
+
+    if(isdemoversion)
+	p2 = W_CacheLumpName (DEH_String("credit2"),  PU_LEVEL);
+    else
+	p2 = W_CacheLumpName (DEH_String("credit"),  PU_LEVEL);
 
     V_MarkRect (0, 0, SCREENWIDTH, SCREENHEIGHT);
 
@@ -1159,8 +1163,11 @@ void F_CastDrawer (void)
         V_DrawPatch(x, y, patch);
 
     // title
+/*
     V_WriteBigText("Cast of Characters", 
                    160 - V_BigFontStringWidth("Cast of Characters")/2, 8);
+*/
+    V_DrawPatch (28, 8, W_CacheLumpName(DEH_String("M_CAST"), PU_CACHE));
 
     // name
     F_CastPrint(DEH_String(castorder[castnum].name));
@@ -1244,9 +1251,15 @@ void F_Drawer (void)
         if(gamemap <= 29)
         {
             // draw credits
-            patch_t *credits =
+	    patch_t *credits2 =
+		    W_CacheLumpName(DEH_String("CREDIT2"), PU_CACHE);
+	    patch_t *credits =
 		    W_CacheLumpName(DEH_String("CREDIT"), PU_CACHE);
-            V_DrawPatch(0, 0, credits);
+
+	    if(isdemoversion)
+		V_DrawPatch(0, 0, credits2);
+	    else
+		V_DrawPatch(0, 0, credits);
         }
         else if(gamemap == 34 && !scroll_finished)			// MODIFIED FOR DEMO
             // demo version - does nothing meaningful
