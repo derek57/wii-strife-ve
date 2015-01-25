@@ -66,12 +66,12 @@ static deh_context_t *DEH_NewContext(void)
 {
     deh_context_t *context;
 
-    context = Z_Malloc(sizeof(*context), PU_STATIC, NULL);
+    context = Z_Malloc(sizeof(*context), PU_STATIC, NULL, "DEH_NewContext -> context");
 
     // Initial read buffer size of 128 bytes
 
     context->readbuffer_size = 128;
-    context->readbuffer = Z_Malloc(context->readbuffer_size, PU_STATIC, NULL);
+    context->readbuffer = Z_Malloc(context->readbuffer_size, PU_STATIC, NULL, "DEH_NewContext -> context->readbuffer");
     context->linenum = 0;
     context->last_was_newline = true;
 
@@ -97,7 +97,7 @@ deh_context_t *DEH_OpenFile(char *filename)
 
     context->type = DEH_INPUT_FILE;
     context->stream = fstream;
-    context->filename = M_StringDuplicate(filename);
+    context->filename = M_Strdup(filename);
 
     return context;
 }
@@ -139,8 +139,8 @@ void DEH_CloseFile(deh_context_t *context)
     }
 
     free(context->filename);
-    Z_Free(context->readbuffer);
-    Z_Free(context);
+    Z_Free(context->readbuffer, "DEH_CloseFile -> context->readbuffer");
+    Z_Free(context, "DEH_CloseFile -> context");
 }
 
 int DEH_GetCharFile(deh_context_t *context)
@@ -213,11 +213,11 @@ static void IncreaseReadBuffer(deh_context_t *context)
     int newbuffer_size;
 
     newbuffer_size = context->readbuffer_size * 2;
-    newbuffer = Z_Malloc(newbuffer_size, PU_STATIC, NULL);
+    newbuffer = Z_Malloc(newbuffer_size, PU_STATIC, NULL, "IncreaseReadBuffer");
 
     memcpy(newbuffer, context->readbuffer, context->readbuffer_size);
 
-    Z_Free(context->readbuffer);
+    Z_Free(context->readbuffer, "IncreaseReadBuffer");
 
     context->readbuffer = newbuffer;
     context->readbuffer_size = newbuffer_size;

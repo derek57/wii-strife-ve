@@ -144,6 +144,10 @@ static int GetAdjustedTime(void)
     return (time_ms * TICRATE) / 1000;
 }
 
+// [SVE]: try increasing time allowed to get ahead
+//#define GET_AHEAD_TICS 5
+#define GET_AHEAD_TICS 20
+
 static boolean BuildNewTic(void)
 {
     int	gameticdiv;
@@ -180,7 +184,7 @@ static boolean BuildNewTic(void)
     }
     else
     {
-       if (maketic - gameticdiv >= 5)
+       if (maketic - gameticdiv >= GET_AHEAD_TICS) // [SVE]
            return false;
     }
 
@@ -794,6 +798,7 @@ void TryRunTics (void)
 	{
             if (gametic/ticdup > lowtic)
                 I_Error ("gametic>lowtic");
+            I_TimerSaveMS(); // [SVE] interpolation
 
             memcpy(local_playeringame, set->ingame, sizeof(local_playeringame));
 

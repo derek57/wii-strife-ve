@@ -56,6 +56,7 @@
 #define KEY_F12		(0x80+0x58)
 
 #define KEY_BACKSPACE	0x7f
+#define KEY_SQUARE	0x1
 #define KEY_PAUSE	0xff
 
 #define KEY_EQUALS	0x3d

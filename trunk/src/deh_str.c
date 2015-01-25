@@ -103,7 +103,7 @@ static void InitHashTable(void)
     hash_table_entries = 0;
     hash_table_length = 16;
     hash_table = Z_Malloc(sizeof(deh_substitution_t *) * hash_table_length,
-                          PU_STATIC, NULL);
+                          PU_STATIC, NULL, "InitHashTable");
     memset(hash_table, 0, sizeof(deh_substitution_t *) * hash_table_length);
 }
 
@@ -124,7 +124,7 @@ static void IncreaseHashtable(void)
 
     hash_table_length *= 2;
     hash_table = Z_Malloc(sizeof(deh_substitution_t *) * hash_table_length,
-                          PU_STATIC, NULL);
+                          PU_STATIC, NULL, "IncreaseHashtable");
     memset(hash_table, 0, sizeof(deh_substitution_t *) * hash_table_length);
 
     // go through the old table and insert all the old entries
@@ -139,7 +139,7 @@ static void IncreaseHashtable(void)
 
     // free the old table
 
-    Z_Free(old_table);
+    Z_Free(old_table, "IncreaseHashtable");
 }
 
 static void DEH_AddToHashtable(deh_substitution_t *sub)
@@ -181,24 +181,24 @@ void DEH_AddStringReplacement(char *from_text, char *to_text)
 
     if (sub != NULL)
     {
-        Z_Free(sub->to_text);
+        Z_Free(sub->to_text, "DEH_AddStringReplacement");
 
         len = strlen(to_text) + 1;
-        sub->to_text = Z_Malloc(len, PU_STATIC, NULL);
+        sub->to_text = Z_Malloc(len, PU_STATIC, NULL, "DEH_AddStringReplacement -> sub->to_text (1)");
         memcpy(sub->to_text, to_text, len);
     }
     else
     {
         // We need to allocate a new substitution.
-        sub = Z_Malloc(sizeof(*sub), PU_STATIC, 0);
+        sub = Z_Malloc(sizeof(*sub), PU_STATIC, 0, "DEH_AddStringReplacement -> sub");
 
         // We need to create our own duplicates of the provided strings.
         len = strlen(from_text) + 1;
-        sub->from_text = Z_Malloc(len, PU_STATIC, NULL);
+        sub->from_text = Z_Malloc(len, PU_STATIC, NULL, "DEH_AddStringReplacement -> sub->from_text (1)");
         memcpy(sub->from_text, from_text, len);
 
         len = strlen(to_text) + 1;
-        sub->to_text = Z_Malloc(len, PU_STATIC, NULL);
+        sub->to_text = Z_Malloc(len, PU_STATIC, NULL, "DEH_AddStringReplacement -> sub->to_text (2)");
         memcpy(sub->to_text, to_text, len);
 
         DEH_AddToHashtable(sub);

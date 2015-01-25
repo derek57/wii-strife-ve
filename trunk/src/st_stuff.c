@@ -74,10 +74,15 @@
 #include "hu_stuff.h"
 
 #include "doomfeatures.h"
+#include "p_tick.h"
+
+#include "m_saves.h"
 
 #ifdef SHAREWARE
 extern boolean STRIFE_1_0_SHAREWARE;
 #endif
+
+#define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
 
 //
 // STATUS BAR DATA
@@ -252,6 +257,7 @@ static st_number_t      w_maxammo[NUMAMMO];  // haleyjd [STRIFE]: Still used.
 // [unused] number of frags so far in deathmatch
 //static int              st_fragscount;
 
+extern int screenSize;
 
 cheatseq_t cheat_mus        = CHEAT("spin", 2);         // [STRIFE]: idmus -> spin
 cheatseq_t cheat_god        = CHEAT("omnipotent", 0);   // [STRIFE]: iddqd -> omnipotent
@@ -292,6 +298,75 @@ cheatseq_t cheat_powerup[NUM_ST_PUMPUP] = // [STRIFE]
     CHEAT("pumpupt", 0),
     CHEAT("pumpup", 0),
 };
+
+//
+// [SVE] svillarreal
+//
+// DAMAGE MARKER SYSTEM
+//
+
+damagemarker_t dmgmarkers;
+
+//
+// ST_RunDamageMarkers
+//
+
+static void ST_RunDamageMarkers(void)
+{
+    damagemarker_t *dmgmarker, *next;
+    
+    for(dmgmarker = dmgmarkers.next; dmgmarker != &dmgmarkers; dmgmarker = next)
+    {
+        next = dmgmarker->next;
+
+        if(!dmgmarker->tics--)
+        {
+            damagemarker_t* marker = dmgmarker;
+            
+            P_SetTarget(&marker->source, NULL);
+            
+            (next->prev = dmgmarker = marker->prev)->next = next;
+            Z_Free(marker, "ST_RunDamageMarkers");
+        }
+    }
+}
+
+//
+// ST_ClearDamageMarkers
+//
+
+void ST_ClearDamageMarkers(void)
+{
+    dmgmarkers.next = dmgmarkers.prev = &dmgmarkers;
+}
+
+//
+// ST_AddDamageMarker
+//
+
+void ST_AddDamageMarker(mobj_t *source)
+{
+    damagemarker_t* dmgmarker;
+    mobj_t *target;
+    
+    target = players[consoleplayer].mo;
+
+    if(source == NULL || source == target)
+    {
+        return;
+    }
+    
+    dmgmarker               = Z_Calloc(1, sizeof(*dmgmarker), PU_LEVEL, 0);
+//    dmgmarker               = M_Calloc(1, sizeof(*dmgmarker));
+    dmgmarker->tics         = 32;
+    
+    P_SetTarget(&dmgmarker->source, source);
+    
+    dmgmarkers.prev->next   = dmgmarker;
+    dmgmarker->next         = &dmgmarkers;
+    dmgmarker->prev         = dmgmarkers.prev;
+    dmgmarkers.prev         = dmgmarker;
+}
 
 //cheatseq_t cheat_choppers = CHEAT("idchoppers", 0); [STRIFE] no such thing
 
@@ -361,7 +436,7 @@ boolean ST_Responder(event_t* ev)
              if(!st_popupdisplaytics)
              {
                  st_displaypopup = false;
-                 if(st_dosizedisplay)
+                 if(st_dosizedisplay && screenSize < 8)
                      M_SizeDisplay(true);
 
                  st_dosizedisplay = false;
@@ -451,7 +526,7 @@ boolean ST_Responder(event_t* ev)
         if(st_showkeys || st_showobjective || st_showinvpop)
         {
             st_displaypopup = true;
-            if(viewheight == SCREENHEIGHT)
+            if(viewheight == SCREENHEIGHT && screenSize < 8)
             {
                 M_SizeDisplay(false);
                 st_dosizedisplay = true;
@@ -839,11 +914,17 @@ void ST_Ticker (void)
             st_showkeys = false;
             st_keypage = -1;
 
-            if(st_dosizedisplay)
+            if(st_dosizedisplay && screenSize < 8)
                 M_SizeDisplay(true);  // mondo hack?
 
             st_dosizedisplay = false;
         }
+    }
+
+    // [SVE] svillarreal
+    if(d_dmgindictor)
+    {
+        ST_RunDamageMarkers();
     }
 
     // haleyjd 20100901: [STRIFE] Keys are handled on a popup
@@ -1346,20 +1427,124 @@ boolean ST_DrawExternal(void)
 {
     int i;
 
+    // [SVE] svillarreal
+    static int              st_invtics = 0;
+
     if(st_statusbaron)
     {
         V_DrawPatchDirect(0, 160, invtop);
         STlib_drawNumPositive(&w_health);
         STlib_drawNumPositive(&w_ready);
     }
-    else
+    else if(fullscreenhud && !classicmode) // [SVE]: allow disable
     {
         ammotype_t ammo;
 
+        // haleyjd 20140927: [SVE] Vastly improved for Veteran Edition.
+
+        // health
+        V_DrawPatch(3, 174, W_CacheLumpName("I_MDKT", PU_CACHE));
         ST_drawNumFontY2(15, 194, plyr->health);
+        
+        // armor
+        if(plyr->armortype == 2)
+            V_DrawPatch(33, 174, W_CacheLumpName("I_ARM1", PU_CACHE));
+        else
+            V_DrawPatch(33, 174, W_CacheLumpName("I_ARM2", PU_CACHE));
+        ST_drawNumFontY2(45, 194, plyr->armorpoints);
+
+        // current inventory item
+        if(plyr->numinventory && 
+           plyr->inventorycursor >= 0 && plyr->inventorycursor < NUMINVENTORY)
+        {
+            char iconname[9];
+            int  lumpnum;
+            inventory_t *inv = &plyr->inventory[plyr->inventorycursor];
+
+            DEH_snprintf(iconname, sizeof(iconname), "I_%s",
+                         DEH_String(sprnames[inv->sprite]));
+
+            if((lumpnum = W_CheckNumForName(iconname)) >= 0)
+            {
+                V_DrawPatch(267, 174, W_CacheLumpName(iconname, PU_CACHE));
+                ST_drawNumFontY2(280, 194, inv->amount);
+            }            
+        }
+
+        // [SVE] svillarreal - display inventory for full screen hud
+        if(st_invtics > 0)
+        {
+            int firstinventory, icon_x, i, numdrawn;
+            int numinventory = MIN(plyr->numinventory, 6);
+
+            if(plyr->inventorycursor >= 5)
+                firstinventory = plyr->inventorycursor - 4;
+            else
+                firstinventory = 0;
+
+            // Draw cursor.
+            if(plyr->numinventory)
+            {
+                V_DrawPatch(35 * (plyr->inventorycursor - firstinventory) + (139 - (16 * (numinventory-1))),
+                            160, invcursor);
+            }
+
+            // Draw inventory bar
+            for(icon_x = 144 - (16 * (numinventory-1)),
+                i = firstinventory,
+                numdrawn = 0; icon_x < (160 + (16 * (numinventory-1)));
+                icon_x += 35, i++, numdrawn++)
+            {
+                int lumpnum;
+                patch_t *patch;
+                char iconname[8];
+
+                if(numdrawn > 4)
+                    break;
+
+                if(plyr->numinventory <= numdrawn)
+                    break;
+                
+                DEH_snprintf(iconname, sizeof(iconname), "I_%s",
+                             DEH_String(sprnames[plyr->inventory[i].sprite]));
+
+                lumpnum = W_CheckNumForName(iconname);
+                if(lumpnum == -1)
+                    patch = W_CacheLumpName(DEH_String("STCFN063"), PU_CACHE);
+                else
+                    patch = W_CacheLumpNum(lumpnum, PU_STATIC);
+
+                if(i == plyr->inventorycursor && leveltime & 0x8)
+                {
+                    V_DrawXlaPatch(icon_x, 162, patch);
+                }
+                else
+                {
+                    V_DrawPatch(icon_x, 162, patch);
+                }
+                ST_drawNumFontY2(icon_x+20, 171, plyr->inventory[i].amount);
+            }
+        }
+        
+        // ammo
         ammo = weaponinfo[plyr->readyweapon].ammo;
         if (ammo != am_noammo)
+        {
+            int x = 297;
+            if(ammo == am_missiles)
+                x = 294;
+            V_DrawPatch(x, 174, invammo[ammo]);
             ST_drawNumFontY2(310, 194, plyr->ammo[ammo]);
+        }
+    }
+    else if((!fullscreenhud || fullscreenhud) && classicmode) // [SVE]: allow disable
+    {
+	ammotype_t ammo;
+
+	ST_drawNumFontY2(15, 194, plyr->health);
+	ammo = weaponinfo[plyr->readyweapon].ammo;
+	if (ammo != am_noammo)
+	    ST_drawNumFontY2(310, 194, plyr->ammo[ammo]);
     }
 
     if(!st_displaypopup)
@@ -1377,6 +1562,11 @@ boolean ST_DrawExternal(void)
     else
     {
         int keys = 0;
+
+        // [SVE] svillarreal - move this condition here due to bizarre
+        // issues with joystick input when pressing the objectives button
+        if(!st_displaypopup)
+            return false;
 
         // villsa [STRIFE] keys popup
         if(st_showkeys || st_popupdisplaytics)
@@ -1635,6 +1825,9 @@ void ST_Stop (void)
 void ST_Init (void)
 {
     ST_loadData();
+
+    // [SVE] svillarreal
+    ST_ClearDamageMarkers();
 
     // haleyjd 20100919: This is not used by Strife. More memory for voices!
     //st_backing_screen = (byte *) Z_Malloc(ST_WIDTH * ST_HEIGHT, PU_STATIC, 0);

@@ -165,4 +165,8 @@ extern int screen_bpp;
 extern int fullscreen;
 extern int aspect_ratio_correct;
 
+// [SVE]: defaults
+extern int default_screen_width;
+extern int default_screen_height;
+
 #endif

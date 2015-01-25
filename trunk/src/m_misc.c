@@ -56,6 +56,8 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
+#include "m_saves.h"
+
 //
 // Create a directory
 //
@@ -156,7 +158,7 @@ int M_ReadFile(char *name, byte **buffer)
 
     length = M_FileLength(handle);
     
-    buf = Z_Malloc (length, PU_STATIC, NULL);
+    buf = Z_Malloc (length, PU_STATIC, NULL, "M_ReadFile");
     count = fread(buf, 1, length, handle);
     fclose (handle);
 	
@@ -535,4 +537,102 @@ char *M_OEMToUTF8(const char *oem)
 }
 
 #endif
+
+//
+// M_ReadFileAsString
+//
+// haleyjd 20140829: [SVE] Load a file assuming it's an ASCII string.
+//
+int M_ReadFileAsString(const char *name, char **buffer)
+{
+    FILE *handle;
+    int	count, length;
+    char *buf;
+	
+    handle = fopen(name, "rb");
+    if (handle == NULL)
+    {
+        *buffer = NULL;
+        return 0;
+    }
+
+    // find the size of the file by seeking to the end and
+    // reading the current position
+
+    length = M_FileLength(handle);
+    
+    buf = Z_Calloc(1, length+1, PU_STATIC, NULL);
+//    buf = M_Calloc(1, length+1);
+    count = fread(buf, 1, length, handle);
+    fclose (handle);
+	
+    if (count < length)
+    {
+        Z_Free(buf, "M_ReadFileAsString");
+        *buffer = NULL;
+        return 0;
+    }
+		
+    *buffer = buf;
+    return length;
+}
+
+//
+// haleyjd 20141024: [SVE] Error-checked strdup
+//
+char *M_Strdup(const char *str)
+{
+    char *ret = strdup(str);
+    if(!ret)
+        I_Error("M_Strdup: failed on allocation of %lu bytes", strlen(str)+1);
+    return ret;
+}
+
+// haleyjd 20141005: [SVE]
+char *M_Itoa(int value, char *string, int radix)
+{
+   char tmp[33];
+   char *tp = tmp;
+   int i;
+   unsigned int v;
+   int sign;
+   char *sp;
+
+   if(radix > 36 || radix <= 1)
+   {
+      errno = EDOM;
+      return 0;
+   }
+
+   sign = (radix == 10 && value < 0);
+
+   if(sign)
+      v = -value;
+   else
+      v = (unsigned int)value;
+
+   while(v || tp == tmp)
+   {
+      i = v % radix;
+      v = v / radix;
+
+      if(i < 10)
+         *tp++ = i + '0';
+      else
+         *tp++ = i + 'a' - 10;
+   }
+
+   if(string == 0)
+      string = (char *)(malloc)((tp-tmp)+sign+1);
+   sp = string;
+
+   if(sign)
+      *sp++ = '-';
+
+   while(tp > tmp)
+      *sp++ = *--tp;
+   *sp = 0;
+
+   return string;
+}
 

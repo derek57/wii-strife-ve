@@ -22,7 +22,7 @@
 #include "r_defs.h"
 
 // font stuff
-#define HU_CHARERASE	KEY_BACKSPACE
+//#define HU_CHARERASE	KEY_BACKSPACE
 
 #define HU_MAXLINES		4
 #define HU_MAXLINELENGTH	80
@@ -106,7 +106,7 @@ boolean HUlib_addCharToTextLine(hu_textline_t *t, char ch);
 boolean HUlib_delCharFromTextLine(hu_textline_t *t);
 
 // draws tline
-void	HUlib_drawTextLine(hu_textline_t *l, boolean drawcursor);
+void HUlib_drawTextLine(hu_textline_t* l, boolean drawcursor, boolean longtext);
 
 // erases text line
 void	HUlib_eraseTextLine(hu_textline_t *l);
@@ -145,6 +145,9 @@ void HUlib_drawSText(hu_stext_t* s);
 
 // erases all stext lines
 void HUlib_eraseSText(hu_stext_t* s); 
+
+int HUlib_yellowTextWidth(const char *text); // [SVE]
+
 /*
 // Input Text Line widget routines
 void

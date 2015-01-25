@@ -88,9 +88,12 @@
 // [SVE] svillarreal
 #include "hu_stuff.h"
 
+#include "p_local.h"
+
+#include "w_merge.h"
+
 extern	patch_t *hu_font[HU_FONTSIZE];
 
-//#include "w_merge.h"
 
 //#define printf pspDebugScreenPrintf
 
@@ -135,12 +138,17 @@ boolean		devparm_opl_read = false;
 boolean		devparm_wipe = false;
 //boolean	devparm_sdl_sound = false;	// not available
 
-boolean		autostart;		// CHANGED FOR PSP: MOVED UP HERE FOR DEVPARM MODE
+boolean		autostart;			// CHANGED FOR PSP: MOVED UP HERE FOR DEVPARM MODE
+
 /*
 boolean         nomonsters;     		// checkparm of -nomonsters
 boolean         respawnparm;    		// checkparm of -respawn
 boolean         fastparm;       		// checkparm of -fast
 */
+// haleyjd [SVE]: remember starting state of these options
+boolean         start_fastparm;
+boolean         start_respawnparm;
+
 boolean         flipparm;       		// [STRIFE] haleyjd 20110629: checkparm of -flip
 //boolean	randomparm;     		// [STRIFE] haleyjd 20130915: checkparm of -random
 
@@ -151,6 +159,7 @@ extern int	soundVolume;
 extern int	sfxVolume;
 extern int	musicVolume;
 */
+//extern int	mus_engine;
 
 boolean		STRIFE_1_0_SHAREWARE;
 boolean		STRIFE_1_1_SHAREWARE;
@@ -236,6 +245,13 @@ void D_ProcessEvents (void)
 {
     event_t*    ev;
 
+    // [SVE] svillarreal - we don't want any unwanted inputs to occur before
+    // the game even starts/loads
+    if(main_loop_started == false)
+    {
+        return;
+    }
+
     // haleyjd 08/22/2010: [STRIFE] there is no such thing as a "store demo" 
     // version of Strife
 
@@ -267,7 +283,6 @@ void D_ProcessEvents (void)
 //
 gamestate_t     wipegamestate = GS_UNKNOWN;
 extern boolean	setsizeneeded;
-extern boolean	wipe;
 
 extern int	showMessages;	// [STRIFE] USUALLY THERE'S NO such variable
 
@@ -287,11 +302,13 @@ void D_Display (void)
     int                         wipestart;
     int                         y;
     boolean                     done;
-//    boolean                     wipe;
     boolean                     redrawsbar;
 
     if (nodrawers)
         return;                    // for comparative timing / profiling
+
+    // haleyjd 20140902: [SVE] interpolation
+    I_TimerStartDisplay();
 
     redrawsbar = false;
     
@@ -312,7 +329,7 @@ void D_Display (void)
     	    display_fps = 0;			// ...UPON WIPING SCREEN WITH ENABLED DISPLAY TICKER
 
         wipe = true;
-        wipe_StartScreen(0, 0, SCREENWIDTH, SCREENHEIGHT);
+	wipe_StartScreen(0, 0, SCREENWIDTH, SCREENHEIGHT);
     }
     else
     {
@@ -321,7 +338,7 @@ void D_Display (void)
 	if(fps_enabled == 1)			// ADDED FOR PSP TO PREVENT CRASH...
     	    display_fps = 1;			// ...UPON WIPING SCREEN WITH ENABLED DISPLAY TICKER
 
-        wipe = false;
+	wipe = false;
     }
 
     if (gamestate == GS_LEVEL && gametic)
@@ -449,14 +466,17 @@ void D_Display (void)
     M_Drawer ();          // menu is drawn even on top of everything
     NetUpdate ();         // send out any new accumulation
 
-
     // normal update
     if (!wipe)
     {
 	I_FinishUpdate ();              // page flip or blit buffer
+	I_TimerEndDisplay();
         return;
     }
-    
+
+    if(!classicmode)
+	M_Drawer ();                            // menu is drawn even on top of wipes
+
     // wipe update
     wipe_EndScreen(0, 0, SCREENWIDTH, SCREENHEIGHT);
 
@@ -476,9 +496,16 @@ void D_Display (void)
         done = wipe_ScreenWipe(wipe_ColorXForm
                                , 0, 0, SCREENWIDTH, SCREENHEIGHT, tics);
         I_UpdateNoBlit ();
-        M_Drawer ();                            // menu is drawn even on top of wipes
+
+	if(classicmode)
+	    M_Drawer ();                            // menu is drawn even on top of wipes
+
         I_FinishUpdate ();                      // page flip or blit buffer
     } while (!done);
+
+    release_keys = true;
+
+    I_TimerEndDisplay();
 }
 
 //
@@ -588,6 +615,19 @@ static boolean D_StartupGrabCallback(void)
 }
 */
 
+static int d_ticcount;
+
+//
+// D_updateTics
+//
+// haleyjd 20140925: [SVE]
+// Update timing information
+//
+static void D_updateTics(void)
+{
+    d_ticcount = I_GetTimeMS();
+}
+
 //
 //  D_DoomLoop
 //
@@ -603,8 +643,6 @@ void D_DoomLoop (void)
 	debugfile = fopen("usb:/apps/wiistrife/debug.txt","w");
     else if(sd)
 	debugfile = fopen("sd:/apps/wiistrife/debug.txt","w");
-
-    main_loop_started = true;
 
     TryRunTics();
 
@@ -627,6 +665,9 @@ void D_DoomLoop (void)
         wipegamestate = gamestate;
     }
 */
+    // haleyjd: [SVE]
+    if (autostart)
+        main_loop_started = true;
 
     while (1)
     {
@@ -643,6 +684,8 @@ void D_DoomLoop (void)
 //	int totalFreeMemSize = sceKernelTotalFreeMemSize();
 //	printf("sceKernelTotalFreeMemSize = %d\n", totalFreeMemSize);
 */
+        D_updateTics();
+
         // frame syncronous IO operations
         I_StartFrame ();
 
@@ -812,6 +855,8 @@ void D_AdvanceDemo (void)
     advancedemo = true;
 }
 
+// haleyjd 20140904: [SVE] part of fix for QFMRM7
+static int quittics;
 
 //
 // This cycles through the demo sequences.
@@ -827,6 +872,9 @@ void D_DoAdvanceDemo (void)
     paused = false;
     gameaction = ga_nothing;
     
+    // [SVE] svillarreal - moved here
+    main_loop_started = true;
+
     // villsa 09/12/10: [STRIFE] converted pagetics to ticrate
     switch (demosequence)
     {
@@ -835,7 +883,7 @@ void D_DoAdvanceDemo (void)
         return;
     case -4: // show exit screen
         menuactive = false;
-        pagetic = 3*TICRATE;
+        pagetic = quittics;
         gamestate = GS_DEMOSCREEN;
         pagename = DEH_String("PANEL7");
 //        S_StartMusic(mus_fast);	// moved to M_QuitResponse function cause for PSP
@@ -858,7 +906,9 @@ void D_DoAdvanceDemo (void)
 	if(!isdemoversion)
 	{
 	    pagename = DEH_String("TITLEPIC");
-	    S_StartMusic(mus_logo);
+
+	    if(!menuactive && classicmode)
+		S_StartMusic(mus_logo);
 	}
 	else if(isdemoversion)
     	    pagename = DEH_String("TITLEPI2");
@@ -874,8 +924,11 @@ void D_DoAdvanceDemo (void)
 	else if(isdemoversion)
     	    pagename = DEH_String("HELP0");
 
-        S_StartSound(NULL, sfx_rb2act);
-        wipegamestate = -1;
+	if(!menuactive && !usergame && !classicmode)
+	{
+	    S_StartSound(NULL, sfx_rb2act);
+	    wipegamestate = -1;
+	}
         break;
     case 0: // Rogue logo
         pagetic = 4*TICRATE;
@@ -889,6 +942,10 @@ void D_DoAdvanceDemo (void)
         wipegamestate = -1;
         break;
     case 1:
+
+	if(menuactive && !usergame && !classicmode)
+	    break;
+
         pagetic = 7*TICRATE;              // The comet struck our planet without
         gamestate = GS_DEMOSCREEN;        // warning.We lost our paradise in a 
         pagename = DEH_String("PANEL1");  // single, violent stroke.
@@ -896,30 +953,50 @@ void D_DoAdvanceDemo (void)
         S_StartMusic(mus_intro);
         break;
     case 2:
+
+	if(menuactive && !usergame && !classicmode)
+	    break;
+
         pagetic = 9*TICRATE;              // The impact released a virus which 
         gamestate = GS_DEMOSCREEN;        // swept through the land and killed 
         pagename = DEH_String("PANEL2");  // millions. They turned out to be 
         I_StartVoice(DEH_String("pro2")); // the lucky ones...
         break;
     case 3:
+
+	if(menuactive && !usergame && !classicmode)
+	    break;
+
         pagetic = 12*TICRATE;             // For those that did not die became 
         gamestate = GS_DEMOSCREEN;        // mutations of humanity. Some became
         pagename = DEH_String("PANEL3");  // fanatics who heard the voice of a
         I_StartVoice(DEH_String("pro3")); // malignant God in their heads, and 
         break;                            // called themselves the Order.
     case 4:
+
+	if(menuactive && !usergame && !classicmode)
+	    break;
+
         pagetic = 11*TICRATE;             // Those of us who were deaf to this
         pagename = DEH_String("PANEL4");  // voice suffer horribly and are 
         gamestate = GS_DEMOSCREEN;        // forced to serve these ruthless
         I_StartVoice(DEH_String("pro4")); // psychotics, who wield weapons more
         break;                            // powerful than anything we can muster.
     case 5:
+
+	if(menuactive && !usergame && !classicmode)
+	    break;
+
         pagetic = 10*TICRATE;             // They destroy our women and children,
         gamestate = GS_DEMOSCREEN;        // so that we must hide them underground,
         pagename = DEH_String("PANEL5");  // and live like animals in constant
         I_StartVoice(DEH_String("pro5")); // fear for our lives.
         break;
     case 6:                               // But there are whispers of discontent.
+
+	if(menuactive && !usergame && !classicmode)
+	    break;
+
         pagetic = 16*TICRATE;             // If we organize, can we defeat our
         gamestate = GS_DEMOSCREEN;        // masters? Weapons are being stolen,
         pagename = DEH_String("PANEL6");  // soldiers are being trained. A 
@@ -933,6 +1010,10 @@ void D_DoAdvanceDemo (void)
         wipegamestate = -1;
         break;
     case 8: // demo
+
+	if(menuactive && demosequence == 1 && !usergame && !classicmode)
+	    break;
+
         // [SVE]
         storycount = 0;
         S_ChangeMusic(mus_dark, 1);
@@ -969,6 +1050,9 @@ void D_DoAdvanceDemo (void)
 
     ++demosequence;
 
+    if(menuactive && demosequence == 1 && !usergame && !classicmode)
+	demosequence = 11;
+
     if(demosequence > 11)
     {
 	if(!isdemoversion)
@@ -976,6 +1060,7 @@ void D_DoAdvanceDemo (void)
 	else
 	    demosequence = 0;
     }
+
     if((demosequence == 7 || demosequence == 9) && !isdemoversion)
         ++demosequence;
 }
@@ -1002,11 +1087,13 @@ void D_StartTitle (void)
 // [STRIFE] New function
 // haleyjd 09/11/10: Sets up the quit game snippet powered by the
 // demo sequence.
+// haleyjd 20140904: [SVE] added tics param to fix QFMRM7
 //
-void D_QuitGame(void)
+void D_QuitGame(int tics)
 {
     gameaction = ga_nothing;
     demosequence = -4;
+    quittics = tics; // [SVE] set quittics
     D_AdvanceDemo();
 }
 
@@ -1053,7 +1140,7 @@ static char *GetGameName(char *gamename)
             // We also need to cut off spaces to get the basic name
 
             gamename_size = strlen(deh_sub) + 10;
-            gamename = Z_Malloc(gamename_size, PU_STATIC, 0);
+            gamename = Z_Malloc(gamename_size, PU_STATIC, 0, "GetGameName");
             M_snprintf(gamename, gamename_size, deh_sub,
                        STRIFE_VERSION / 100, STRIFE_VERSION % 100);
 
@@ -1585,12 +1672,25 @@ static char *voices[2] =
 	NULL	// the last entry MUST be NULL
 };
 */
+
+// haleyjd [SVE]: cheat state tracking in D_DoomMain
+enum
+{
+    CHEAT_NONE = 0,    // not cheating
+    CHEAT_SP   = 0x01, // cheating if in single player
+    CHEAT_MP   = 0x02, // cheating if in multiplayer
+    
+    CHEAT_ANY  = (CHEAT_SP|CHEAT_MP) // cheating regardless
+};
+
 //
 // D_DoomMain
 //
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+
+void (*P_BloodSplatSpawner)(fixed_t, fixed_t, int, int);
 
 void D_DoomMain (void)
 {
@@ -1601,13 +1701,27 @@ void D_DoomMain (void)
 
     W_CheckSize(0);
 */
+    int setcheating = CHEAT_NONE; // haleyjd [SVE] 20140914
+
     FILE *fprw;
     FILE *fpv;
 
     if(usb)
+    {
+/*
+	if(!d_skipmovies)				// FIXME: Implement later for the WII ??
+	    I_AVStartVideoStream("usb:/apps/wiistrife/movies/outx.mpg");
+*/
 	fprw = fopen("usb:/apps/wiistrife/pspstrife.wad","rb");
+    }
     else if(sd)
+    {
+/*
+	if(!d_skipmovies)				// FIXME: Implement later for the WII ??
+	    I_AVStartVideoStream("sd:/apps/wiistrife/movies/output.mpg");
+*/
 	fprw = fopen("sd:/apps/wiistrife/pspstrife.wad","rb");
+    }
 
     if(fprw)
     {
@@ -1656,7 +1770,10 @@ void D_DoomMain (void)
     }
 
     if(devparm)
+    {
 	fsize = 28377364;
+        setcheating |= CHEAT_ANY;
+    }
 
     if(fsize == 9934413)	// FILE SIZE OF STRIFE0.WAD FOR v1.1
     {
@@ -1946,13 +2063,13 @@ void D_DoomMain (void)
     //
 
     fastparm = M_CheckParm ("-fast");
-*/
-//    I_DisplayFPSDots(devparm);
-/*
+
+    I_DisplayFPSDots(devparm);
+
     // haleyjd 20110206 [STRIFE]: -devparm implies -nograph
     if(devparm)
         showintro = false;
-*/
+
     // Note: Vanilla Strife does not understand the -deathmatch command
     // line parameter. deathmatch=1 is the default behavior when
     // playing a netgame.
@@ -1964,11 +2081,12 @@ void D_DoomMain (void)
     // Start a deathmatch game.  Weapons do not stay in place and
     // all items respawn after 30 seconds.
     //
-/*
+
     if (M_CheckParm ("-altdeath"))
         deathmatch = 2;
+
+    if(devparm)
 */
-//    if(devparm)
     {
         if(devparm && STRIFE_1_0_REGISTERED)
 	    printStyledText(1, 1,CONSOLE_FONT_GREEN,CONSOLE_FONT_BLACK,CONSOLE_FONT_BOLD,&stTexteLocation,"                       STRIFE: Quest for the Sigil v1.0                        ");
@@ -2073,6 +2191,17 @@ void D_DoomMain (void)
 
     M_LoadDefaults();
 
+    fastparm = false;
+    respawnparm = false;
+/*
+    if(devparm)
+    {
+	if(mus_engine == 1)
+	    snd_musicdevice = SNDDEVICE_SB;
+	else
+	    snd_musicdevice = SNDDEVICE_GENMIDI;
+    }
+*/
     if (!graphical_startup)
     {
         showintro = false;
@@ -2171,7 +2300,10 @@ void D_DoomMain (void)
 		    voices_wad_exists = 1;
 
 		if(usb)
+		{
 		    D_AddFile("usb:/apps/wiistrife/IWAD/Reg/v12/strife1.wad");
+//		    D_AddFile("usb:/apps/wiistrife/PWAD/test.wad");
+		}
 		else if(sd)
 		    D_AddFile("sd:/apps/wiistrife/IWAD/Reg/v12/strife1.wad");
 
@@ -2230,12 +2362,15 @@ void D_DoomMain (void)
 //	    break;
 	}
     }
+    W_MergeFile("usb:/apps/wiistrife/pspstrife.wad");
 
 //    D_AddFile(iwadfile);
+/*
     if(usb)
 	D_AddFile("usb:/apps/wiistrife/pspstrife.wad");			// REQUIRED FOR SPECIAL PSP STUFF
     else if(sd)
 	D_AddFile("sd:/apps/wiistrife/pspstrife.wad");			// REQUIRED FOR SPECIAL PSP STUFF
+*/
 //    W_CheckCorrectIWAD(strife);		// DISABLED FOR PSP - sorry :-( I'LL TRY TO FIND A FIX
 //    modifiedgame = W_ParseCommandLine();
 
@@ -2402,6 +2537,10 @@ void D_DoomMain (void)
 
     D_ConnectNetGame();
 */
+    // haleyjd 20141008: [SVE]: remember some startup state
+    start_respawnparm = respawnparm;
+    start_fastparm    = fastparm;
+
     // haleyjd 20110210: Create Strife hub save folders
     M_CreateSaveDirs(savegamedir);
 
@@ -2586,6 +2725,9 @@ void D_DoomMain (void)
 */
 	    startloadgame = -1;
     }
+
+    P_BloodSplatSpawner = ((bloodsplats == UNLIMITED ? P_SpawnBloodSplat :
+                           (bloodsplats ? P_SpawnBloodSplat2 : P_NullBloodSplatSpawner)));
 /*
     if (W_CheckNumForName("SS_START") >= 0
      || W_CheckNumForName("FF_END") >= 0)

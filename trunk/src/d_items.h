@@ -35,6 +35,9 @@ typedef struct
     int		flashstate;
     boolean     availabledemo;    // villsa [STRIFE]
 
+    // Amount of kick this weapon gives
+    float	kick;
+
 } weaponinfo_t;
 
 extern  weaponinfo_t    weaponinfo[NUMWEAPONS];

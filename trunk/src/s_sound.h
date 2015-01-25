@@ -91,5 +91,7 @@ extern int snd_channels;
 
 extern int disable_voices;
 
+void S_GetCurrentMusic(int *track, int *looping);
+
 #endif
 

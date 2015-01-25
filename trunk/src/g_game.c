@@ -70,8 +70,12 @@
 #include "g_game.h"
 
 #include "doomfeatures.h"
+#include "p_locations.h"
+#include "p_inter.h"
+#include "fe_funcs.h"
 
 #define SAVEGAMESIZE	0x2c000
+//#define SAVEGAMESIZE	0x58000		// DOUBLED FOR THE WII AS CAUSED BY BLOODSPLATS
 
 void	G_ReadDemoTiccmd (ticcmd_t* cmd); 
 void	G_WriteDemoTiccmd (ticcmd_t* cmd); 
@@ -264,6 +268,7 @@ static int      joyymove;
 static int      joystrafemove;
 static int      joyirx;
 static int      joyiry;
+static int      joylookmove;
 static boolean  joyarray[MAX_JOY_BUTTONS + 1]; 
 static boolean *joybuttons = &joyarray[1];		// allow [-1] 
 
@@ -309,6 +314,7 @@ extern fixed_t 	ftom_zoommul; // how far the window zooms in each tic (fb coords
 extern int	messageToPrint;
 extern boolean	messageNeedsInput;
 extern boolean	namingCharacter; 
+extern boolean	music_cheat_used;
 
 void AM_Start (void);
 
@@ -322,7 +328,7 @@ static char     savedescription[32];
 mobj_t*		bodyque[BODYQUESIZE]; 
 //int       bodyqueslot; [STRIFE] unused
  
-int             vanilla_savegame_limit = 1;
+int             vanilla_savegame_limit = 0;	// CHANGED FOR THE WII CAUSE OF BLOODSPLATS
 int             vanilla_demo_limit = 1;
  
 
@@ -934,8 +940,6 @@ void G_BuildTiccmd (ticcmd_t* cmd, int maketic)
     // next_weapon variable is set to change weapons when
     // we generate a ticcmd.  Choose a new weapon.
 /*
-    event_t* ev;
-
     if (next_weapon != 0)
     {
         i = G_NextWeapon(next_weapon);
@@ -1052,9 +1056,19 @@ void G_BuildTiccmd (ticcmd_t* cmd, int maketic)
 		}
 	}
     }
-
-    if(button_layout == 0)
 */
+    // [SVE] svillarreal
+    boolean mouse_invert = true;
+
+//    if(!novert)
+    {
+        cmd->pitchmove += mouse_invert ? -mousey : mousey;
+    }
+
+    // [SVE] svillarreal
+    cmd->pitchmove -= joylookmove;
+
+//    if(button_layout == 0)
     {
 	if (strafe)
 	    side += mousex*2;
@@ -1085,13 +1099,23 @@ void G_BuildTiccmd (ticcmd_t* cmd, int maketic)
         else if (mouselook == 2)
 	    newlookdir = players[consoleplayer].pitch - adj;
 
-	    // vertical view angle taken from p_user.c
-
+	// vertical view angle taken from p_user.c
 	if (newlookdir > 90)
+	{
 	    newlookdir = 90;
+/*
+	    if(newlookdir > 0)
+		cmd->buttons2 |= BT2_LOOKUP;
+*/
+	}
 	else if (newlookdir < -110)
+	{
 	    newlookdir = -110;
-
+/*
+	    if(newlookdir < 0)
+	        cmd->buttons2 |= BT2_LOOKDOWN;
+*/
+	}
 	players[consoleplayer].pitch = newlookdir;
 /*
 	cmd->buttons |= BT_USE;
@@ -1160,8 +1184,39 @@ void G_BuildTiccmd (ticcmd_t* cmd, int maketic)
         carry = desired_angleturn - cmd->angleturn;
     }
 */
+    // [SVE]: must encode local client's look range
+    if((cmd->pitchmove ||
+        (cmd->buttons2 & (BT2_CENTERVIEW|BT2_LOOKUP|BT2_LOOKDOWN))))
+        cmd->buttons2 |= BT2_LOOKRANGE;
 } 
  
+//
+// G_SetSkyTexture
+//
+// haleyjd 20140816: [SVE] Separated out of G_InitNew for bug fixes:
+// * Change when map changes
+// * For a modicum of consistency, also use the red sky on ANY map if the
+//   player possesses the Sigil in single player. Otherwise we have odd
+//   transitions from, eg., New Front Base to Tarnhill to Borderlands.
+//   This wasn't an issue with the bug in place, since it tended to mask
+//   the problem during individual play sessions.
+//
+void G_SetSkyTexture()
+{
+    char *skytexturename;
+
+    // [STRIFE] Strife skies (of which there are but two)
+    // [SVE] svillarreal - red sky for map35
+    if(((gamemap >= 9 && gamemap < 32) || gamemap == 35) ||
+        (/*!deathmatch &&*/ players[0].weaponowned[wp_sigil]))
+        skytexturename = "skymnt01";
+    else
+        skytexturename = "skymnt02";
+
+    skytexturename = DEH_String(skytexturename);
+
+    skytexture = R_TextureNumForName(skytexturename);
+}
 
 //
 // G_DoLoadLevel 
@@ -1170,13 +1225,22 @@ void G_DoLoadLevel (void)
 { 
     int             i; 
 
+    // haleyjd 20140816: [SVE] Fix sky texture problems
+    if(!classicmode)
+        G_SetSkyTexture();
+
     // haleyjd 10/03/10: [STRIFE] This is not done here.
     //skyflatnum = R_FlatNumForName(DEH_String(SKYFLATNAME));
 
     levelstarttic = gametic;        // for time calculation
 
-    if (wipegamestate == GS_LEVEL) 
+    if (wipegamestate == GS_LEVEL)
+    {
+	if(!classicmode)
+	    FE_ClearScreen();
+
         wipegamestate = -1;             // force a wipe 
+    }
 
     gamestate = GS_LEVEL; 
 
@@ -1457,10 +1521,12 @@ void G_Ticker (void)
             G_DoLoadGame(true); 
             M_SaveMoveHereToMap(); // [STRIFE]
             M_ReadMisObj();
+            P_SetLocationsFromFile(savepathtemp);
             break; 
         case ga_savegame: 
             M_SaveMoveMapToHere(); // [STRIFE]
             M_SaveMisObj(savepath);
+            P_WriteActiveLocations(savepath);
             G_DoSaveGame(savepath); 
             break; 
         case ga_playdemo: 
@@ -1722,6 +1788,9 @@ void G_PlayerReborn (int player)
     p->allegiance            = allegiance;           // villsa [STRIFE]
     p->centerview            = true;                 // villsa [STRIFE]
 
+    // [SVE] svillarreal
+    p->recoilpitch           = 0;
+
     for(i = 0; i < NUMAMMO; i++) 
         p->maxammo[i] = maxammo[i]; 
 
@@ -1732,6 +1801,9 @@ void G_PlayerReborn (int player)
     // villsa [STRIFE]: Default objective
     M_StringCopy(mission_objective, DEH_String("Find help"),
                  OBJECTIVE_LEN);
+
+    // [SVE] svillarreal - set default objective location
+    P_SetLocationsFromScript("LOC0");
 }
 
 //
@@ -1808,7 +1880,7 @@ G_CheckSpot
 //
 // [STRIFE]: Modified exit message to match binary.
 //
-/*
+
 void G_DeathMatchSpawnPlayer (int playernum) 
 { 
     int             i,j; 
@@ -1832,7 +1904,7 @@ void G_DeathMatchSpawnPlayer (int playernum)
     // no good spot, so the player will probably get stuck 
     P_SpawnPlayer (&playerstarts[playernum]); 
 } 
-*/
+
 //
 // G_LoadPath
 //
@@ -1848,7 +1920,7 @@ void G_LoadPath(int map)
 
     // haleyjd: free if already set, and use M_SafeFilePath
     if(loadpath)
-        Z_Free(loadpath);
+        Z_Free(loadpath, "G_LoadPath");
     loadpath = M_SafeFilePath(savepathtemp, mapbuf);
 }
 
@@ -1927,6 +1999,32 @@ void G_ScreenShot (void)
 extern char*	pagename; 
 
 //
+// G_RemovePrisoners
+//
+// haleyjd 20141108: [SVE] Remove prisoners when exiting the prison after
+// having freed them.
+//
+static void G_RemovePrisoners(void)
+{
+    thinker_t *th;
+
+    for(th = thinkercap.next; th != &thinkercap; th = th->next)
+    {
+        if(th->function.acp1 == (actionf_p1)P_MobjThinker)
+        {
+            mobj_t *mo = (mobj_t *)th;
+            mapdialog_t *md = P_DialogFind(mo->type, 0);
+            
+            if(mo->health <= 0)
+                continue;
+
+            if(!strncasecmp(md->name, "Prisoner", MDLG_NAMELEN))
+                P_RemoveMobj(mo);
+        }
+    }
+}
+
+//
 // G_RiftExitLevel
 //
 // haleyjd 20100824: [STRIFE] New function
@@ -1937,6 +2035,14 @@ void G_RiftExitLevel(int map, int spot, angle_t angle)
 {
     gameaction = ga_completed;
     
+    // [SVE]: when exiting from the Prison and have freed 
+    // the prisoners, remove the prisoners
+    if(/*!deathmatch &&*/ !classicmode && gamemap == 5 && 
+        players[0].questflags & QF_QUEST13)
+    {
+        G_RemovePrisoners();
+    }
+
     // special handling for post-Sigil map changes
     if(players[0].weaponowned[wp_sigil])
     {
@@ -1978,8 +2084,43 @@ void G_Exit2(int dest, angle_t angle)
 //
 void G_ExitLevel (int dest) 
 {
+    char mapname[9];
+    
+    music_cheat_used = false;
+
+    // [SVE]: don't go past last map present amongst loaded wads
     if(dest == 0)
-        dest = gamemap + 1;
+    {
+        int times = 0;
+        do
+        {
+            switch(times)
+            {
+            case 0:
+                dest = gamemap + 1;  // try next map in numeric order
+                if(/*!capturethechalice &&*/ dest == 36)
+                    dest = 1; // don't enter CTC from non-CTC maps
+                break;
+            case 1:
+/*
+                if(capturethechalice)
+                    dest = 36;       // CTC rotation
+                else
+*/
+                    dest = gamemap;  // return to same map
+                break;
+            case 2:
+                dest = gamemap;      // return to same map
+                break;
+            default:
+                // This should be unreachable...
+                I_Error("G_ExitLevel: no level to exit into!");
+            }
+            M_snprintf(mapname, sizeof(mapname), "MAP%02d", dest);
+            ++times;
+        }
+        while(W_CheckNumForName(mapname) < 0);
+    }
     destmap = dest;
     riftdest = 0;
     gameaction = ga_completed; 
@@ -2103,6 +2244,11 @@ void G_RiftPlayer(void)
                        riftSpots[riftdest - 1].y << FRACBITS);
         players[0].mo->angle  = riftangle;
         players[0].mo->health = players[0].health;
+
+        // haleyjd [SVE]: set viewz for interpolation reasons
+        players[0].viewz = players[0].mo->z + players[0].viewheight;
+        players[0].prevviewz = players[0].viewz;
+        players[0].prevpitch = players[0].pitch;
     }
 }
 
@@ -2112,17 +2258,36 @@ void G_RiftPlayer(void)
 // haleyjd 20100824: [STRIFE] New function
 // Called from the cheat code to jump to a rift spot.
 //
+
 boolean G_RiftCheat(int riftSpotNum)
 {
+    boolean result;
+
     // [SVE]: don't scoot to uninitialized spots
     if(!riftSpotInit[riftSpotNum - 1])
         return false;
 
+    result = P_TeleportMove(players[0].mo,
+                          riftSpots[riftSpotNum - 1].x << FRACBITS,
+                          riftSpots[riftSpotNum - 1].y << FRACBITS);
+    if(result)
+    {
+        // haleyjd [SVE]: set viewz for interpolation reasons
+        players[0].viewz = players[0].mo->z + players[0].viewheight;
+        players[0].prevviewz = players[0].viewz;
+        players[0].prevpitch = players[0].pitch;
+    }
+
+    return result;
+}
+/*
+boolean G_RiftCheat(int riftSpotNum)
+{
     return P_TeleportMove(players[0].mo,
                           riftSpots[riftSpotNum - 1].x << FRACBITS,
                           riftSpots[riftSpotNum - 1].y << FRACBITS);
 }
-
+*/
 //
 // G_DoWorldDone
 //
@@ -2165,6 +2330,7 @@ void G_DoWorldDone (void)
         G_RiftPlayer();
         G_DoSaveGame(savepathtemp);
         M_SaveMisObj(savepathtemp);
+        P_WriteActiveLocations(savepathtemp);
     }
 
     gameaction = ga_nothing; 
@@ -2197,7 +2363,7 @@ void G_ReadCurrent(const char *path)
 
     temppath = M_SafeFilePath(path, "\\current");
 
-    if(M_ReadFile(temppath, &buffer) <= 0)
+    if(M_ReadFile(temppath, &buffer) < 4) // [SVE]: ensure 4 bytes at least.
         gameaction = ga_newgame;
     else
     {
@@ -2207,10 +2373,10 @@ void G_ReadCurrent(const char *path)
                    ((int)buffer[2] << 16) |
                    ((int)buffer[3] << 24));
         gameaction = ga_loadgame;
-        Z_Free(buffer);
+        Z_Free(buffer, "G_ReadCurrent");
     }
 
-    Z_Free(temppath);
+    Z_Free(temppath, "G_ReadCurrent");
     
     G_LoadPath(gamemap);
 }
@@ -2236,9 +2402,283 @@ void G_LoadGame (char* name)
 // haleyjd 20100928: [STRIFE] VERSIONSIZE == 8
 #define VERSIONSIZE             8
 
+//
+// G_HasVisitedMap
+//
+// [SVE]: Check if the player has visited a given map.
+//
+static boolean G_HasVisitedMap(int mapnum)
+{
+    char mapbuf[33];
+    char *temppath;
+    boolean res;
+
+    M_Itoa(mapnum, mapbuf, 10);
+
+    temppath = M_SafeFilePath(savepathtemp, mapbuf);
+    res = M_FileExists(temppath);
+    Z_Free(temppath, "G_HasVisitedMap");
+
+    return res;
+}
+
+//
+// G_GiveRebornItem
+//
+static void G_GiveRebornItem(int type)
+{
+    P_GiveItemToPlayer(&players[0], states[mobjinfo[type].spawnstate].sprite, type);
+}
+
+//
+// G_SpecialReborn
+//
+// haleyjd 20141122: [SVE] Give the player status equivalent to his progess
+// if a save file load fails.
+//
+static void G_SpecialReborn(void)
+{
+    // Sanctuary
+    if(G_HasVisitedMap(1))
+    {
+        players[0].questflags |= QF_QUEST1;
+        G_GiveRebornItem(MT_TOKEN_RING);
+        G_GiveRebornItem(MT_INV_COMMUNICATOR);
+        G_GiveRebornItem(MT_KEY_BASE);
+        G_GiveRebornItem(MT_INV_ARMOR1);
+        P_GiveWeapon(&players[0], wp_elecbow, false);
+    }
+
+    // Front Base
+    if(G_HasVisitedMap(3))
+    {
+        players[0].questflags |= QF_QUEST3|QF_QUEST10|QF_QUEST11;
+        G_GiveRebornItem(MT_MONY_300);
+        G_GiveRebornItem(MT_GOVSKEY);
+        G_GiveRebornItem(MT_KEY_TRAVEL);
+        G_GiveRebornItem(MT_PRISONKEY);
+    }
+
+    // Power Station
+    if(G_HasVisitedMap(4))
+    {
+        players[0].questflags |= QF_QUEST4|QF_QUEST14;
+        G_GiveRebornItem(MT_MONY_300);
+        G_GiveRebornItem(MT_INV_SUIT);
+        G_GiveRebornItem(MT_INV_ARMOR2);
+        G_GiveRebornItem(MT_POWER1KEY);
+        G_GiveRebornItem(MT_POWER2KEY);
+        G_GiveRebornItem(MT_POWER3KEY);
+        G_GiveRebornItem(MT_KEY_GOLD);
+        P_GiveWeapon(&players[0], wp_missile, false);
+        players[0].accuracy += 10;
+        players[0].stamina  += 10;
+    }
+
+    // Prison
+    if(G_HasVisitedMap(5))
+    {
+        players[0].questflags |= QF_QUEST12|QF_QUEST13;
+        G_GiveRebornItem(MT_MONY_300);
+        G_GiveRebornItem(MT_KEY_HAND);
+        G_GiveRebornItem(MT_KEY_ID_BLUE);
+        G_GiveRebornItem(MT_INV_SATCHEL);
+        P_GiveWeapon(&players[0], wp_rifle, false);
+        players[0].accuracy += 10;
+        players[0].stamina  += 10;
+    }
+
+    // Sewers
+    if(G_HasVisitedMap(6))
+    {
+        players[0].questflags |= QF_QUEST15;
+        G_GiveRebornItem(MT_QUEST_UNIFORM);
+        G_GiveRebornItem(MT_TOKEN_FLAME_THROWER_PARTS);
+        P_GiveWeapon(&players[0], wp_hegrenade, false);
+        players[0].accuracy += 10;
+        players[0].stamina  += 10;
+    }
+
+    // Castle
+    if(G_HasVisitedMap(7))
+    {
+        players[0].questflags |= QF_QUEST16;
+        G_GiveRebornItem(MT_MONY_300);
+    }
+
+    // Audience Chamber
+    if(G_HasVisitedMap(8))
+    {
+        G_GiveRebornItem(MT_KEY_SILVER);
+    }
+
+    // New Front Base
+    if(G_HasVisitedMap(10))
+    {
+        players[0].questflags |= QF_QUEST17;
+        players[0].weaponowned[wp_sigil] = true;
+        if(players[0].sigiltype < 0)
+            players[0].sigiltype = 0;
+        G_GiveRebornItem(MT_MONY_300);
+        players[0].stamina  += 10;
+        players[0].accuracy += 10;
+    }
+
+    // Borderlands
+    if(G_HasVisitedMap(11))
+    {
+        G_GiveRebornItem(MT_KEY_ORACLE);
+    }
+
+    // Oracle
+    if(G_HasVisitedMap(12))
+    {
+        players[0].questflags |= QF_QUEST18;
+        G_GiveRebornItem(MT_MILITARYID);
+        G_GiveRebornItem(MT_KEY_ORDER);
+        G_GiveRebornItem(MT_QUEST_GUARD_UNIFORM);
+    }
+
+    // Mines
+    if(G_HasVisitedMap(14))
+    {
+        players[0].questflags |= QF_QUEST29;
+        G_GiveRebornItem(MT_DEGNINORE);
+        players[0].stamina  += 10;
+        players[0].accuracy += 10;
+    }
+
+    // Fortress: Admin.
+    if(G_HasVisitedMap(15))
+        players[0].questflags |= QF_QUEST27;
+
+    // Fortress: Bishop's Tower
+    if(G_HasVisitedMap(16))
+    {
+        players[0].questflags |= QF_QUEST21|QF_QUEST22|QF_QUEST23;
+        players[0].weaponowned[wp_sigil] = true;
+        if(players[0].sigiltype < 1)
+            players[0].sigiltype = 1;
+    }
+
+    // Fortress: Bailey
+    if(G_HasVisitedMap(17))
+        G_GiveRebornItem(MT_KEY_WAREHOUSE);
+
+    // Fortress: Stores
+    if(G_HasVisitedMap(18))
+    {
+        G_GiveRebornItem(MT_KEY_MAULER);
+        P_GiveWeapon(&players[0], wp_mauler, false);
+    }
+
+    // Order Commons
+    if(G_HasVisitedMap(23))
+    {
+        players[0].questflags |= QF_QUEST24;
+        players[0].weaponowned[wp_sigil] = true;
+        if(players[0].sigiltype < 2)
+            players[0].sigiltype = 2;
+        G_GiveRebornItem(MT_KEY_BRASS);
+        G_GiveRebornItem(MT_CATACOMBKEY);
+        players[0].stamina  += 10;
+        players[0].accuracy += 10;
+    }
+
+    // Factory: Conversion Chapel
+    if(G_HasVisitedMap(24))
+    {
+        players[0].questflags |= QF_QUEST25;
+        players[0].weaponowned[wp_sigil] = true;
+        if(players[0].sigiltype < 3)
+            players[0].sigiltype = 3;
+        G_GiveRebornItem(MT_KEY_RED_CRYSTAL);
+        G_GiveRebornItem(MT_KEY_BLUE_CRYSTAL);
+        players[0].stamina  += 10;
+        players[0].accuracy += 10;
+    }
+
+    // Catacombs: Ruins
+    if(G_HasVisitedMap(25))
+    {
+        players[0].questflags |= QF_QUEST28;
+        G_GiveRebornItem(MT_KEY_CHAPEL);
+        G_GiveRebornItem(MT_KEY_FACTORY);
+        G_GiveRebornItem(MT_KEY_MINE);
+    }
+
+    // Factory: Proving Grounds
+    if(G_HasVisitedMap(26))
+    {
+        players[0].weaponowned[wp_sigil] = true;
+        if(players[0].sigiltype < 2)
+            players[0].sigiltype = 2;
+    }
+
+    // Lab
+    if(G_HasVisitedMap(27))
+    {
+        players[0].questflags |= QF_QUEST26;
+        players[0].weaponowned[wp_sigil] = true;
+        if(players[0].sigiltype < 4)
+            players[0].sigiltype = 4;
+        players[0].stamina  += 10;
+        players[0].accuracy += 10;
+    }
+
+    // Ship
+    if(G_HasVisitedMap(28))
+    {
+        players[0].questflags = QF_ALLQUESTS;
+        players[0].weaponowned[wp_sigil] = true;
+        if(players[0].sigiltype < 4)
+            players[0].sigiltype = 4;
+    }
+
+    // Training Facility
+    if(G_HasVisitedMap(31))
+    {
+        players[0].stamina  += 10;
+        players[0].accuracy += 10;
+    }
+
+    if(players[0].stamina > 90)
+        players[0].stamina = 90;
+    if(players[0].accuracy > 90)
+        players[0].accuracy = 90;
+
+    P_GiveBody(&players[0], 200);
+
+    // achievements are disabled on this file, sorry :/
+//    HU_NotifyCheating(&players[0]);
+}
+
+//
+// G_HandleLoadError
+//
+// haleyjd 20141122: [SVE] Handle load game errors gracefully
+//
+static void G_HandleLoadError(FILE *save_stream, boolean userload)
+{
+    if(save_stream)
+        fclose(save_stream);
+
+    if(userload)
+    {
+        G_InitNew(gameskill, gamemap);
+        G_SpecialReborn();
+    }
+    else
+        G_DoLoadLevel();
+
+    players[0].message = "WARNING: Could not load save file";
+}
+
 void G_DoLoadGame (boolean userload) 
 {
     int savedleveltime;
+    skill_t savedcurskill; // haleyjd: [SVE] fix skill level issue with saves
+    skill_t newskill;
 
     gameaction = ga_nothing;
 
@@ -2252,12 +2692,17 @@ void G_DoLoadGame (boolean userload)
     }
 
     savegame_error = false;
+    savedcurskill  = gameskill;
 
     if (!P_ReadSaveGameHeader())
     {
-        fclose(save_stream);
+        G_HandleLoadError(save_stream, userload);
         return;
     }
+
+    // haleyjd 20140816: [SVE] Fix savegame skill glitch
+    newskill  = gameskill;
+    gameskill = savedcurskill;
 
     // haleyjd: A comment would be good here, fraggle...
     // Evidently this is a Choco-ism, necessitated by reading the savegame
@@ -2266,9 +2711,9 @@ void G_DoLoadGame (boolean userload)
     
     // load a base level
 
-    // STRIFE-TODO: ????
+    // [STRIFE]: hubs vs user loaded saves
     if(userload)
-        G_InitNew(gameskill, gamemap); 
+        G_InitNew(newskill, gamemap); 
     else
         G_DoLoadLevel();
  
@@ -2279,11 +2724,38 @@ void G_DoLoadGame (boolean userload)
     //   between hub levels
     P_UnArchivePlayers (userload); 
     P_UnArchiveWorld (); 
+
+    // [SVE]: error check
+    if(savegame_error)
+    {
+        G_HandleLoadError(save_stream, userload);
+        return;
+    }
+
     P_UnArchiveThinkers (); 
+
+    // [SVE]: error check
+    if(savegame_error)
+    {
+        G_HandleLoadError(save_stream, userload);
+        return;
+    }
+
     P_UnArchiveSpecials (); 
  
+    // [SVE]: error check
+    if(savegame_error)
+    {
+        G_HandleLoadError(save_stream, userload);
+        return;
+    }
+
     if (!P_ReadSaveGameEOF())
-        I_Error ("Bad savegame");
+    {
+        // [SVE]
+        G_HandleLoadError(save_stream, userload);
+        return;
+    }
 
     fclose(save_stream);
     
@@ -2317,12 +2789,12 @@ boolean G_WriteSaveName(int slot, const char *charname)
     // haleyjd: free previous path, if any, and allocate new one using
     // M_SafeFilePath routine, which isn't limited to 128 characters.
     if(savepathtemp)
-        Z_Free(savepathtemp);
+        Z_Free(savepathtemp, "G_WriteSaveName");
     savepathtemp = M_SafeFilePath(savegamedir, "strfsav6.ssg/");
 
     // haleyjd: as above.
     if(savepath)
-        Z_Free(savepath);
+        Z_Free(savepath, "G_WriteSaveName");
     savepath = M_SafeFilePath(savegamedir, M_MakeStrifeSaveDir(savegameslot, ""));
 
     // haleyjd: memset full character_name for safety
@@ -2335,7 +2807,7 @@ boolean G_WriteSaveName(int slot, const char *charname)
     // Write the "name" file under the directory
     retval = M_WriteFile(tmpname, character_name, 32);
 
-    Z_Free(tmpname);
+    Z_Free(tmpname, "G_WriteSaveName");
 
     return retval;
 }
@@ -2347,6 +2819,7 @@ boolean G_WriteSaveName(int slot, const char *charname)
 //
 // [STRIFE] No such function, at least in v1.2
 // STRIFE-TODO: Does this make a comeback in v1.31?
+
 /*
 void
 G_SaveGame
@@ -2359,131 +2832,6 @@ G_SaveGame
 }
 */
 
-// On the PSP, the function G_DoSaveGame causes a real mess so it has been modified
-/*
-void G_DoSaveGame (char *path)
-{ 
-    char *current_path;
-    char *savegame_file;
-    char *temp_savegame_file;
-    byte gamemapbytes[4];
-    char gamemapstr[33];
-
-    char    buff[BUFSIZ];							// FOR PSP
-    FILE    *in, *out;								// FOR PSP
-    size_t  n;									// FOR PSP
- 
-    temp_savegame_file = P_TempSaveGameFile();
-    
-    // [STRIFE] custom save file path logic
-    memset(gamemapstr, 0, sizeof(gamemapstr));
-    M_snprintf(gamemapstr, sizeof(gamemapstr), "%d", gamemap);
-    savegame_file = M_SafeFilePath(path, gamemapstr);
-
-    // [STRIFE] write the "current" file, which tells which hub map
-    //   the save slot is currently on.
-    current_path = M_SafeFilePath(path, "current");
-    // haleyjd: endian-agnostic IO
-    gamemapbytes[0] = (byte)( gamemap        & 0xff);
-    gamemapbytes[1] = (byte)((gamemap >>  8) & 0xff);
-    gamemapbytes[2] = (byte)((gamemap >> 16) & 0xff);
-    gamemapbytes[3] = (byte)((gamemap >> 24) & 0xff);
-    M_WriteFile(current_path, gamemapbytes, 4);
-    Z_Free(current_path);
-
-    // Open the savegame file for writing.  We write to a temporary file
-    // and then rename it at the end if it was successfully written.
-    // This prevents an existing savegame from being overwritten by 
-    // a corrupted one, or if a savegame buffer overrun occurs.
-
-    save_stream = fopen(temp_savegame_file, "wb");
-
-    in = fopen(temp_savegame_file, "rb" );					// FOR PSP
-
-    // On the PSP we don't need this for actually saving a game...
-    // ...instead we still need it for kinda "checking" savegame corruption
-
-//    if (save_stream == NULL)							// DISABLED FOR PSP
-    if (save_stream == NULL || in == NULL)					// FOR PSP
-    {
-        return;
-    }
-
-    savegame_error = false;
-
-    P_WriteSaveGameHeader(savedescription);
- 
-    P_ArchivePlayers (); 
-    P_ArchiveWorld (); 
-    P_ArchiveThinkers (); 
-    P_ArchiveSpecials (); 
-
-    P_WriteSaveGameEOF();
-
-    // Enforce the same savegame size limit as in Vanilla Doom, 
-    // except if the vanilla_savegame_limit setting is turned off.
-    // [STRIFE]: Verified subject to same limit.
-
-    if (vanilla_savegame_limit && ftell(save_stream) > SAVEGAMESIZE)
-    {
-        I_Error ("Savegame buffer overrun");
-    }
-    
-    // Finish up, close the savegame file.
-
-//    fclose(save_stream);							// DISABLED FOR PSP
-
-    // Now remove a possibly existing old savegame file
-
-    remove(savegame_file);
-
-    // Now open the destination savegame file for writing
-
-    out= fopen(savegame_file, "wb" );						// FOR PSP
-
-//    rename(temp_savegame_file, savegame_file);				// NOT WORKING ON PSP
-
-    // Now write the contents of the temporary savegame file into the destination file
-
-    while ( (n=fread(buff,1,BUFSIZ,in)) != 0 )					// FOR PSP
-    {										// FOR PSP
-        fwrite( buff, 1, n, out );						// FOR PSP
-    }										// FOR PSP
-
-//    if(devparm)
-//    {
-//	printf("FROM G_GAME.O:\n");
-//	puts(savegame_file);
-//	printf("SAVEGAME FILE\n");
-//	puts(temp_savegame_file);
-//	printf("TEMP SAVEGAME FILE\n");
-//    }
-
-    // haleyjd: free the savegame_file path
-    Z_Free(savegame_file);
-
-    gameaction = ga_nothing; 
-    //M_StringCopy(savedescription, "", sizeof(savedescription));
-
-    // [STRIFE]: custom message logic
-    if(!strcmp(path, savepath))
-    {
-        M_snprintf(savename, sizeof(savename), "%s saved.", character_name);
-        players[consoleplayer].message = savename;
-    }
-
-    // Finish up, close the temporary savegame files as well as the final savegame file.
-
-    fclose(save_stream);							// MOVED HERE FOR PSP
-
-    fclose(in);									// FOR PSP
-    fclose(out);								// FOR PSP
-
-    // draw the pattern into the back screen
-
-    R_FillBackScreen ();
-} 
-*/
 void G_DoSaveGame (char *path)
 { 
     char *current_path;
@@ -2508,7 +2856,7 @@ void G_DoSaveGame (char *path)
     gamemapbytes[2] = (byte)((gamemap >> 16) & 0xff);
     gamemapbytes[3] = (byte)((gamemap >> 24) & 0xff);
     M_WriteFile(current_path, gamemapbytes, 4);
-    Z_Free(current_path);
+    Z_Free(current_path, "G_DoSaveGame");
 
     // Open the savegame file for writing.  We write to a temporary file
     // and then rename it at the end if it was successfully written.
@@ -2553,7 +2901,7 @@ void G_DoSaveGame (char *path)
     rename(temp_savegame_file, savegame_file);
     
     // haleyjd: free the savegame_file path
-    Z_Free(savegame_file);
+    Z_Free(savegame_file, "G_DoSaveGame");
 
     gameaction = ga_nothing; 
     //M_StringCopy(savedescription, "", sizeof(savedescription));
@@ -2598,21 +2946,132 @@ void G_DeferedInitNew(skill_t skill, int map)
 //
 void G_DoNewGame (void) 
 {
+    int i;
+
     demoplayback = false; 
     netdemo = false;
 //    netgame = false;
 //    deathmatch = false;
     playeringame[1] = playeringame[2] = playeringame[3] = 0;
-/*
-    respawnparm = false;
-    fastparm = false;
-*/
+
+    respawnparm = start_respawnparm; // haleyjd [SVE]: reset to startup state
+    fastparm = start_fastparm;
+
     stonecold = false;      // villsa [STRIFE]
     //nomonsters = false;   [STRIFE] not set here!?!
     consoleplayer = 0;
     G_InitNew (d_skill, d_map);
     gameaction = ga_nothing; 
+
+    // [SVE] svillarreal
+    for(i = 0; i < MAXPLAYERS; ++i)
+        players[i].secretcount = 0;
 } 
+
+//
+// G_AdjustMobjInfoForSkill
+//
+// haleyjd 20140816: Separated out of G_InitNew to fix bugs.
+//
+void G_AdjustMobjInfoForSkill(skill_t skill)
+{
+    int i;
+
+    if(!skill && gameskill)
+    {
+        // Setting to Baby skill... make things easier.
+
+        // Acolytes walk, attack, and feel pain slower
+        for(i = S_AGRD_13; i <= S_AGRD_23; i++)
+            states[i].tics *= 2; 
+
+        // Reavers attack slower
+        for(i = S_ROB1_10; i <= S_ROB1_15; i++)
+            states[i].tics *= 2;
+
+        // Turrets attack slower
+        for(i = S_TURT_02; i <= S_TURT_03; i++)
+            states[i].tics *= 2;
+
+        // Crusaders attack and feel pain slower
+        for(i = S_ROB2_09; i <= S_ROB2_19; i++)
+            states[i].tics *= 2;
+
+        // Stalkers think, walk, and attack slower
+        for(i = S_SPID_03; i <= S_SPID_10; i++)
+            states[i].tics *= 2;
+
+        // The Bishop's homing missiles are faster (what?? BUG?)
+        // haleyjd 20140816: [SVE] Fix conditional on classicmode
+        if(classicmode)
+            mobjinfo[MT_SEEKMISSILE].speed *= 2;
+        else
+            mobjinfo[MT_SEEKMISSILE].speed /= 2;
+    }
+    if(skill && !gameskill)
+    {
+        // Setting a higher skill when previously on baby... make things normal
+
+        // Acolytes
+        for(i = S_AGRD_13; i <= S_AGRD_23; i++)
+            states[i].tics >>= 1; 
+
+        // Reavers
+        for(i = S_ROB1_10; i <= S_ROB1_15; i++)
+            states[i].tics >>= 1;
+
+        // Turrets
+        for(i = S_TURT_02; i <= S_TURT_03; i++)
+            states[i].tics >>= 1;
+
+        // Crusaders
+        for(i = S_ROB2_09; i <= S_ROB2_19; i++)
+            states[i].tics >>= 1;
+
+        // Stalkers
+        for(i = S_SPID_03; i <= S_SPID_10; i++)
+            states[i].tics >>= 1;
+
+        // The Bishop's homing missiles - again, seemingly backward.
+        // haleyjd 20140816: [SVE] Fix conditional on classicmode
+        if(classicmode)
+            mobjinfo[MT_SEEKMISSILE].speed /= 2;
+        else
+            mobjinfo[MT_SEEKMISSILE].speed *= 2;
+    }
+    if(fastparm || (skill == sk_nightmare && skill != gameskill))
+    {
+        // BLOODBATH! Make some things super-aggressive.
+        
+        // Acolytes walk, attack, and feel pain twice as fast
+        // (This makes just getting out of the first room almost impossible)
+        for(i = S_AGRD_13; i <= S_AGRD_23; i++)
+            states[i].tics >>= 1;
+
+        // Bishop's homing missiles again get SLOWER and not faster o_O
+        // haleyjd 20140816: [SVE] Fix conditional on classicmode
+        if(classicmode)
+            mobjinfo[MT_SEEKMISSILE].speed /= 2;
+        else
+            mobjinfo[MT_SEEKMISSILE].speed *= 2;
+    }
+    else if(skill != sk_nightmare && gameskill == sk_nightmare)
+    {
+        // Setting back to an ordinary skill after being on Bloodbath?
+        // Put stuff back to normal.
+
+        // Acolytes
+        for(i = S_AGRD_13; i <= S_AGRD_23; i++)
+            states[i].tics *= 2;
+
+        // Bishop's homing missiles
+        // haleyjd 20140816: [SVE] Fix conditional on classicmode
+        if(classicmode)
+            mobjinfo[MT_SEEKMISSILE].speed *= 2;
+        else
+            mobjinfo[MT_SEEKMISSILE].speed /= 2;
+    }
+}
 
 //
 // G_InitNew
@@ -2626,8 +3085,10 @@ G_InitNew
 ( skill_t       skill,
   int           map ) 
 { 
-    char *skytexturename;
     int             i; 
+
+    music_cheat_used = false;
+    cast_running = false;
 
     if (paused) 
     { 
@@ -2647,11 +3108,11 @@ G_InitNew
 
     M_ClearRandom (); 
 
-    if (skill == sk_nightmare/* || respawnparm */)
+    if (skill == sk_nightmare || respawnparm )
         respawnmonsters = true;
     else
         respawnmonsters = false;
-
+/*
     // [STRIFE] Strife skill level mobjinfo/states tweaking
     // BUG: None of this code runs properly when loading save games, so
     // basically it's impossible to play any skill level properly unless
@@ -2710,7 +3171,7 @@ G_InitNew
         // The Bishop's homing missiles - again, seemingly backward.
         mobjinfo[MT_SEEKMISSILE].speed >>= 1;
     }
-    if(/*fastparm || */(skill == sk_nightmare && skill != gameskill))
+    if(fastparm || (skill == sk_nightmare && skill != gameskill))
     {
         // BLOODBATH! Make some things super-aggressive.
         
@@ -2734,6 +3195,9 @@ G_InitNew
         // Bishop's homing missiles
         mobjinfo[MT_SEEKMISSILE].speed *= 2;
     }
+*/
+    // [STRIFE] Strife skill level mobjinfo/states tweaking
+    G_AdjustMobjInfoForSkill(skill);
 
     // force players to be initialized upon first level load
     for (i=0 ; i<MAXPLAYERS ; i++) 
@@ -2759,15 +3223,8 @@ G_InitNew
     // restore from a saved game.  This was fixed before the Doom
     // source release, but this IS the way Vanilla DOS Doom behaves.
 
-    // [STRIFE] Strife skies (of which there are but two)
-    if(gamemap >= 9 && gamemap < 32)
-        skytexturename = "skymnt01";
-    else
-        skytexturename = "skymnt02";
-
-    skytexturename = DEH_String(skytexturename);
-
-    skytexture = R_TextureNumForName(skytexturename);
+    // haleyjd 20140816: [SVE] fix for Veteran Edition
+    G_SetSkyTexture();
 
     // [STRIFE] HUBS
     G_LoadPath(gamemap);
@@ -2817,7 +3274,7 @@ static void IncreaseDemoBuffer(void)
     // Generate a new buffer twice the size
     new_length = current_length * 2;
     
-    new_demobuffer = Z_Malloc(new_length, PU_STATIC, 0);
+    new_demobuffer = Z_Malloc(new_length, PU_STATIC, 0, "IncreaseDemoBuffer");
     new_demop = new_demobuffer + (demo_p - demobuffer);
 
     // Copy over the old data
@@ -2826,7 +3283,7 @@ static void IncreaseDemoBuffer(void)
 
     // Free the old buffer and point the demo pointers at the new buffer.
 
-    Z_Free(demobuffer);
+    Z_Free(demobuffer, "IncreaseDemoBuffer");
 
     demobuffer = new_demobuffer;
     demo_p = new_demop;
@@ -2892,7 +3349,7 @@ void G_RecordDemo (char* name)
 
     usergame = false;
     demoname_size = strlen(name) + 5;
-    demoname = Z_Malloc(demoname_size, PU_STATIC, NULL);
+    demoname = Z_Malloc(demoname_size, PU_STATIC, NULL, "G_RecordDemo -> demoname");
     M_snprintf(demoname, demoname_size, "%s.lmp", name);
     maxsize = 0x20000;
 
@@ -2908,7 +3365,7 @@ void G_RecordDemo (char* name)
     if (i)
         maxsize = atoi(myargv[i+1])*1024;
 */
-    demobuffer = Z_Malloc (maxsize,PU_STATIC,NULL); 
+    demobuffer = Z_Malloc (maxsize,PU_STATIC,NULL, "G_RecordDemo -> demobuffer"); 
     demoend = demobuffer + maxsize;
 
     demorecording = true; 
@@ -2943,11 +3400,11 @@ void G_BeginRecording (void)
     //*demo_p++ = gameepisode; [STRIFE] Doesn't have episodes.
     *demo_p++ = gamemap; 
 //    *demo_p++ = deathmatch; 
-/*
+
     *demo_p++ = respawnparm;
     *demo_p++ = fastparm;
-    *demo_p++ = nomonsters;
-*/
+//    *demo_p++ = nomonsters;
+
     *demo_p++ = consoleplayer;
  
     for (i=0 ; i<MAXPLAYERS ; i++) 
@@ -3042,11 +3499,11 @@ void G_DoPlayDemo (void)
     //episode = *demo_p++; [STRIFE] No episodes
     map = *demo_p++; 
 //    deathmatch = *demo_p++;
-/*
+
     respawnparm = *demo_p++;
     fastparm = *demo_p++;
-    nomonsters = *demo_p++;
-*/
+//    nomonsters = *demo_p++;
+
     consoleplayer = *demo_p++;
 
     for (i=0 ; i<MAXPLAYERS ; i++) 
@@ -3140,11 +3597,12 @@ boolean G_CheckDemoStatus (void)
 //        netgame = false;
 //        deathmatch = false;
         playeringame[1] = playeringame[2] = playeringame[3] = 0;
-/*
-        respawnparm = false;
-        fastparm = false;
-        nomonsters = false;
-*/
+
+        respawnparm = start_respawnparm; // [SVE] reset to start state
+        fastparm = start_fastparm;
+
+//        nomonsters = false;
+
         consoleplayer = 0;
         
         if (singledemo) 
@@ -3159,7 +3617,7 @@ boolean G_CheckDemoStatus (void)
     { 
         *demo_p++ = DEMOMARKER; 
         M_WriteFile (demoname, demobuffer, demo_p - demobuffer); 
-        Z_Free (demobuffer); 
+        Z_Free (demobuffer, "G_CheckDemoStatus"); 
         demorecording = false; 
         I_Error ("Demo %s recorded", demoname); 
     } 

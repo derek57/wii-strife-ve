@@ -40,8 +40,15 @@
 #include "p_local.h"
 #include "p_inter.h"
 
+#include "p_locations.h"
 #include "doomfeatures.h"
 #include "i_system.h"
+
+#include "f_finale.h"	// [SVE]
+#include "hu_stuff.h"	// [SVE]
+#include "hu_lib.h"	// [SVE]
+
+#include "p_tick.h"
 
 //
 // Defines and Macros
@@ -123,6 +130,9 @@ static char pickupstring[46];
 
 // Health based on gameskill given by the front's medic
 static const int healthamounts[] = { -100 , -75, -50, -50, -100 };
+
+// haleyjd 20141111: [SVE] special rejection message for particular items
+static char *rejectgivemsg;
 
 //=============================================================================
 //
@@ -276,6 +286,7 @@ static rndmessage_t rndMessages[] =
         }
     },
     // Beggar
+    // haleyjd 20140828: [SVE] reformatted so these display properly
     {
         "BEGGAR",
         10,
@@ -286,21 +297,21 @@ static rndmessage_t rndMessages[] =
 
             "YOU WOULDN'T HAVE ANY EXTRA FOOD, WOULD YOU?",
 
-            "YOU  SURFACE PEOPLE WILL NEVER \n"
-            "                                                                 "
-            "                                      UNDERSTAND US.",
+            "YOU SURFACE PEOPLE WILL NEVER \n"
+            "UNDERSTAND US.",
 
-            "HA, THE GUARDS CAN'T FIND US.  THOSE \n"
+            "HA, THE GUARDS CAN'T FIND US. THOSE \n"
             "IDIOTS DON'T EVEN KNOW WE EXIST.",
 
-            "ONE DAY EVERYONE BUT THOSE WHO SERVE THE ORDER WILL BE FORCED TO "
-            "  JOIN US.",
+            "ONE DAY EVERYONE BUT THOSE WHO \n"
+            "SERVE THE ORDER WILL BE FORCED \n"
+            "TO JOIN US.",
 
-            "STARE NOW,  BUT YOU KNOW THAT THIS WILL BE YOUR OWN FACE ONE DAY.",
+            "STARE NOW, BUT YOU KNOW THAT THIS \n"
+            "WILL BE YOUR OWN FACE ONE DAY.",
 
-            // Note: "NOTHING THING" is an authentic typo
-            "THERE'S NOTHING THING MORE \n"
-            "ANNOYING THAN A SURFACER WITH AN ATTITUDE!",
+            "THERE'S NOTHING MORE ANNOYING \n"
+            "THAN A SURFACER WITH AN ATTITUDE!",
 
             "THE ORDER WILL MAKE SHORT WORK OF YOUR PATHETIC FRONT.",
 
@@ -347,6 +358,39 @@ static rndmessage_t rndMessages[] =
 
 // And again, this could have been a define, but was a variable.
 static int numrndmessages = arrlen(rndMessages);
+
+//=============================================================================
+//
+// [SVE]
+//
+// Voices where BlackBird speaks at the end.
+//
+
+static const char *BlackBirdVoices[] =
+{
+    "ADG01", "AG301", "CTT02", "DER03", "FP201A", "FP301A", "GOV04", "LOM06",
+    "MAC02", "MAC06", "MAC08", "MAC14", "MAE03",  "MAE04",  "MAE06", "ORC06",
+    "PDG02", "QUI04", "QUI06", "TCC01", "TCH02",  "WDM02",  "WER02", "WER03",
+    "WER05", "WER08", "WOR03"
+};
+
+static boolean P_IsBlackBirdVoice(const char *voice)
+{
+    int i;
+
+    if(!voice)
+        return false;
+
+    for(i = 0; i < arrlen(BlackBirdVoices); i++)
+    {
+        if(!strcasecmp(voice, BlackBirdVoices[i]))
+            return true;
+    }
+
+    return false;
+}
+
+static boolean blackbirdvoice;
 
 //=============================================================================
 //
@@ -410,7 +454,7 @@ static void P_ParseDialogLump(byte *lump, mapdialog_t **dialogs,
     int i;
     byte *rover = lump;
 
-    *dialogs = Z_Malloc(numdialogs * sizeof(mapdialog_t), tag, NULL);
+    *dialogs = Z_Malloc(numdialogs * sizeof(mapdialog_t), tag, NULL, "P_ParseDialogLump");
 
     for(i = 0; i < numdialogs; i++)
     {
@@ -459,7 +503,7 @@ static void P_ParseDemoDialogLump(byte *lump, mapdialog_t **dialogs,
     int i;
     byte *rover = lump;
 
-    *dialogs = Z_Malloc(numdialogs * sizeof(mapdialog_t), tag, NULL);
+    *dialogs = Z_Malloc(numdialogs * sizeof(mapdialog_t), tag, NULL, "P_ParseDemoDialogLump");
 
     for(i = 0; i < numdialogs; i++)
     {
@@ -570,7 +614,7 @@ void P_DialogLoad(void)
         default:
             break;
         }
-        Z_Free(leveldialogptr); // haleyjd: free the original lump
+        Z_Free(leveldialogptr, "P_DialogLoad -> leveldialogptr"); // haleyjd: free the original lump
     }
 
     // also load SCRIPT00 if it has not been loaded yet
@@ -601,7 +645,7 @@ void P_DialogLoad(void)
         default:
             break;
         }
-        Z_Free(script0ptr); // haleyjd: free the original lump
+        Z_Free(script0ptr, "P_DialogLoad -> script0ptr"); // haleyjd: free the original lump
     }
 }
 
@@ -629,6 +673,10 @@ int P_PlayerHasItem(player_t *player, mobjtype_t type)
         // check quest tokens
         if(type >= MT_TOKEN_QUEST1 && type <= MT_TOKEN_QUEST31)
             return (player->questflags & (1 << (type - MT_TOKEN_QUEST1)));
+
+        // haleyjd 20140830: [SVE] communicator
+        if(type == MT_INV_COMMUNICATOR)
+            return !!(player->powers[pw_communicator]);
 
         // check inventory
         for(i = 0; i < 32; i++)
@@ -744,6 +792,11 @@ boolean P_GiveInventoryItem(player_t *player, int sprnum, mobjtype_t type)
     mobjtype_t item = 0;
     inventory_t* invtail;
 
+    // haleyjd 20140817: [SVE] Do not give inventory items to players who
+    // aren't playing.
+    if(!playeringame[player - players])
+        return false;
+
     // repaint the status bar due to inventory changing
     player->st_update = true;
 
@@ -810,6 +863,87 @@ boolean P_GiveInventoryItem(player_t *player, int sprnum, mobjtype_t type)
     return ok;
 }
 
+static void P_TakeDialogItem(player_t *player, int type, int amount);
+void P_CalcHeight(player_t *);
+
+//
+// P_MourelVeteranAction
+//
+// haleyjd 20140819: [SVE] For Veteran Edition, when not playing in classic
+// mode, we remove the dead end that occurs at Governor Mourel if the player
+// steals the chalice. This is a hack on league with Rogue's original stuff ;)
+//
+static boolean P_MourelVeteranAction(player_t *player)
+{
+    int i, selections;
+    thinker_t *th;
+
+    if(classicmode)
+        return false;
+
+    // Need to be on Tarnhill and have been speaking with the Governor
+    if(gamemap != 2 || !dialogtalker || dialogtalker->type != MT_PEASANT1)
+        return false;
+
+    // Need to have stolen the Chalice.
+    if(!(player->questflags & QF_QUEST2))
+        return false;
+
+    // take away Chalice if still possessed
+    if(P_PlayerHasItem(player, MT_INV_CHALICE))
+        P_TakeDialogItem(player, MT_INV_CHALICE, 1);
+
+    // clear quest flag
+    player->questflags &= ~QF_QUEST2;
+
+    // remove Gov's Key if haven't visited Macil
+    if(!(player->questflags & QF_QUEST3))
+        player->cards[key_GovsKey] = false;
+
+    // dismiss any dialog
+    M_ClearMenus(0);
+    F_StartFinale();
+    S_StartSound(NULL, sfx_meatht); // whock!
+
+    // set the Gov back to dialog state 0
+    dialogtalker->miscdata = 0;
+
+    // teleport player to player 1 start
+    P_TeleportMove(player->mo, playerstarts[0].x*FRACUNIT, playerstarts[0].y*FRACUNIT);
+    player->mo->z = player->mo->floorz;
+    P_CalcHeight(player);
+
+    player->prevviewz = player->viewz; // reset for interpolation
+    player->prevpitch = player->pitch;
+
+    // spawn some Acolytes
+    selections = deathmatch_p - deathmatchstarts;
+    for(i = 0; i < selections; i++)
+    {
+        mobj_t *mo;
+        mo = P_SpawnMobj(deathmatchstarts[i].x*FRACUNIT,
+                         deathmatchstarts[i].y*FRACUNIT, 
+                         ONFLOORZ, MT_GUARD1);
+        P_TeleportMove(mo, mo->x, mo->y);
+    }
+
+    // find Harris and set his dialog state
+    // 20141108: also, remove any chalices dropped on the ground... :P
+    for(th = thinkercap.next; th != &thinkercap; th = th->next)
+    {
+        if(th->function.acp1 == (actionf_p1)P_MobjThinker)
+        {
+            mobj_t *mo = (mobj_t *)th;
+            if(mo->type == MT_PEASANT5_A)
+                mo->miscdata = 7;
+            else if(mo->type == MT_INV_CHALICE)
+                P_RemoveMobj(mo);
+        }
+    }
+
+    return true;
+}
+
 //
 // P_GiveItemToPlayer
 //
@@ -823,6 +957,11 @@ boolean P_GiveItemToPlayer(player_t *player, int sprnum, mobjtype_t type)
     int i = 0;
     line_t junk;
     int sound = sfx_itemup; // haleyjd 09/21/10: different sounds for items
+
+    // haleyjd 20140817: [SVE] Do not give inventory items to players who
+    // aren't playing.
+    if(!playeringame[player - players])
+        return false;
 
     // set quest if mf_givequest flag is set
     if(mobjinfo[type].flags & MF_GIVEQUEST)
@@ -865,12 +1004,22 @@ boolean P_GiveItemToPlayer(player_t *player, int sprnum, mobjtype_t type)
 
     case SPR_ARM1: // Armor 1
         if(!P_GiveArmor(player, -2))
-            P_GiveInventoryItem(player, sprnum, type);
+        {
+            // [SVE]: fix buying error outside of classic mode
+            boolean res = P_GiveInventoryItem(player, sprnum, type);
+            if(!(classicmode || res))
+                return false;
+        }
         break;
 
     case SPR_ARM2: // Armor 2
         if(!P_GiveArmor(player, -1))
-            P_GiveInventoryItem(player, sprnum, type);
+        {
+            // [SVE]: fix buying error outside of classic mode
+            boolean res = P_GiveInventoryItem(player, sprnum, type);
+            if(!(classicmode || res))
+                return false;
+        }
         break;
 
     case SPR_COIN: // 1 Gold
@@ -1037,11 +1186,17 @@ boolean P_GiveItemToPlayer(player_t *player, int sprnum, mobjtype_t type)
 
         case MT_TOKEN_HEALTH: // Health token - from the Front's doctor
             if(!P_GiveBody(player, healthamounts[gameskill]))
+            {
+                // [SVE]: override default rejection message for health
+                rejectgivemsg = "You seem fine to me.";
                 return false;
+            }
             break;
 
         case MT_TOKEN_ALARM: // Alarm token - particularly from the Oracle.
-            P_NoiseAlert(player->mo, player->mo);
+            // haleyjd 20140819: [SVE] hacks
+            if(!P_MourelVeteranAction(player))
+                P_NoiseAlert(player->mo, player->mo);
             A_AlertSpectreC(dialogtalker); // BUG: assumes in a dialog o_O
             break;
 
@@ -1073,6 +1228,11 @@ boolean P_GiveItemToPlayer(player_t *player, int sprnum, mobjtype_t type)
 
             player->stamina += 10;
             P_GiveBody(player, 200); // full healing
+
+            // [SVE] svillarreal
+            if(!classicmode)
+                HU_SetNotification("Stamina +10!");
+
             break;
 
         case MT_TOKEN_NEW_ACCURACY: // Accuracy upgrade
@@ -1080,6 +1240,11 @@ boolean P_GiveItemToPlayer(player_t *player, int sprnum, mobjtype_t type)
                 return false;
 
             player->accuracy += 10;
+
+            // [SVE] svillarreal
+             if(!classicmode)
+                HU_SetNotification("Accuracy +10!");
+
             break;
 
         case MT_SLIDESHOW: // Slideshow (start a finale)
@@ -1222,11 +1387,20 @@ static void P_DialogDrawer(void)
             // time to pause the game?
             if(menupausetime + 3 < gametic)
                 menupause = true;
+
+	    wipe = false;
         }
 
         // draw character name
         M_WriteText(12, 18, dialogname);
         y = 28;
+
+        if(blackbirdvoice) // [SVE]
+        {
+            /*const*/ char *msg = "BlackBird is listening...";
+            int x = 300 - HUlib_yellowTextWidth(msg);
+            HUlib_drawYellowText(x, 181, msg);
+        }
 
         // show text (optional for dialogs with voices)
         if(dialogshowtext==1 || currentdialog->voice[0] == '\0')
@@ -1235,25 +1409,7 @@ static void P_DialogDrawer(void)
 
 	    dialog_active = true; // FIX FOR THE WII: DISABLES THE JUMPING WHILE USING DIALOG ITEMS
 	}
-/*
-#ifdef SHAREWARE
-	if(STRIFE_1_0_SHAREWARE || STRIFE_1_1_SHAREWARE)		// FOR PSP: SHAREWARE INFO
-	{
-            y = M_WriteText(20, 28, dialogtext);
-            y = M_WriteText(20, 28, "AS YOU CAN SEE, THIS IS ONLY THE");
-	    y = M_WriteText(20, 38, "SHAREWARE (DEMO) VERSION OF STRIFE");
-	    y = M_WriteText(20, 48, "AND CURRENTLY NO DIALOGUES ARE");
-	    y = M_WriteText(20, 58, "WORKING AND I'M NOT SURE WHEN OR IF");
-	    y = M_WriteText(20, 68, "EVER THESE WILL MAKE IT INTO");
-	    y = M_WriteText(20, 78, "ANOTHER RELEASE OF PSP-STRIFE.");
-	    y = M_WriteText(20, 88, "");
-	    y = M_WriteText(20, 98, "STAY TUNED...");
-	    y = M_WriteText(20, 108, "");
-	    y = M_WriteText(20, 118, "...OR ELSE GET THE STRIFE1.WAD FILE TO");
-	    y = M_WriteText(20, 128, "ENJOY THE FULL VERSION OF THE GAME.");
-	}
-#endif
-*/
+
         height = 20 * dialogmenu.numitems;
 
         finaly = 175 - height;     // preferred height
@@ -1282,9 +1438,21 @@ static void P_DialogDrawer(void)
                              currentdialog->choices[i].needamounts[0]);
             }
 
+            // haleyjd: [SVE] set information for mouse
+            dialogmenu.menuitems[i].x = dialogmenu.x;
+            dialogmenu.menuitems[i].y = dialogmenu.y + 3 + y;
+            dialogmenu.menuitems[i].w = M_StringWidth(choicetext);
+            dialogmenu.menuitems[i].h = 12;
+
             M_WriteText(dialogmenu.x, dialogmenu.y + 3 + y, choicetext);
             y += 19;
         }
+
+        // haleyjd: [SVE] set information for mouse
+        dialogmenu.menuitems[dialogmenu.numitems - 1].x = dialogmenu.x;
+        dialogmenu.menuitems[dialogmenu.numitems - 1].y = 19 * i + dialogmenu.y + 3;
+        dialogmenu.menuitems[dialogmenu.numitems - 1].w = M_StringWidth(dialoglastmsgbuffer);
+        dialogmenu.menuitems[dialogmenu.numitems - 1].h = 12;
 
         // draw the final item for dismissing the dialog
         M_WriteText(dialogmenu.x, 19 * i + dialogmenu.y + 3, dialoglastmsgbuffer);
@@ -1326,6 +1494,9 @@ void P_DialogDoChoice(int choice)
     {
         int item;
 
+        // [SVE]: set default give rejection message here
+        rejectgivemsg = DEH_String("You seem to have enough!");
+
         message = currentchoice->textok;
         if(dialogtalkerstates->yes)
             P_SetMobjState(dialogtalker, dialogtalkerstates->yes);
@@ -1347,7 +1518,7 @@ void P_DialogDoChoice(int choice)
             }
         }
         else
-            message = DEH_String("You seem to have enough!");
+            message = rejectgivemsg; // [SVE]: could be overridden by particular items
 
         // store next dialog into the talking actor
         nextdialog = currentchoice->next;
@@ -1369,9 +1540,20 @@ void P_DialogDoChoice(int choice)
 
         if((objective = currentchoice->objective))
         {
+/*
             DEH_snprintf(mission_objective, OBJECTIVE_LEN, "log%i", objective);
             objlump = W_CacheLumpName(mission_objective, PU_CACHE);
             M_StringCopy(mission_objective, objlump, OBJECTIVE_LEN);
+*/
+            int lumpnum; // haleyjd 20140906: [SVE] dont' bomb out if missing.
+            char lumpname[9];
+            DEH_snprintf(lumpname, sizeof(lumpname), "log%i", objective);
+            if((lumpnum = W_CheckNumForName(lumpname)) >= 0)
+            {
+                objlump = W_CacheLumpNum(lumpnum, PU_CACHE);
+                M_StringCopy(mission_objective, objlump, OBJECTIVE_LEN);
+            }
+            P_SetLocationsFromScript(lumpname);
         }
         // haleyjd 20130301: v1.31 hack: if first char of message is a period,
         // clear the player's message. Is this actually used anywhere?
@@ -1450,7 +1632,7 @@ void P_DialogStart(player_t *player)
 			linetarget->type == MT_SHOPKEEPER_M))	// HACK AGAINST [SVE]: add more demo style
 	S_StartSound(0, sfx_welcum);				// HACK AGAINST [SVE]: add more demo style
 
-    linetarget->target = player->mo;         // target the player
+    P_SetTarget(&linetarget->target, player->mo); // target the player
     dialogtalker->reactiontime = 2;          // set reactiontime
     dialogtalkerangle = dialogtalker->angle; // remember original angle
 
@@ -1549,6 +1731,8 @@ void P_DialogStart(player_t *player)
     // get voice
     I_StartVoice(currentdialog->voice);
 
+    blackbirdvoice = P_IsBlackBirdVoice(currentdialog->voice);
+
     // get bye text
     switch(rnd)
     {
@@ -1566,6 +1750,99 @@ void P_DialogStart(player_t *player)
 
     DEH_snprintf(dialoglastmsgbuffer, sizeof(dialoglastmsgbuffer),
                  "%d) %s", i + 1, byetext);
+}
+
+//
+// P_IsBlockingItem
+//
+// haleyjd 20140827: [SVE] Detect items that are given through dialog and may
+// block the player's progress in the game.
+//
+boolean P_IsBlockingItem(int itemtype)
+{
+    switch(itemtype)
+    {
+    case MT_KEY_BASE:                  // Base key, given by Rowan
+    case MT_PRISONKEY:                 // Prison key, given by Mourel
+    case MT_POWER1KEY:                 // Power1 key, given by Werner
+    case MT_POWER2KEY:                 // Power2 key, given by Technician
+    case MT_POWER3KEY:                 // Power3 key, given by Sammis
+    case MT_KEY_SILVER:                // Silver key, given by False Programmer
+    case MT_KEY_ORACLE:                // Oracle key, given by ???
+    case MT_CATACOMBKEY:               // Catacomb key, given by Richter
+    case MT_MILITARYID:                // Military ID, given by the Keymaster?
+    case MT_KEY_ORDER:                 // Order key, given by ???
+    case MT_INV_COMMUNICATOR:          // Comm Unit, given by Rowan
+    case MT_TOKEN_QUEST3:              // Permission for Irale, given by Macil
+        return true;
+    
+    case MT_TOKEN_ORACLE_PASS:         // Oracle Pass, given by the Oracle
+        return !P_PlayerHasItem(&players[0], MT_TOKEN_QUEST18);
+
+    case MT_TOKEN_FLAME_THROWER_PARTS: // Flamethrower parts, given by Weran
+        return !players[0].weaponowned[wp_flame];
+
+    case MT_TOKEN_PRISON_PASS:         // Prison pass, given by Mourel
+        return !P_PlayerHasItem(&players[0], MT_PRISONKEY);
+
+    default:
+        return false;
+    }
+}
+
+//
+// P_CheckForBlockingItems
+//
+// haleyjd 20140827: [SVE] Check a thing's dialog states to see if it gives the
+// player important items but does not currently drop those items if killed.
+//
+boolean P_CheckForBlockingItems(mobj_t *thing)
+{
+    int i;
+    int curdrop = P_DialogFind(thing->type, thing->miscdata)->dropitem;
+
+    for(i = 0; i < numleveldialogs; i++)
+    {
+        mapdialog_t *dlg = &leveldialogs[i];
+
+        if(thing->type == dlg->speakerid)
+        {
+            int choice;
+
+            for(choice = 0; choice < MDLG_MAXCHOICES; choice++)
+            {
+                mapdlgchoice_t *ch = &(dlg->choices[choice]);
+                if(P_IsBlockingItem(ch->giveitem) && ch->giveitem != curdrop &&
+                   !P_PlayerHasItem(&players[0], ch->giveitem))
+                    return true;
+            }
+        }           
+    }
+
+    // Stupid hacks:
+
+    // If Bishop is not dead...
+    if(!P_PlayerHasItem(&players[0], MT_TOKEN_BISHOP))
+    {
+        // No killing Oracle or Macil.
+        if(thing->type == MT_ORACLE || thing->type == MT_RLEADER2)
+           return true;
+    }
+
+    // If Oracle is dead...
+    if(P_PlayerHasItem(&players[0], MT_TOKEN_ORACLE))
+    {
+        // No killing Macil until talking to Richter.
+        if(thing->type == MT_RLEADER2 &&
+           !P_PlayerHasItem(&players[0], MT_CATACOMBKEY))
+            return true;
+    }
+
+    // [SVE] svillarreal - If forge NPC hasn't opened the door for the player yet
+    if(gamemap == 22 && thing->type == MT_PEASANT1 && thing->miscdata == 0)
+        return true;
+
+    return false;
 }
 
 // EOF

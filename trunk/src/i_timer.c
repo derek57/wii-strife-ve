@@ -29,6 +29,17 @@
 #include "i_timer.h"
 #include "doomtype.h"
 
+static unsigned int start_displaytime;
+static unsigned int displaytime;
+
+static unsigned int rendertic_start;
+static unsigned int rendertic_next;
+
+unsigned int        rendertic_step;
+float               rendertic_msec;
+
+const float realtic_clock_rate = 100.0f;
+
 //
 // I_GetTime
 // returns time in 1/35th second tics
@@ -78,11 +89,56 @@ void I_WaitVBL(int count)
     I_Sleep((count * 1000) / 70);
 }
 
+//
+// I_TimerStartDisplay
+//
+// Calculate the starting display time.
+//
+void I_TimerStartDisplay(void)
+{
+    start_displaytime = SDL_GetTicks();
+}
+
+//
+// I_TimerEndDisplay
+//
+// Calculate the ending display time.
+//
+void I_TimerEndDisplay(void)
+{
+    displaytime = SDL_GetTicks() - start_displaytime;
+}
+
+//
+// I_TimerSaveMS
+//
+// Update interpolation state variables at the end of gamesim logic.
+//
+
+void I_TimerSaveMS(void)
+{
+    rendertic_start = SDL_GetTicks();
+    rendertic_next  = (unsigned int)((rendertic_start * rendertic_msec + 1.0f) / rendertic_msec);
+    rendertic_step  = rendertic_next - rendertic_start;
+}
+
+//
+// I_setMSec
+//
+// Module private; set the milliseconds per render frame.
+//
+static void I_setMSec(void)
+{
+    rendertic_msec = realtic_clock_rate * TICRATE / 100000.0f;
+}
 
 void I_InitTimer(void)
 {
     // initialize timer
 
     SDL_Init(SDL_INIT_TIMER);
+
+    // haleyjd: init interpolation
+    I_setMSec();
 }
 

@@ -59,10 +59,11 @@ typedef struct menu_s
     short		x;
     short		y;		// x,y of menu
     short		lastOn;		// last item user was on in menu
+    int           	background;	// [SVE]
 } menu_t;
 
-extern menu_t*	currentMenu;    // villsa [STRIFE] made external
-extern short itemOn;
+extern menu_t*	currentMenu;    	// villsa [STRIFE] made external
+extern short	itemOn;
 
 //
 // MENUS
@@ -102,6 +103,8 @@ void M_ClearMenus (int choice);
 void M_LoadSelect(int choice);
 
 void M_SizeDisplay(int choice);
+
+int M_StringWidth(char* string); // [SVE]
 
 extern int detailLevel;
 extern int screenblocks;

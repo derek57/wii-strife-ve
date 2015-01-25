@@ -95,6 +95,8 @@ void         P_DialogStartP1(void);
 mapdialog_t* P_DialogFind(mobjtype_t type, int jumptoconv);
 int          P_PlayerHasItem(player_t *player, mobjtype_t type);
 
+boolean	P_CheckForBlockingItems(mobj_t *thing);
+
 #endif
 
 // EOF

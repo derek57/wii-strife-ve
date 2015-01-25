@@ -194,7 +194,7 @@ EV_DoCeiling
 
         // new door thinker
         rtn = 1;
-        ceiling = Z_Malloc (sizeof(*ceiling), PU_LEVSPEC, 0);
+        ceiling = Z_Malloc (sizeof(*ceiling), PU_LEVSPEC, 0, "EV_DoCeiling");
         P_AddThinker (&ceiling->thinker);
         sec->specialdata = ceiling;
         ceiling->thinker.function.acp1 = (actionf_p1)T_MoveCeiling;
@@ -227,7 +227,8 @@ EV_DoCeiling
             // [STRIFE] haleyjd 20130209: Turns out these types do NOT crush
             // in Strife... yeah, that makes a lot of sense. Thanks to Gez for
             // having detected this difference.
-            //ceiling->crush = true;
+            if(!classicmode) // [SVE]: fix this outside classicmode
+                ceiling->crush = true;
             ceiling->topheight = sec->ceilingheight;
 
         case lowerToFloor:

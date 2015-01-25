@@ -55,11 +55,16 @@ void HU_Drawer(void);
 //char HU_dequeueChatChar(void);
 void HU_Erase(void);
 
+void HU_SetNotification(char *message); // [SVE]
+
 //extern char *chat_macros[10];
 extern char player_names[8][16];   // villsa [STRIFE]
 
+// [SVE]: do not access level names out of bounds
+#define HU_NUMMAPNAMES 38
+
 // haleyjd [STRIFE] externalized:
-extern char *mapnames[];
+extern char *mapnames[HU_NUMMAPNAMES];
 
 // [STRIFE]
 extern patch_t* yfont[HU_FONTSIZE];   // haleyjd 09/18/10: [STRIFE]

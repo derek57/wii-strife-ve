@@ -60,7 +60,7 @@ typedef struct thinker_s
     struct thinker_s*	prev;
     struct thinker_s*	next;
     think_t		function;
-    
+    int                 references; // haleyjd 20140926: [SVE]
 } thinker_t;
 
 

@@ -64,7 +64,8 @@ char *sprnames[NUMSPRITES+1] =
     "STAT", "DSTA", "CRAB", "CAGE", "TREE", "TRE1", "BUSH", "SHRB", 
     "STAK", "BAR1", "VASE", "STOL", "POT1", "TUB1", "ANVL", "TLMP", 
     "TRAY", "APOW", "AFED", "DRIP", "CDRP", "SPLH", "WTFT", "HERT", 
-    "TELP", "MONI", "STEL", "STLA", "STLE", "HUGE", "STLG", NULL
+    "TELP", "MONI", "STEL", "STLA", "STLE", "HUGE", "STLG", "BLD2",
+    "BLUD", NULL
 };
 
 
@@ -185,6 +186,10 @@ void A_Light2();
 void A_SigilShock();
 void A_TorpedoExplode();
 void A_MaulerSound();
+
+// [SVE]
+void A_CheckPlayerDone();
+void A_OreSpawner();
 
 // villsa [STRIFE]
 state_t states[NUMSTATES] =
@@ -503,7 +508,7 @@ state_t states[NUMSTATES] =
 /*S_RGIB_04*/       { SPR_RGIB, 4, 5, { A_BodyParts }, S_RGIB_05 },     //310
 /*S_RGIB_05*/       { SPR_RGIB, 5, 5, { A_BodyParts }, S_RGIB_06 },     //311
 /*S_RGIB_06*/       { SPR_RGIB, 6, 5, { A_BodyParts }, S_RGIB_07 },     //312
-/*S_RGIB_07*/       { SPR_RGIB, 7, 1400, { NULL }, S_NULL },        //313
+/*S_RGIB_07*/       { SPR_RGIB, 7, 1400, { A_CheckPlayerDone }, S_RGIB_07 }, //313 - [SVE]: modified
 /*S_MRYS_00*/       { SPR_MRYS, 0, 30, { NULL }, S_MRST_00 },       //314
 /*S_MRNO_00*/       { SPR_MRNO, 0, 6, { NULL }, S_MRNO_01 },        //315
 /*S_MRNO_01*/       { SPR_MRNO, 1, 6, { NULL }, S_MRNO_02 },        //316
@@ -1198,7 +1203,7 @@ state_t states[NUMSTATES] =
 /*S_SEWR_10*/       { SPR_SEWR, 32774, 4, { A_BodyParts }, S_SEWR_11 },     //1005
 /*S_SEWR_11*/       { SPR_SEWR, 32775, 4, { A_BodyParts }, S_SEWR_12 },     //1006
 /*S_SEWR_12*/       { SPR_SEWR, 8, 4, { NULL }, S_SEWR_13 },        //1007
-/*S_SEWR_13*/       { SPR_SEWR, 9, 5, { NULL }, S_NULL },       //1008
+/*S_SEWR_13*/       { SPR_SEWR, 9, 44, { NULL }, S_SEWR_14 },       //1008 - [SVE] Modified
 /*S_SPID_00*/       { SPR_SPID, 0, 1, { A_StalkerSetLook }, S_SPID_00 },        //1009
 /*S_SPID_01*/       { SPR_SPID, 0, 10, { A_Look }, S_SPID_01 },     //1010
 /*S_SPID_02*/       { SPR_SPID, 9, 10, { A_Look }, S_SPID_02 },     //1011
@@ -1708,6 +1713,24 @@ state_t states[NUMSTATES] =
 /*S_STLG_03*/       { SPR_STLG, 3, -1, { NULL }, S_NULL },      //1515
 /*S_STLG_04*/       { SPR_STLG, 4, -1, { NULL }, S_NULL },      //1516
 /*S_STLG_05*/       { SPR_STLG, 5, -1, { NULL }, S_NULL },      //1517
+/*S_RGIB_16*/       { SPR_RGIB, 7, 1400, { NULL }, S_NULL },
+/*S_SEWR_14*/       { SPR_SEWR, 32775, 4, { NULL }, S_SEWR_15 },
+/*S_SEWR_15*/       { SPR_SEWR, 32778, 3, { NULL }, S_SEWR_16 },
+/*S_SEWR_16*/       { SPR_SEWR, 32779, 3, { A_BodyParts }, S_SEWR_17 },
+/*S_SEWR_17*/       { SPR_JUNK, 6, 35, { A_BodyParts }, S_NULL },
+/*S_PLAY_CORPSE*/   { SPR_PLAY, 15, -1, { NULL }, S_NULL },
+/*S_PLAY_20*/       { SPR_PLAY, 0, 175, { A_OreSpawner }, S_PLAY_20 },
+		    { SPR_BLD2, 0, -1, { NULL }, S_NULL }, // S_BLOODSPLAT
+		    { SPR_BLD2, 1, -1, { NULL }, S_NULL }, // S_BLOODSPLAT2
+		    { SPR_BLD2, 2, -1, { NULL }, S_NULL }, // S_BLOODSPLAT3
+		    { SPR_BLD2, 3, -1, { NULL }, S_NULL }, // S_BLOODSPLAT4
+		    { SPR_BLD2, 4, -1, { NULL }, S_NULL }, // S_BLOODSPLAT5
+		    { SPR_BLD2, 5, -1, { NULL }, S_NULL }, // S_BLOODSPLAT6
+		    { SPR_BLD2, 6, -1, { NULL }, S_NULL }, // S_BLOODSPLAT7
+		    { SPR_BLD2, 7, -1, { NULL }, S_NULL }, // S_BLOODSPLAT8
+		    { SPR_BLUD, 2, 8, { NULL }, S_BLOOD2 }, // S_BLOOD1
+		    { SPR_BLUD, 1, 8, { NULL }, S_BLOOD3 }, // S_BLOOD2
+		    { SPR_BLUD, 0, -1, { NULL }, S_NULL }, // S_BLOOD3
 };
 
 
@@ -1766,6 +1789,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
         sfx_None,       //activesound
         MF_SOLID|MF_SHOOTABLE|MF_DROPOFF|MF_NOTDMATCH|MF_ALLY,       //flags
         NULL,       //namepointer
+        MF2_DONOTMAP, // flags2
     },
 
     {       /*MT_SHOPKEEPER_W*/
@@ -2526,7 +2550,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
         S_NULL,     //xdeathstate
         sfx_psdtha,     //deathsound
         0,      //speed
-        20*FRACUNIT,        //radius
+        16*FRACUNIT,        //radius -- [SVE]: made smaller due to bizarre bug on MAP27
         56*FRACUNIT,        //height
         100,        //mass
         0,      //damage
@@ -3369,8 +3393,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
         0,      //damage
         sfx_agrac3,     //activesound
         MF_SOLID|MF_SHOOTABLE|MF_COUNTKILL|MF_COLORSWAP1|MF_COLORSWAP2
-        |MF_COLORSWAP3,     //flags
+        |MF_COLORSWAP3|MF_NODIALOG,     //flags - haleyjd 20140820: [SVE] Added NODIALOG
         "ACOLYTE",      //namepointer
+        MF2_NOSTONECOLD|MF2_DRAWBILLBOARD, // [SVE] flags2
     },
 
     {       /*MT_SHADOWGUARD*/
@@ -4929,6 +4954,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
         sfx_None,       //activesound
         MF_NOBLOCKMAP,      //flags
         NULL,       //namepointer
+	MF2_BLOOD,	// flags2
     },
 
     {       /*MT_TFOG*/
@@ -7196,8 +7222,10 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
         99999999,       //mass
         0,      //damage
         sfx_reactr,     //activesound
-        MF_SOLID|MF_SHOOTABLE|MF_NOGRAVITY|MF_GIVEQUEST|MF_NOBLOOD,     //flags
+        // haleyjd 20140820: [SVE] Added NODIALOG
+        MF_SOLID|MF_SHOOTABLE|MF_NOGRAVITY|MF_GIVEQUEST|MF_NOBLOOD|MF_NODIALOG, //flags
         NULL,       //namepointer
+        MF2_NOSTONECOLD|MF2_DRAWBILLBOARD, // flags2
     },
 
     {       /*MT_RAT*/
@@ -7279,6 +7307,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
         sfx_None,       //activesound
         MF_SOLID|MF_SHOOTABLE|MF_NODIALOG|MF_NOBLOOD,       //flags
         NULL,       //namepointer
+        MF2_NOREBELATTACK|MF2_DRAWBILLBOARD, // flags2 - [SVE] rebels have unhealthy habits.
     },
 
     {       /*MT_MISC_15*/
@@ -7954,11 +7983,12 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
         sfx_None,       //activesound
         MF_NOBLOCKMAP|MF_SHADOW,        //flags
         NULL,       //namepointer
+        MF2_DRAWBILLBOARD, // flags2 [SVE]
     },
 
     {       /*MT_DEADTHING1*/
         22,     //doomednum
-        S_ROB2_28,      //spawnstate
+        S_ROB2_29,      //spawnstate - [SVE] Fixed (was 28)
         1000,       //spawnhealth
         S_NULL,     //seestate
         sfx_None,       //seesound
@@ -7985,7 +8015,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
     {       /*MT_DEADTHING2*/
         15,     //doomednum
-        S_PLAY_18,      //spawnstate
+        S_PLAY_CORPSE,      //spawnstate - [SVE]: fixed
         1000,       //spawnhealth
         S_NULL,     //seestate
         sfx_None,       //seesound
@@ -8278,6 +8308,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
         sfx_smfire,     //activesound
         MF_NOBLOCKMAP,      //flags
         NULL,       //namepointer
+        MF2_DRAWBILLBOARD // [SVE] flags2
     },
 
     {       /*MT_LIGHT8*/
@@ -8305,6 +8336,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
         sfx_None,       //activesound
         MF_NOBLOCKMAP,      //flags
         NULL,       //namepointer
+        MF2_DRAWBILLBOARD // [SVE] flags2
     },
 
     {       /*MT_MISC_14*/
@@ -9567,7 +9599,12 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
         S_NULL,     //deathstate
         S_NULL,     //xdeathstate
         sfx_None,       //deathsound
-        512*FRACUNIT,       //speed
+        // haleyjd 20140820: [SVE] Fixed broken power coupling speed. 
+        // 512*FRACUNIT is the result of an error in Rogue's multigen 
+        // script which put the value of MF_NOTDMATCH here instead of
+        // in the object's flags (which I don't fix, for compat reasons)
+        //512*FRACUNIT,       //speed
+        8,
         16*FRACUNIT,        //radius
         16*FRACUNIT,        //height
         1,      //mass
@@ -11035,6 +11072,123 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
         NULL,       //namepointer
     },
 
+    //
+    // [SVE] svillarreal - new mobj types
+    //
+
+    {       /*MT_BLOOD_GORE*/
+        -1,     //doomednum
+        S_SPRY_00,      //spawnstate
+        1000,       //spawnhealth
+        S_NULL,     //seestate
+        sfx_None,       //seesound
+        8,      //reactiontime
+        sfx_None,       //attacksound
+        S_NULL,     //painstate
+        0,      //painchance
+        sfx_None,       //painsound
+        S_NULL,     //meleestate
+        S_NULL,     //missilestate
+        S_NULL,     //crashstate
+        S_NULL,     //deathstate
+        S_NULL,     //xdeathstate
+        sfx_None,       //deathsound
+        0,      //speed
+        20*FRACUNIT,        //radius
+        16*FRACUNIT,        //height
+        100,        //mass
+        0,      //damage
+        sfx_None,       //activesound
+        MF_NOBLOCKMAP,      //flags
+        NULL,       //namepointer
+        MF2_NOTHINGBLOCK|MF2_MARKDECAL,   // flags2
+    },
+
+    {       /*MT_ORE_SPAWNER*/
+        7975,        //doomednum
+        S_PLAY_20,      //spawnstate
+        20,     //spawnhealth
+        S_NULL,     //seestate
+        sfx_None,       //seesound
+        8,      //reactiontime
+        sfx_None,       //attacksound
+        S_NULL,     //painstate
+        0,      //painchance
+        sfx_None,       //painsound
+        S_NULL,     //meleestate
+        S_NULL,     //missilestate
+        S_NULL,     //crashstate
+        S_NULL,     //deathstate
+        S_NULL,     //xdeathstate
+        sfx_None,       //deathsound
+        0,      //speed
+        20*FRACUNIT,        //radius
+        16*FRACUNIT,        //height
+        100,        //mass
+        0,      //damage
+        sfx_telept,     //activesound
+        MF_NOSECTOR,       //flags
+        NULL,       //namepointer
+    },
+
+    // Blood Splat (MT_BLOODSPLAT)
+    {
+        /* doomednum            */ -1,
+        /* spawnstate           */ S_BLOODSPLAT,
+        /* spawnhealth          */ 1000,
+        /* seestate             */ S_NULL,
+        /* seesound             */ sfx_None,
+        /* reactiontime         */ 8,
+        /* attacksound          */ sfx_None,
+        /* painstate            */ S_NULL,
+        /* painchance           */ 0,
+        /* painsound            */ sfx_None,
+        /* meleestate           */ S_NULL,
+        /* missilestate         */ S_NULL,
+        /* crashstate		*/ S_NULL,
+        /* deathstate           */ S_NULL,
+        /* xdeathstate          */ S_NULL,
+        /* deathsound           */ sfx_None,
+        /* speed                */ 0,
+        /* radius               */ 0,
+        /* height               */ 0,
+        /* mass                 */ 100,
+        /* damage               */ 0,
+        /* activesound          */ sfx_None,
+        /* flags                */ 0,
+        /* namepointer          */ NULL,
+        /* flags2               */ 0,
+    },
+
+    // Fuzzy Blood (MT_FUZZYBLOOD)
+    {
+        /* doomednum            */ -1,
+        /* spawnstate           */ S_BLOOD1,
+        /* spawnhealth          */ 1000,
+        /* seestate             */ S_NULL,
+        /* seesound             */ sfx_None,
+        /* reactiontime         */ 8,
+        /* attacksound          */ sfx_None,
+        /* painstate            */ S_NULL,
+        /* painchance           */ 0,
+        /* painsound            */ sfx_None,
+        /* meleestate           */ S_NULL,
+        /* missilestate         */ S_NULL,
+        /* crashstate		*/ S_NULL,
+        /* deathstate           */ S_NULL,
+        /* xdeathstate          */ S_NULL,
+        /* deathsound           */ sfx_None,
+        /* speed                */ 0,
+        /* radius               */ 0,
+        /* height               */ 0,
+        /* mass                 */ 100,
+        /* damage               */ 0,
+        /* activesound          */ sfx_None,
+        /* flags                */ MF_SHADOW,
+        /* namepointer          */ NULL,
+        /* flags2               */ 0,
+        /* blood                */ FUZZYBLOOD,
+    },
 };
 
 

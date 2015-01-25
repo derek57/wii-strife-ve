@@ -171,7 +171,7 @@ int EV_DoPlat(line_t* line, plattype_e type, int amount)
 
         // Find lowest & highest floors around sector
         rtn = 1;
-        plat = Z_Malloc( sizeof(*plat), PU_LEVSPEC, 0);
+        plat = Z_Malloc( sizeof(*plat), PU_LEVSPEC, 0, "EV_DoPlat");
         P_AddThinker(&plat->thinker);
 
         plat->type = type;
@@ -180,6 +180,10 @@ int EV_DoPlat(line_t* line, plattype_e type, int amount)
         plat->thinker.function.acp1 = (actionf_p1) T_PlatRaise;
         plat->crush = false;
         plat->tag = line->tag;
+
+        // haleyjd 20141001 [SVE]: protect against uninitialized plat->low 
+        // causing bounced plats that descend forever
+        plat->low = sec->floorheight;
 
         switch(type)
         {
@@ -350,5 +354,6 @@ void P_RemoveActivePlat(plat_t* plat)
             return;
         }
 
-        I_Error("P_RemoveActivePlat: can't find plat!");
+    // haleyjd 20140816: [SVE] stability
+    //I_Error("P_RemoveActivePlat: can't find plat!");
 }

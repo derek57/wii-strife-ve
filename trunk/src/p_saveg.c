@@ -1,6 +1,7 @@
 //
 // Copyright(C) 1993-1996 Id Software, Inc.
 // Copyright(C) 2005-2014 Simon Howard
+// Copyright(C) 2014 Night Dive Studios, Inc.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -21,16 +22,19 @@
 #include <stdlib.h>
 
 #include "dstrings.h"
-#include "deh_str.h"
+#include "deh_main.h"
 #include "i_system.h"
 #include "z_zone.h"
 #include "m_misc.h"
 #include "p_local.h"
 #include "p_saveg.h"
+#include "w_checksum.h"
 
 // State.
 #include "doomstat.h"
 #include "r_state.h"
+
+#include "p_tick.h"// [SVE]
 
 #define SAVEGAME_EOF 0x1d
 
@@ -51,15 +55,9 @@ char *P_TempSaveGameFile(void)
 
     if (filename == NULL)
     {
-        filename = M_StringJoin(savegamedir, "/temp.dsg", NULL);
+        filename = M_StringJoin(savegamedir, "temp.dsg", NULL);
     }
-/*
-    if(devparm)
-    {
-	printf("FROM P_SAVEG.O TEMP-SAVEGAME FILE IS:\n");
-	puts(filename);
-    }
-*/
+
     return filename;
 }
 
@@ -79,7 +77,7 @@ char *P_SaveGameFile(int slot)
 
     DEH_snprintf(basename, 32, SAVEGAMENAME "%d.dsg", slot);
 
-    M_snprintf(filename, filename_size, "%s/%s", savegamedir, basename);
+    M_snprintf(filename, filename_size, "%s%s", savegamedir, basename);
 
     return filename;
 }
@@ -429,6 +427,12 @@ static void saveg_read_mobj_t(mobj_t *str)
 
     // byte miscdata;
     str->miscdata = saveg_read8(); // [STRIFE] Only change to mobj_t.
+
+    // int bloodsplats
+    str->bloodsplats = saveg_read32();
+
+    // int blood
+    str->blood = saveg_read32();
 }
 
 static void saveg_write_mobj_t(mobj_t *str)
@@ -547,6 +551,12 @@ static void saveg_write_mobj_t(mobj_t *str)
 
     // byte miscdata;
     saveg_write8(str->miscdata); // [STRIFE] Only change to mobj_t.
+
+    // int bloodsplats
+    saveg_write32(str->bloodsplats);
+
+    // int blood
+    saveg_write32(str->blood);
 }
 
 
@@ -833,8 +843,8 @@ static void saveg_read_player_t(player_t *str)
     //str->itemcount = saveg_read32();
 
     // haleyjd 08/30/10 [STRIFE] No secretcount.
-    // int secretcount;
-    //str->secretcount = saveg_read32();
+    // [SVE] svillarreal - brought back for achievements
+    str->secretcount = saveg_read32();
 
     // char* message;
     str->message = saveg_readp();
@@ -1016,8 +1026,9 @@ static void saveg_write_player_t(player_t *str)
     //saveg_write32(str->itemcount);
 
     // haleyjd 08/30/10 [STRIFE] No secretcount
+    // [SVE] svillarreal - brought back for achievements
     // int secretcount;
-    //saveg_write32(str->secretcount);
+    saveg_write32(str->secretcount);
 
     // char* message;
     saveg_writep(str->message);
@@ -1589,6 +1600,55 @@ static void saveg_write_glow_t(glow_t *str)
 }
 
 //
+// fireflicker_t
+//
+// [SVE]: added code for forgotten thinker type
+//
+
+static void saveg_read_fireflicker_t(fireflicker_t *str)
+{
+    int sector;
+
+    // thinker_t thinker;
+    saveg_read_thinker_t(&str->thinker);
+
+    // sector_t* sector;
+    sector = saveg_read32();
+    str->sector = &sectors[sector];
+
+    // int count;
+    str->count = saveg_read32();
+
+    // int maxlight;
+    str->maxlight = saveg_read32();
+
+    // int minlight;
+    str->minlight = saveg_read32();
+}
+
+static void saveg_write_fireflicker_t(fireflicker_t *str)
+{
+    // thinker_t thinker;
+    saveg_write_thinker_t(&str->thinker);
+
+    // sector_t* sector;
+    saveg_write32(str->sector - sectors);
+
+    // int count;
+    saveg_write32(str->count);
+
+    // int maxlight;
+    saveg_write32(str->maxlight);
+
+    // int minlight;
+    saveg_write32(str->minlight);
+}
+
+// [SVE]: internal save version.
+// Bump this if you change ANYTHING that is written to a save game.
+#define SAVE_VERSION 132
+
+//
 // Write the header for a savegame
 //
 // haleyjd 09/28/10: [STRIFE] numerous modifications.
@@ -1598,6 +1658,9 @@ void P_WriteSaveGameHeader(char *description)
 {
     char name[VERSIONSIZE]; 
     int i; 
+    sha1_digest_t digest; // [SVE]
+
+    W_Checksum(digest);
 
     /*
     [STRIFE] This is in the "NAME" file in a Strife save directory.
@@ -1608,10 +1671,14 @@ void P_WriteSaveGameHeader(char *description)
     */
 
     memset (name,0,sizeof(name)); 
-    M_snprintf(name, sizeof(name), "ver %i", STRIFE_VERSION);
+    M_snprintf(name, sizeof(name), "ver %i", SAVE_VERSION);
 
-    for (i=0; i<VERSIONSIZE; ++i)
+    for(i = 0; i < VERSIONSIZE; i++)
         saveg_write8(name[i]);
+
+    // [SVE]: store wad checksum
+    for(i = 0; i < 20; i++)
+        saveg_write8(digest[i]);
 
     saveg_write8(gameskill);
     
@@ -1631,12 +1698,19 @@ void P_WriteSaveGameHeader(char *description)
 // Read the header for a savegame
 //
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+
 boolean P_ReadSaveGameHeader(void)
 {
     int	 i; 
     byte a, b, c; 
     char vcheck[VERSIONSIZE]; 
     char read_vcheck[VERSIONSIZE];
+    sha1_digest_t oldDigest; // [SVE]
+    sha1_digest_t curDigest; // [SVE]
+
+    W_Checksum(curDigest);
 
     // skip the description field 
     /*
@@ -1644,13 +1718,20 @@ boolean P_ReadSaveGameHeader(void)
         saveg_read8();
     */
     
-    for (i=0; i<VERSIONSIZE; ++i)
+    for(i = 0; i < VERSIONSIZE; i++)
         read_vcheck[i] = saveg_read8();
 
     memset (vcheck,0,sizeof(vcheck));
-    M_snprintf(vcheck, sizeof(vcheck), "ver %i", STRIFE_VERSION);
+    M_snprintf(vcheck, sizeof(vcheck), "ver %i", SAVE_VERSION);
     if (strcmp(read_vcheck, vcheck) != 0)
         return false;                       // bad version 
+
+    // [SVE]: read saved wad digest
+    for(i = 0; i < 20; i++)
+        oldDigest[i] = saveg_read8();
+
+    if(savegame_error /*|| memcmp(curDigest, oldDigest, 20)*/)
+        return false; // wad digest mismatch
 
     gameskill = saveg_read8();
 
@@ -1658,7 +1739,7 @@ boolean P_ReadSaveGameHeader(void)
     //gameepisode = saveg_read8();
     //gamemap = saveg_read8();
 
-    for (i=0 ; i<MAXPLAYERS ; i++)
+    for(i = 0; i < MAXPLAYERS; i++)
         playeringame[i] = saveg_read8();
 
     // get the times 
@@ -1764,6 +1845,9 @@ void P_ArchiveWorld (void)
     line_t*             li;
     side_t*             si;
     
+    // [SVE]: numsectors
+    saveg_write32(numsectors);
+
     // do sectors
     for (i=0, sec = sectors ; i<numsectors ; i++,sec++)
     {
@@ -1776,6 +1860,8 @@ void P_ArchiveWorld (void)
         //saveg_write16(sec->tag);                // needed? [STRIFE] not saved.
     }
 
+    // [SVE]: numlines
+    saveg_write32(numlines);
     
     // do lines
     for (i=0, li = lines ; i<numlines ; i++,li++)
@@ -1807,11 +1893,21 @@ void P_ArchiveWorld (void)
 //
 void P_UnArchiveWorld (void)
 {
-    int			i;
-    int			j;
-    sector_t*		sec;
-    line_t*		li;
-    side_t*		si;
+    int       i;
+    int       j;
+    sector_t *sec;
+    line_t   *li;
+    side_t   *si;
+    int       oldnumsectors, oldnumlines;
+
+    // [SVE]: numsectors
+    oldnumsectors = saveg_read32();
+
+    if(savegame_error || oldnumsectors != numsectors)
+    {
+        savegame_error = true;
+        return;
+    }
     
     // do sectors
     for (i=0, sec = sectors ; i<numsectors ; i++,sec++)
@@ -1825,6 +1921,15 @@ void P_UnArchiveWorld (void)
         //sec->tag = saveg_read16();              // needed? [STRIFE] not saved
         sec->specialdata = 0;
         sec->soundtarget = 0;
+    }
+
+    // [SVE]: numlines
+    oldnumlines = saveg_read32();
+
+    if(savegame_error || oldnumlines != numlines)
+    {
+        savegame_error = true;
+        return;
     }
     
     // do lines
@@ -1875,7 +1980,10 @@ void P_ArchiveThinkers (void)
     // save off the current thinkers
     for (th = thinkercap.next ; th != &thinkercap ; th=th->next)
     {
-        if (th->function.acp1 == (actionf_p1)P_MobjThinker)
+        mobj_t  *mo = (mobj_t *)th;
+
+        if (th->function.acp1 == (actionf_p1)P_MobjThinker
+            || (th->function.acp1 == (actionf_p1)P_NullMobjThinker && mo->type == MT_BLOODSPLAT))
         {
             saveg_write8(tc_mobj);
             saveg_write_pad();
@@ -1903,12 +2011,18 @@ void P_ArchiveThinkers (void)
 //
 // P_UnArchiveThinkers
 //
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+
 void P_UnArchiveThinkers (void)
 {
-    byte                tclass;
-    thinker_t*          currentthinker;
-    thinker_t*          next;
-    mobj_t*             mobj;
+    byte       tclass;
+    thinker_t *currentthinker;
+    thinker_t *next;
+    thinker_t *th;
+    mobj_t    *mobj, *player;
+    boolean    loopdone = false;
     
     // remove all the current thinkers
     currentthinker = thinkercap.next;
@@ -1919,24 +2033,25 @@ void P_UnArchiveThinkers (void)
         if (currentthinker->function.acp1 == (actionf_p1)P_MobjThinker)
             P_RemoveMobj ((mobj_t *)currentthinker);
         else
-            Z_Free (currentthinker);
+            Z_Free (currentthinker, "P_UnArchiveThinkers");
 
         currentthinker = next;
     }
     P_InitThinkers ();
     
     // read in saved thinkers
-    while (1)
+    while(!loopdone)
     {
         tclass = saveg_read8();
         switch (tclass)
         {
         case tc_end:
-            return; 	// end of list
+            loopdone = true;
+            break; // end of list
 
         case tc_mobj:
             saveg_read_pad();
-            mobj = Z_Malloc (sizeof(*mobj), PU_LEVEL, NULL);
+            mobj = Z_Malloc (sizeof(*mobj), PU_LEVEL, NULL, "P_UnArchiveThinkers");
             saveg_read_mobj_t(mobj);
 
             // haleyjd 09/29/10: Strife sets the targets of non-allied creatures
@@ -1952,26 +2067,70 @@ void P_UnArchiveThinkers (void)
             // the objects removed, including the player's previous body, from
             // being passed to Z_Free. One glitch relying on another!
 
+            // haleyjd 20140817: [SVE] fix unconditionally for Veteran Edition;
+            // see below for corrected approach.
+            /*
             if(mobj->target != NULL && (mobj->flags & MF_ALLY) != MF_ALLY)
                 mobj->target = players[0].mo;
             else
                 mobj->target = NULL;
+            */
+            if(mobj->type == MT_PLAYER)
+                player = mobj; // remember player
 
             // WARNING! Strife does not seem to set tracer! I am leaving it be
             // for now because so far no crashes have been observed, and failing
             // to set this here will almost certainly crash Choco.
             mobj->tracer = NULL;
-            P_SetThingPosition (mobj);
+            P_MobjBackupPosition(mobj); // [SVE] interpolation
+            P_SetThingPosition(mobj);
             mobj->info = &mobjinfo[mobj->type];
             // [STRIFE]: doesn't set these
             //mobj->floorz = mobj->subsector->sector->floorheight;
             //mobj->ceilingz = mobj->subsector->sector->ceilingheight;
             mobj->thinker.function.acp1 = (actionf_p1)P_MobjThinker;
+
+            if (mobj->type == MT_BLOODSPLAT)
+            {
+                mobj->thinker.function.acp1 = (actionf_p1)P_NullMobjThinker;
+                if (mobj->blood == FUZZYBLOOD)
+                {
+                    mobj->flags = MF_SHADOW;
+                    mobj->colfunc = fuzzcolfunc;
+                }
+                else
+                    mobj->colfunc = bloodsplatcolfunc;
+            }
+            else
+            {
+                mobj->thinker.function.acp1 = (actionf_p1)P_MobjThinker;
+                mobj->colfunc = mobj->info->colfunc;
+            }
+
             P_AddThinker (&mobj->thinker);
             break;
 
         default:
-            I_Error ("Unknown tclass %i in savegame",tclass);
+            //I_Error ("Unknown tclass %i in savegame",tclass);
+            savegame_error = true;
+            return;
+        }
+    }
+
+    // haleyjd 20140817: [SVE] now that all mobjs have been spawned, set their
+    // targets.
+    for(th = thinkercap.next; th != &thinkercap; th = th->next)
+    {
+        if(th->function.acp1 == (actionf_p1)P_MobjThinker)
+        {
+            mobj_t *mo = (mobj_t *)th;
+            if(mo->target != NULL && (mo->flags & MF_ALLY) != MF_ALLY)
+            {
+                mo->target = NULL; // current value is not a valid pointer
+                P_SetTarget(&mo->target, player);
+            }
+            else
+                mo->target = NULL;
         }
     }
 }
@@ -1990,7 +2149,8 @@ enum
     tc_strobe,
     tc_glow,
     tc_slidingdoor, // [STRIFE]
-    tc_endspecials
+    tc_endspecials,
+    tc_fireflicker  // [SVE]
 
 } specials_e;
 
@@ -2007,6 +2167,7 @@ enum
 // T_StrobeFlash, (strobe_t: sector_t *),
 // T_Glow, (glow_t: sector_t *),
 // T_PlatRaise, (plat_t: sector_t *), - active list
+// T_FireFlicker, (fireflicker_t: sector *) [SVE]
 //
 void P_ArchiveSpecials (void)
 {
@@ -2018,11 +2179,12 @@ void P_ArchiveSpecials (void)
     {
         if (th->function.acv == (actionf_v)NULL)
         {
-            for (i = 0; i < MAXCEILINGS;i++)
-                if (activeceilings[i] == (ceiling_t *)th)
+            // haleyjd 20140817: [SVE] remove activeceilings limit
+            for(i = 0; i < MAXCEILINGS; i++)
+                if(activeceilings[i] == (ceiling_t *)th)
                     break;
 
-            if (i<MAXCEILINGS)
+            if(i < MAXCEILINGS)
             {
                 saveg_write8(tc_ceiling);
                 saveg_write_pad();
@@ -2094,6 +2256,15 @@ void P_ArchiveSpecials (void)
             saveg_write_glow_t((glow_t *) th);
             continue;
         }
+
+        // [SVE]: fireflicker thinkers
+        if (th->function.acp1 == (actionf_p1)T_FireFlicker)
+        {
+            saveg_write8(tc_fireflicker);
+            saveg_write_pad();
+            saveg_write_fireflicker_t((fireflicker_t *)th);
+            continue;
+        }
     }
 
     // add a terminating marker
@@ -2115,6 +2286,7 @@ void P_UnArchiveSpecials (void)
     lightflash_t*       flash;
     strobe_t*           strobe;
     glow_t*             glow;
+    fireflicker_t*      flicker;
 
 
     // read in saved thinkers
@@ -2129,7 +2301,7 @@ void P_UnArchiveSpecials (void)
 
         case tc_ceiling:
             saveg_read_pad();
-            ceiling = Z_Malloc (sizeof(*ceiling), PU_LEVEL, NULL);
+            ceiling = Z_Malloc (sizeof(*ceiling), PU_LEVEL, NULL, "P_UnArchiveSpecials -> ceiling");
             saveg_read_ceiling_t(ceiling);
             ceiling->sector->specialdata = ceiling;
 
@@ -2142,7 +2314,7 @@ void P_UnArchiveSpecials (void)
 
         case tc_door:
             saveg_read_pad();
-            door = Z_Malloc (sizeof(*door), PU_LEVEL, NULL);
+            door = Z_Malloc (sizeof(*door), PU_LEVEL, NULL, "P_UnArchiveSpecials -> door");
             saveg_read_vldoor_t(door);
             door->sector->specialdata = door;
             door->thinker.function.acp1 = (actionf_p1)T_VerticalDoor;
@@ -2152,7 +2324,7 @@ void P_UnArchiveSpecials (void)
         case tc_slidingdoor:
             // haleyjd 09/29/10: [STRIFE] New thinker type for sliding doors
             saveg_read_pad();
-            slidedoor = Z_Malloc(sizeof(*slidedoor), PU_LEVEL, NULL);
+            slidedoor = Z_Malloc(sizeof(*slidedoor), PU_LEVEL, NULL, "P_UnArchiveSpecials -> slidedoor");
             saveg_read_slidedoor_t(slidedoor);
             slidedoor->frontsector->specialdata = slidedoor;
             slidedoor->thinker.function.acp1 = (actionf_p1)T_SlidingDoor;
@@ -2161,7 +2333,7 @@ void P_UnArchiveSpecials (void)
 
         case tc_floor:
             saveg_read_pad();
-            floor = Z_Malloc (sizeof(*floor), PU_LEVEL, NULL);
+            floor = Z_Malloc (sizeof(*floor), PU_LEVEL, NULL, "P_UnArchiveSpecials -> floor");
             saveg_read_floormove_t(floor);
             floor->sector->specialdata = floor;
             floor->thinker.function.acp1 = (actionf_p1)T_MoveFloor;
@@ -2170,7 +2342,7 @@ void P_UnArchiveSpecials (void)
 
         case tc_plat:
             saveg_read_pad();
-            plat = Z_Malloc (sizeof(*plat), PU_LEVEL, NULL);
+            plat = Z_Malloc (sizeof(*plat), PU_LEVEL, NULL, "P_UnArchiveSpecials -> plat");
             saveg_read_plat_t(plat);
             plat->sector->specialdata = plat;
 
@@ -2183,7 +2355,7 @@ void P_UnArchiveSpecials (void)
 
         case tc_flash:
             saveg_read_pad();
-            flash = Z_Malloc (sizeof(*flash), PU_LEVEL, NULL);
+            flash = Z_Malloc (sizeof(*flash), PU_LEVEL, NULL, "P_UnArchiveSpecials -> flash");
             saveg_read_lightflash_t(flash);
             flash->thinker.function.acp1 = (actionf_p1)T_LightFlash;
             P_AddThinker (&flash->thinker);
@@ -2191,7 +2363,7 @@ void P_UnArchiveSpecials (void)
 
         case tc_strobe:
             saveg_read_pad();
-            strobe = Z_Malloc (sizeof(*strobe), PU_LEVEL, NULL);
+            strobe = Z_Malloc (sizeof(*strobe), PU_LEVEL, NULL, "P_UnArchiveSpecials -> strobe");
             saveg_read_strobe_t(strobe);
             strobe->thinker.function.acp1 = (actionf_p1)T_StrobeFlash;
             P_AddThinker (&strobe->thinker);
@@ -2199,15 +2371,26 @@ void P_UnArchiveSpecials (void)
 
         case tc_glow:
             saveg_read_pad();
-            glow = Z_Malloc (sizeof(*glow), PU_LEVEL, NULL);
+            glow = Z_Malloc (sizeof(*glow), PU_LEVEL, NULL, "P_UnArchiveSpecials -> glow");
             saveg_read_glow_t(glow);
             glow->thinker.function.acp1 = (actionf_p1)T_Glow;
             P_AddThinker (&glow->thinker);
             break;
 
+        case tc_fireflicker:
+            // [SVE]: fireflicker thinkers
+            saveg_read_pad();
+            flicker = Z_Malloc (sizeof(*flicker), PU_LEVEL, NULL, "P_UnArchiveSpecials -> flicker");
+            saveg_read_fireflicker_t(flicker);
+            flicker->thinker.function.acp1 = (actionf_p1)T_FireFlicker;
+            P_AddThinker (&flicker->thinker);
+            break;
+
         default:
-            I_Error ("P_UnarchiveSpecials:Unknown tclass %i "
-                     "in savegame",tclass);
+            //I_Error ("P_UnarchiveSpecials:Unknown tclass %i "
+            //         "in savegame",tclass);
+            savegame_error = true;
+            return;
         }
     }
 }

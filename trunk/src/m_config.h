@@ -22,9 +22,18 @@
 
 #include "doomtype.h"
 
+// [SVE]
+enum
+{
+    M_CFG_SETCURRENT = 0x01, // set current value
+    M_CFG_SETDEFAULT = 0x02, // set default value
+
+    M_CFG_SETALL     = M_CFG_SETCURRENT | M_CFG_SETDEFAULT
+};
+
 void M_LoadDefaults(void);
 void M_SaveDefaults(void);
-void M_SaveDefaultsAlternate(char *main, char *extra);
+void M_SaveDefaultsAlternate(char *main/*, char *extra*/);
 void M_SetConfigDir(char *dir);
 void M_BindVariable(char *name, void *variable);
 boolean M_SetVariable(char *name, char *value);
@@ -35,5 +44,9 @@ void M_SetConfigFilenames(char *main_config/*, char *extra_config*/);
 char *M_GetSaveGameDir(char *iwadname);
 
 extern char *configdir;
+
+// [SVE] haleyjd: new config functions
+void M_BindVariableWithDefault(char *name, void *location, void *default_location);
+const int GetKeyForName(const char *name);
 
 #endif

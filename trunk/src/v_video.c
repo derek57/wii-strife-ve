@@ -555,7 +555,8 @@ void V_LoadTintTable(void)
 
 void V_LoadXlaTable(void)
 {
-    xlatab = W_CacheLumpName("XLATAB", PU_STATIC);
+    if(!xlatab) // [SVE]: once only
+        xlatab = W_CacheLumpName("XLATAB", PU_STATIC);
 }
 
 //
@@ -773,7 +774,7 @@ void WritePCXfile(char *filename, byte *data,
     pcx_t*	pcx;
     byte*	pack;
 	
-    pcx = Z_Malloc (width*height*2+1000, PU_STATIC, NULL);
+    pcx = Z_Malloc (width*height*2+1000, PU_STATIC, NULL, "WritePCXfile");
 
     pcx->manufacturer = 0x0a;		// PCX id
     pcx->version = 5;			// 256 color
@@ -814,7 +815,7 @@ void WritePCXfile(char *filename, byte *data,
     length = pack - (byte *)pcx;
     M_WriteFile (filename, pcx, length);
 
-    Z_Free (pcx);
+    Z_Free (pcx, "WritePCXfile");
 }
 
 //
@@ -840,7 +841,9 @@ void V_ScreenShot(char *format)
 
     if (i == 100)
     {
-        I_Error ("V_ScreenShot: Couldn't create a PCX");
+        // [SVE]: stability
+        //I_Error ("V_ScreenShot: Couldn't create a PCX");
+        return;
     }
 
     // save the pcx file

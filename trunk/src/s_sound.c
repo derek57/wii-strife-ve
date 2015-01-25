@@ -74,6 +74,7 @@ musicinfo_t *S_music = S_musicFull;		// FOR PSP: (SHAREWARE RESTRICTIONS)
 #endif
 
 extern boolean isregistered;
+extern boolean music_cheat_used;
 
 typedef struct
 {
@@ -122,6 +123,14 @@ static boolean mus_paused;
 
 static musicinfo_t *mus_playing = NULL;
 
+// [SVE]: remember track number too, for convenience
+
+static int mus_tracknum;
+
+// [SVE]: remember if music is looping or not
+
+static int mus_looping;
+
 // Number of channels to use
 
 int snd_channels = 8;
@@ -157,7 +166,7 @@ void S_Init(int sfxVolume, int musicVolume, int voiceVolume)
     // Allocating the internal channels for mixing
     // (the maximum numer of sounds rendered
     // simultaneously) within zone memory.
-    channels = Z_Malloc(snd_channels*sizeof(channel_t), PU_STATIC, 0);
+    channels = Z_Malloc(snd_channels*sizeof(channel_t), PU_STATIC, 0, "S_Init");
 
     // Free all channels for use
     for (i=0 ; i<snd_channels ; i++)
@@ -668,7 +677,7 @@ void I_StartVoice(const char *lumpname)
         return;
 
     // haleyjd 20140906: [SVE] check for demo redirection
-    if(/*!classicmode &&*/ isregistered && gamemap >= 32 && gamemap <= 34)
+    if(!classicmode && isregistered && gamemap >= 32 && gamemap <= 34)
         lumpname = S_replaceDemoVoice(lumpname);
 
     // have a voice playing already? stop it.
@@ -843,9 +852,16 @@ void S_ChangeMusic(int musicnum, int looping)
     char namebuf[9];
     void *handle;
 
+    extern int musnum;
+
+    if(music_cheat_used && !menuactive)
+	musicnum = musnum;
+
     if (musicnum <= mus_None || musicnum >= NUMMUSIC)
     {
-        I_Error("Bad music number %d", musicnum);
+//        I_Error("Bad music number %d", musicnum);
+        // [SVE]: no error, use a default music track.
+        music = &S_music[mus_action];
     }
     else
     {
@@ -861,7 +877,12 @@ void S_ChangeMusic(int musicnum, int looping)
         music = &S_music[musicnum];
     }
 
-    if (mus_playing == music)
+    mus_tracknum = musicnum; // [SVE]
+
+    // [SVE]: do start the track if the looping is different; this fixes 
+    // loading a save on the Prison while the intro is playing.
+//    if (mus_playing == music)
+    if (mus_playing == music && mus_looping == looping)
     {
         return;
     }
@@ -885,6 +906,7 @@ void S_ChangeMusic(int musicnum, int looping)
     I_PlaySong(handle, looping);
 
     mus_playing = music;
+    mus_looping = looping; // [SVE]: remember looping status
 }
 
 boolean S_MusicPlaying(void)
@@ -907,5 +929,14 @@ void S_StopMusic(void)
         mus_playing->data = NULL;
         mus_playing = NULL;
     }
+}
+
+//
+// haleyjd 20141116: [SVE] Query currently playing music info.
+//
+void S_GetCurrentMusic(int *track, int *looping)
+{
+    *track   = mus_tracknum;
+    *looping = mus_looping;
 }
 

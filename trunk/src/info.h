@@ -290,6 +290,10 @@ typedef enum
     SPR_STLE, // 260
     SPR_HUGE, // 261
     SPR_STLG, // 262
+
+    SPR_BLD2,
+    SPR_BLUD,
+
     NUMSPRITES
 
 } spritenum_t;
@@ -1815,6 +1819,28 @@ typedef enum
     S_STLG_03,      // 1515
     S_STLG_04,      // 1516
     S_STLG_05,      // 1517
+
+    // [SVE]: New states
+    S_RGIB_16,      // Safety state for dead players
+    S_SEWR_14,      // Extra death frame for Sentinel
+    S_SEWR_15,      // Extra death frame for Sentinel
+    S_SEWR_16,      // Extra death frame for Sentinel
+    S_SEWR_17,      // Extra death frame for Sentinel
+    S_PLAY_CORPSE,  // Extra frame for player corpse map object
+    S_PLAY_20,
+
+    S_BLOODSPLAT,
+    S_BLOODSPLAT2,
+    S_BLOODSPLAT3,
+    S_BLOODSPLAT4,
+    S_BLOODSPLAT5,
+    S_BLOODSPLAT6,
+    S_BLOODSPLAT7,
+    S_BLOODSPLAT8,
+    S_BLOOD1,
+    S_BLOOD2,
+    S_BLOOD3,
+
     NUMSTATES
 
 } statenum_t;
@@ -2181,6 +2207,14 @@ typedef enum
     MT_TOKEN_QUEST30,       //341
     MT_TOKEN_QUEST31,       //342
     MT_SLIDESHOW,       //343
+
+    // [SVE] svillarreal - new mobj types
+    MT_BLOOD_GORE,
+    MT_ORE_SPAWNER,
+
+    MT_BLOODSPLAT,
+    MT_FUZZYBLOOD,
+
     NUMMOBJTYPES
 
 } mobjtype_t;
@@ -2212,6 +2246,9 @@ typedef struct
     int     activesound;
     int     flags;
     char*   name;
+    int     flags2; // haleyjd 20140818: [SVE] flags2
+    int     blood;
+    void    (*colfunc)(void);
 } mobjinfo_t;
 
 extern mobjinfo_t mobjinfo[NUMMOBJTYPES];

@@ -22,7 +22,7 @@
 
 
 
-
+extern byte*            dc_transmap;
 extern lighttable_t*	dc_colormap;
 extern int		dc_x;
 extern int		dc_yl;
@@ -63,6 +63,7 @@ R_VideoErase
 extern int		ds_y;
 extern int		ds_x1;
 extern int		ds_x2;
+extern int		dc_texheight;
 
 extern lighttable_t*	ds_colormap;
 
@@ -79,6 +80,8 @@ extern byte*		dc_translation;
 extern byte*		xlatab;            // haleyjd 08/26/10: [STRIFE]
 
 extern char *back_flat; // haleyjd 08/29/10: [STRIFE]
+
+extern fixed_t          dc_blood;
 
 // Span blitting for rows, floor/ceiling.
 // No Sepctre effect needed.
@@ -106,6 +109,8 @@ void R_FillBackScreen (void);
 // If the view size is not full screen, draws a border around it.
 void R_DrawViewBorder (void);
 
+void R_DrawBloodSplatColumn(void);
+void R_DrawSolidBloodSplatColumn(void);
 
 
 #endif

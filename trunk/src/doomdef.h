@@ -342,6 +342,10 @@ typedef struct
     // Pointer to the location in memory of the variable
     /*void*/int *location;
 
+    // haleyjd [SVE]: Pointer to default location, if any (allows runtime mod
+    // of variables which must be runtime-invariant)
+    void *default_location;
+
     // Type of the variable
     default_type_t type;
 

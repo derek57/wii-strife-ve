@@ -21,6 +21,10 @@
 #define __P_SETUP__
 
 
+#include "r_defs.h"
+
+
+#define crapmul (1.0f / 65536.0f)
 
 
 // NOT called by W_Ticker. Fixme.
@@ -33,5 +37,10 @@ P_SetupLevel
 
 // Called by startup code.
 void P_Init (void);
+
+//
+// Computes the line length in frac units, the glide render needs this
+//
+float P_SegLength (seg_t* seg);
 
 #endif

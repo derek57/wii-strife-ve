@@ -393,7 +393,7 @@ int EV_DoDoor(line_t* line, vldoor_e type)
 
         // new door thinker
         rtn = 1;
-        door = Z_Malloc (sizeof(*door), PU_LEVSPEC, 0);
+        door = Z_Malloc (sizeof(*door), PU_LEVSPEC, 0, "EV_DoDoor");
         P_AddThinker (&door->thinker);
         sec->specialdata = door;
 
@@ -784,11 +784,15 @@ void EV_VerticalDoor(line_t* line, mobj_t* thing)
                     // Try closing it anyway. At least it will work on 32-bit
                     // machines.
 
-                    door->direction = -1;
+                    // haleyjd 20140817: [SVE] No. Evokes undefined behavior.
+                    //door->direction = -1;
                 }
             }
             return;
         default:
+            // haleyjd 20140817: [SVE] Fix multiple thinkers problem
+            if(!classicmode)
+                return; // sector is busy, get out of here.
             break;
         }
     }
@@ -796,7 +800,7 @@ void EV_VerticalDoor(line_t* line, mobj_t* thing)
     // haleyjd 09/15/10: [STRIFE] Removed DOOM door sounds
 
     // new door thinker
-    door = Z_Malloc (sizeof(*door), PU_LEVSPEC, 0);
+    door = Z_Malloc (sizeof(*door), PU_LEVSPEC, 0, "EV_VerticalDoor");
     P_AddThinker (&door->thinker);
     sec->specialdata = door;
     door->thinker.function.acp1 = (actionf_p1) T_VerticalDoor;
@@ -870,7 +874,7 @@ void P_SpawnDoorCloseIn30 (sector_t* sec)
 {
     vldoor_t*   door;
 
-    door = Z_Malloc ( sizeof(*door), PU_LEVSPEC, 0);
+    door = Z_Malloc ( sizeof(*door), PU_LEVSPEC, 0, "P_SpawnDoorCloseIn30");
 
     P_AddThinker (&door->thinker);
 
@@ -895,7 +899,7 @@ P_SpawnDoorRaiseIn5Mins
 {
     vldoor_t*	door;
 	
-    door = Z_Malloc ( sizeof(*door), PU_LEVSPEC, 0);
+    door = Z_Malloc ( sizeof(*door), PU_LEVSPEC, 0, "P_SpawnDoorRaiseIn5Mins");
     
     P_AddThinker (&door->thinker);
 
@@ -1308,7 +1312,7 @@ void EV_SlidingDoor(line_t* line, mobj_t* thing)
     // Init sliding door vars
     if(!door)
     {
-        door = Z_Malloc (sizeof(*door), PU_LEVSPEC, 0);
+        door = Z_Malloc (sizeof(*door), PU_LEVSPEC, 0, "EV_SlidingDoor");
         P_AddThinker (&door->thinker);
 
         sec->specialdata = door;

@@ -34,7 +34,7 @@ void D_PageDrawer (void);
 void D_AdvanceDemo (void);
 void D_DoAdvanceDemo (void);
 void D_StartTitle (void);
-void D_QuitGame (void); // [STRIFE]
+void D_QuitGame(int tics); // [SVE]
 
 void D_IntroTick(void); // [STRIFE]
  

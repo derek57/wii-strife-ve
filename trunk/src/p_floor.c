@@ -286,7 +286,7 @@ EV_DoFloor
 
         // new floor thinker
         rtn = 1;
-        floor = Z_Malloc (sizeof(*floor), PU_LEVSPEC, 0);
+        floor = Z_Malloc (sizeof(*floor), PU_LEVSPEC, 0, "EV_DoFloor");
         P_AddThinker (&floor->thinker);
         sec->specialdata = floor;
         floor->thinker.function.acp1 = (actionf_p1) T_MoveFloor;
@@ -520,16 +520,18 @@ EV_BuildStairs
 
         // new floor thinker
         rtn = 1;
-        floor = Z_Malloc (sizeof(*floor), PU_LEVSPEC, 0);
+        floor = Z_Malloc (sizeof(*floor), PU_LEVSPEC, 0, "EV_BuildStairs -> floor (1)");
         P_AddThinker (&floor->thinker);
 	sec->tag = 0; // haleyjd 20140919: [STRIFE] clears tag of first stair sector
         sec->specialdata = floor;
         floor->thinker.function.acp1 = (actionf_p1) T_MoveFloor;
 	floor->direction = direction; // haleyjd 20140919: bug fix: direction, not "1"
         floor->sector = sec;
+        floor->type = buildStair; // haleyjd [SVE]: initialize type
         floor->speed = speed;
         height = sec->floorheight + stairsize;
         floor->floordestheight = height;
+        floor->crush = false; // haleyjd [SVE]: initialize crush
 
         texture = sec->floorpic;
 
@@ -556,14 +558,18 @@ EV_BuildStairs
                 if (tsec->floorpic != texture)
                     continue;
 
-                height += stairsize;
+                // [SVE]: double stair size fix
+                //height += stairsize;
 
                 if (tsec->specialdata)
                     continue;
 
+                // [SVE]: double stair size fix
+                height += stairsize;
+
                 sec = tsec;
                 secnum = newsecnum;
-                floor = Z_Malloc (sizeof(*floor), PU_LEVSPEC, 0);
+                floor = Z_Malloc (sizeof(*floor), PU_LEVSPEC, 0, "EV_BuildStairs -> floor (2)");
 
                 P_AddThinker (&floor->thinker);
 
@@ -573,6 +579,8 @@ EV_BuildStairs
                 floor->sector = sec;
                 floor->speed = speed;
                 floor->floordestheight = height;
+                floor->type = buildStair; // haleyjd [SVE]: initialize type
+                floor->crush = false; // haleyjd [SVE]: initialize crush
                 ok = 1;
                 break;
             }

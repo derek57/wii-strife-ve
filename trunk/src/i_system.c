@@ -63,8 +63,8 @@
 #include <CoreFoundation/CFUserNotification.h>
 #endif
 
-#define DEFAULT_RAM 17 * 2 /* MiB */
-#define MIN_RAM     5 * 4 /* MiB */
+#define DEFAULT_RAM 32	/* MiB */
+#define MIN_RAM     8	/* MiB */
 
 extern boolean devparm;
 

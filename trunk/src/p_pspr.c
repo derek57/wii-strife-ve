@@ -35,6 +35,8 @@
 
 #include "p_pspr.h"
 
+#include "p_tick.h" // [SVE]
+
 #define LOWERSPEED		FRACUNIT*6
 #define RAISESPEED		FRACUNIT*6
 
@@ -294,10 +296,15 @@ void A_WeaponReady( player_t* player, pspdef_t* psp)
         player->attackdown = false;
     
     // bob the weapon based on movement speed
-    angle = (128*leveltime)&FINEMASK;
-    psp->sx = FRACUNIT + FixedMul (player->bob, finecosine[angle]);
-    angle &= FINEANGLES/2-1;
-    psp->sy = WEAPONTOP + FixedMul (player->bob, finesine[angle]);
+    // haleyjd 20140830: [SVE] only do this here in classicmode; otherwise we do
+    // it in P_MovePsprites.
+    if(classicmode)
+    {
+        angle = (128*leveltime)&FINEMASK;
+        psp->sx = FRACUNIT + FixedMul (player->bob, finecosine[angle]);
+        angle &= FINEANGLES/2-1;
+        psp->sy = WEAPONTOP + FixedMul (player->bob, finesine[angle]);
+    }
 }
 
 
@@ -524,6 +531,10 @@ void A_FireMissile(player_t* player, pspdef_t* psp)
     player->ammo[weaponinfo[player->readyweapon].ammo]--;
     P_SpawnPlayerMissile(player->mo, MT_MINIMISSLE);
     player->mo->angle = an;
+
+    // [SVE] svillarreal
+    if(d_recoil && !classicmode)
+        player->recoilpitch = (6*FRACUNIT);
 }
 
 //
@@ -538,6 +549,34 @@ void A_FireMauler2(player_t* player, pspdef_t* pspr)
     player->ammo[weaponinfo[player->readyweapon].ammo] -= 30;
     P_SpawnPlayerMissile(player->mo, MT_TORPEDO);
     P_Thrust(player, player->mo->angle + ANG180, 512000);
+
+    // [SVE] svillarreal
+    player->cheats &= ~CF_TORPEDO;
+
+    // [SVE] svillarreal
+    if(d_recoil && !classicmode)
+        player->recoilpitch = (14*FRACUNIT);
+}
+
+//
+// PIT_GrenadeCheckLine
+// [SVE] svillarreal - new function
+//
+
+static fixed_t grenend_x;
+static fixed_t grenend_y;
+
+static boolean PIT_GrenadeCheckLine(intercept_t *in)
+{
+    if(!in->d.line->backsector)
+    {
+        // nudge it slightly in front of the wall
+        grenend_x = p_trace.x + FixedMul(p_trace.dx, in->frac - (FRACUNIT/4));
+        grenend_y = p_trace.y + FixedMul(p_trace.dy, in->frac - (FRACUNIT/4));
+        return false;
+    }
+
+    return true;
 }
 
 //
@@ -553,6 +592,7 @@ void A_FireGrenade(player_t* player, pspdef_t* pspr)
     state_t* st2;
     angle_t an;
     fixed_t radius;
+    fixed_t x, y;
 
     // decide on what type of grenade to spawn
     if(player->readyweapon == wp_hegrenade)
@@ -576,12 +616,19 @@ void A_FireGrenade(player_t* player, pspdef_t* pspr)
     st2 = &states[weaponinfo[player->readyweapon].atkstate];
     P_SetPsprite(player, ps_flash, st1 - st2);
 
+    // [SVE] svillarreal
+    if(d_recoil && !classicmode)
+        player->recoilpitch = (6*FRACUNIT);
+
     player->mo->z += 32*FRACUNIT; // ugh
-    mo = P_SpawnMortar(player->mo, type);
+    mo = P_SpawnMortar(player->mo, player->mo, type);
     player->mo->z -= 32*FRACUNIT; // ugh
 
+    x = mo->x;
+    y = mo->y;
+
     // change momz based on player's pitch
-    mo->momz = FixedMul((player->pitch<<FRACBITS) / 160, mo->info->speed) + (8*FRACUNIT);
+    mo->momz = FixedMul(P_PitchToFixedSlope(player->pitch), mo->info->speed) + (8*FRACUNIT);
     S_StartSound(mo, mo->info->seesound);
 
     radius = mobjinfo[type].radius + player->mo->info->radius;
@@ -601,6 +648,18 @@ void A_FireGrenade(player_t* player, pspdef_t* pspr)
 
     // set bounce flag
     mo->flags |= MF_BOUNCE;
+
+    // [SVE] svillarreal - check if grenade(s) has been shot through the wall and if
+    // so, then clip the distance between the position and the source's position
+    grenend_x = mo->x;
+    grenend_y = mo->y;
+
+    // test if there's anything between the grenade's initial position to the final position
+    if(!P_PathTraverse(x, y, grenend_x, grenend_y, PT_ADDLINES, PIT_GrenadeCheckLine))
+    {
+        mo->x = grenend_x;
+        mo->y = grenend_y;
+    }
 }
 
 //
@@ -650,13 +709,21 @@ void A_FirePoisonBolt(player_t* player, pspdef_t* pspr)
 //
 fixed_t         bulletslope;
 
-
 void P_BulletSlope (mobj_t *mo)
 {
-    angle_t	an;
-    
+    angle_t an = mo->angle;
+
+    if(mo->player && !(autoaim)) // [SVE]: SP autoaim toggle (MODIFIED FOR THE WII)
+    {
+	bulletslope = ((p2fromp(mo->player)->pitch / MLOOKUNIT) << FRACBITS) / 173;
+
+        if(linetarget)
+            P_SetTarget(&mo->target, linetarget);
+
+        return;
+    }
+
     // see which target is to be aimed at
-    an = mo->angle;
     bulletslope = P_AimLineAttack (mo, an, 16*64*FRACUNIT);
 
     if (!linetarget)
@@ -672,8 +739,9 @@ void P_BulletSlope (mobj_t *mo)
 
     // haleyjd 09/06/10: [STRIFE] Somebody added this here, and without it, you
     // will get spurious crashing in routines such as P_LookForPlayers!
+
     if(linetarget)
-        mo->target = linetarget;
+        P_SetTarget(&mo->target, linetarget);
 }
 
 
@@ -723,6 +791,10 @@ void A_FireRifle(player_t* player, pspdef_t* pspr)
         player->ammo[weaponinfo[player->readyweapon].ammo]--;
         P_BulletSlope(player->mo);
         P_GunShot(player->mo, !player->refire);
+
+        // [SVE] svillarreal
+        if(d_recoil && !classicmode)
+	    player->recoilpitch = (8*FRACUNIT);
     }
 }
 
@@ -779,7 +851,8 @@ void A_FireSigil(player_t* player, pspdef_t* pspr)
 {
     mobj_t* mo;
     angle_t an;
-    int i;
+    int i, damage;
+    fixed_t thrust;
 
     // keep info on armor because sigil does piercing damage
     i = player->armortype;
@@ -787,7 +860,12 @@ void A_FireSigil(player_t* player, pspdef_t* pspr)
 
     // BUG: setting inflictor causes firing the Sigil to always push the player
     // toward the east, no matter what direction he is facing.
-    P_DamageMobj(player->mo, player->mo, NULL, 4 * (player->sigiltype + 1));
+    // haleyjd 20140817: [SVE] fix sigil damage thrust to be directional
+    damage = 4 * (player->sigiltype + 1);
+    P_DamageMobj(player->mo, NULL, player->mo, damage);
+
+    thrust = damage * (FRACUNIT>>3) * 100 / player->mo->info->mass;
+    P_Thrust(player, player->mo->angle + ANG180, thrust);
 
     // restore armor
     player->armortype = i;
@@ -804,7 +882,7 @@ void A_FireSigil(player_t* player, pspdef_t* pspr)
             // haleyjd 09/18/10: corrected z coordinate
             mo = P_SpawnMobj(linetarget->x, linetarget->y, ONFLOORZ, 
                              MT_SIGIL_A_GROUND);
-            mo->tracer = linetarget;
+            P_SetTarget(&mo->tracer, linetarget);
         }
         else
         {
@@ -815,7 +893,7 @@ void A_FireSigil(player_t* player, pspdef_t* pspr)
             mo->momy += FixedMul((28*FRACUNIT), finesine[an]);
         }
         mo->health = -1;
-        mo->target = player->mo;
+        P_SetTarget(&mo->target, player->mo);
         break;
 
         // simple projectile
@@ -829,7 +907,7 @@ void A_FireSigil(player_t* player, pspdef_t* pspr)
         for(i = 0; i < 20; i++)     // increment by 1/10 of 90, 20 times.
         {
             player->mo->angle += (ANG90 / 10);
-            mo = P_SpawnMortar(player->mo, MT_SIGIL_C_SHOT);
+            mo = P_SpawnMortar(player->mo, player->mo, MT_SIGIL_C_SHOT);
             mo->health = -1;
             mo->z = player->mo->z + (32*FRACUNIT);
         }
@@ -842,7 +920,7 @@ void A_FireSigil(player_t* player, pspdef_t* pspr)
         if(linetarget)
         {
             mo = P_SpawnPlayerMissile(player->mo, MT_SIGIL_D_SHOT);
-            mo->tracer = linetarget;
+            P_SetTarget(&mo->tracer, linetarget);
         }
         else
         {
@@ -860,8 +938,8 @@ void A_FireSigil(player_t* player, pspdef_t* pspr)
         mo->health = -1;
         if(!linetarget)
         {
-            an = player->pitch >> ANGLETOFINESHIFT;
-            mo->momz += FixedMul(finesine[an], mo->info->speed); 
+            // [SVE] svillarreal - fixed access violation on finesine table
+            mo->momz += FixedMul(P_PitchToFixedSlope(player->pitch), mo->info->speed);
         }
         break;
 
@@ -882,6 +960,8 @@ void A_GunFlashThinker(player_t* player, pspdef_t* pspr)
     else
         P_SetPsprite(player, ps_flash, S_NULL);
 
+    // haleyjd 20140908: [SVE] vanilla Strife bug fix:
+    player->extralight = 0;
 }
 
 
@@ -927,7 +1007,7 @@ void A_TorpedoExplode(mobj_t* actor)
     for(i = 0; i < 80; i++)
     {
         actor->angle += (ANG90 / 20);
-        P_SpawnMortar(actor, MT_TORPEDOSPREAD)->target = actor->target;
+        P_SpawnMortar(actor, actor->target, MT_TORPEDOSPREAD);
     }
 }
 
@@ -945,6 +1025,12 @@ void A_MaulerSound(player_t *player, pspdef_t *psp)
     t = P_Random();
     psp->sy += (t - P_Random()) << 10;
 
+    // [SVE] svillarreal - seems like this was poorly thought out but
+    // it appears that the randomization code above was intended to make
+    // the weapon shake but this codepointer is only called in one frame
+    // so the weapon would just randomly move once. kinda weird...
+    if(!classicmode)
+        player->cheats |= CF_TORPEDO;
 }
 
 
@@ -978,6 +1064,28 @@ void P_MovePsprites (player_t* player)
     pspdef_t*	psp;
     state_t*	state;
 
+    // haleyjd 20140830: [SVE] Torpedo HUD
+    if(!classicmode)
+    {
+        if(player->readyweapon == wp_torpedo)           
+        {
+            if(player->psprites[ps_targcenter].state == NULL)
+            {
+                P_SetPsprite(player, ps_targcenter, S_RBPY_00);
+                player->psprites[ps_targcenter].sx = 0;
+                player->psprites[ps_targcenter].sy = 0;
+            }
+        }
+        else if(player->powers[pw_targeter] > 1)
+        {
+            P_SetPsprite(player, ps_targcenter, S_TRGT_00); // 10
+            player->psprites[ps_targcenter].sx = 160*FRACUNIT;
+            player->psprites[ps_targcenter].sy = 100*FRACUNIT;
+        }
+        else
+            P_SetPsprite(player, ps_targcenter, S_NULL);
+    }
+
     psp = &player->psprites[0];
     for(i = 0; i < NUMPSPRITES; i++, psp++)
     {
@@ -996,6 +1104,18 @@ void P_MovePsprites (player_t* player)
         }
     }
     
+    // haleyjd 20140830: [SVE] bob weapons smoothly regardless of animation
+    if(!classicmode &&
+       player->psprites[ps_weapon].state &&
+       player->psprites[ps_weapon].state->action.acp2 == (actionf_p2)A_WeaponReady)
+    {
+        pspdef_t *psp = &(player->psprites[ps_weapon]);
+        angle_t angle = (128*leveltime)&FINEMASK;
+        psp->sx = FRACUNIT + FixedMul (player->bob, finecosine[angle]);
+        angle &= FINEANGLES/2-1;
+        psp->sy = WEAPONTOP + FixedMul (player->bob, finesine[angle]);
+    }
+
     player->psprites[ps_flash].sx = player->psprites[ps_weapon].sx;
     player->psprites[ps_flash].sy = player->psprites[ps_weapon].sy;
 
@@ -1005,6 +1125,14 @@ void P_MovePsprites (player_t* player)
 
     player->psprites[ps_targright].sx =
         ((100 - player->accuracy) << FRACBITS) + (160*FRACUNIT);
-}
 
+    // [SVE] svillarreal - shake weapon when firing torpedo
+    if(!classicmode && player->readyweapon == wp_torpedo && (player->cheats & CF_TORPEDO))
+    {
+        int t = P_Random();
+        player->psprites[ps_weapon].sx += (t - P_Random()) << 10;
+        t = P_Random();
+        player->psprites[ps_weapon].sy += (t - P_Random()) << 10;
+    }
+}
 

@@ -37,6 +37,7 @@
 #include "s_sound.h"
 #include "p_inter.h"
 
+#include "p_tick.h"
 
 
 // Index of the special effects (INVUL inverse) map.
@@ -79,6 +80,14 @@ P_Thrust
 }
 
 
+//
+// P_PitchToFixedSlope
+//
+
+fixed_t P_PitchToFixedSlope(const int pitch)
+{
+    return pitch / 160;
+}
 
 
 //
@@ -98,9 +107,15 @@ void P_CalcHeight (player_t* player)
     // OPTIMIZE: tablify angle
     // Note: a LUT allows for effects
     //  like a ramp with low health.
-    player->bob =
-        FixedMul (player->mo->momx, player->mo->momx)
-        + FixedMul (player->mo->momy,player->mo->momy);
+    // haleyjd [SVE]: no bobbing when dead
+    if(classicmode || player->health > 0)
+    {
+        player->bob =
+            FixedMul (player->mo->momx, player->mo->momx)
+            + FixedMul (player->mo->momy,player->mo->momy);
+    }
+    else
+        player->bob = 0;
 
     player->bob >>= 2;
 
@@ -174,6 +189,10 @@ void P_CalcHeight (player_t* player)
 void P_MovePlayer (player_t* player)
 {
     ticcmd_t*      cmd;
+    fixed_t   lookupmax;
+    fixed_t   lookdownmax;
+    fixed_t   lookpitchamt;
+    fixed_t   centerviewamt;
 
     cmd = &player->cmd;
 
@@ -214,53 +233,90 @@ void P_MovePlayer (player_t* player)
     {
         P_SetMobjState (player->mo, S_PLAY_01);
     }
-/*						// DISABLED FOR PSP FREELOOK
+
     // villsa [STRIFE] centerview button
-    if (cmd->buttons2 & BT2_CENTERVIEW)
-        player->centerview = 1;
-*/
+    if(cmd->buttons2 & BT2_CENTERVIEW)
+    {
+        if(cmd->buttons2 & BT2_LOOKRANGE)
+            player->centerview = 2;
+        else
+            player->centerview = 1;
+    }
+
+    // [SVE]: extended look range for clients w/hardware renderer
+    if((cmd->buttons2 & BT2_LOOKRANGE) || player->centerview == 2)
+    {
+        lookupmax     =  190 * FRACUNIT;
+        lookdownmax   = -200 * FRACUNIT;
+        lookpitchamt  =   12 * FRACUNIT;
+        centerviewamt =   14 * FRACUNIT;
+    }
+    else
+    {
+        lookupmax     =   90 * FRACUNIT;
+        lookdownmax   = -110 * FRACUNIT;
+        lookpitchamt  =    6 * FRACUNIT;
+        centerviewamt =    8 * FRACUNIT;
+    }
+
     // villsa [STRIFE] adjust player's pitch when centerviewing
-    if (player->centerview)
+    if(player->centerview)
     {
         if (player->pitch <= 0)
         {
             if (player->pitch < 0)
-                player->pitch = player->pitch + CENTERVIEWAMOUNT;
+                player->pitch = player->pitch + centerviewamt;
         }
         else
         {
-            player->pitch = player->pitch - CENTERVIEWAMOUNT;
+            player->pitch = player->pitch - centerviewamt;
         }
-        if (abs(player->pitch) < CENTERVIEWAMOUNT)
+        if (abs(player->pitch) < centerviewamt)
         {
             player->pitch = 0;
             player->centerview = 0;
         }
     }
-    
-    // villsa [STRIFE] look up action
-    if (cmd->buttons2 & BT2_LOOKUP)
-    {
-        player->pitch += LOOKPITCHAMOUNT;
-        if (player->pitch > LOOKUPMAX ||
-            player->pitch < LOOKDOWNMAX)
-            player->pitch -= LOOKPITCHAMOUNT;
-    }
-    else
-    {
-        // villsa [STRIFE] look down action
-        if (cmd->buttons2 & BT2_LOOKDOWN)
-        {
-            player->pitch -= LOOKPITCHAMOUNT;
-            if (player->pitch > LOOKUPMAX ||
-                player->pitch < LOOKDOWNMAX)
-                player->pitch += LOOKPITCHAMOUNT;
-        }
-    }
 
+    // villsa [STRIFE] look up/down action
+    if(cmd->buttons2 & BT2_LOOKUP)
+    {
+        player->pitch += lookpitchamt;
+        if(player->pitch > lookupmax || player->pitch < lookdownmax)
+            player->pitch -= lookpitchamt;
+    }
+    else if(cmd->buttons2 & BT2_LOOKDOWN)
+    {
+        player->pitch -= lookpitchamt;
+        if(player->pitch > lookupmax || player->pitch < lookdownmax)
+            player->pitch += lookpitchamt;
+    }
+    else if(cmd->pitchmove)
+    {
+        player->pitch += (cmd->pitchmove*12288);
+
+        if(player->pitch > lookupmax)
+            player->pitch = lookupmax;
+
+        if(player->pitch < lookdownmax)
+            player->pitch = lookdownmax;
+    }
 }
 
 
+// haleyjd 20140828: [SVE] Random Blackbird quips on death
+static const char *funnyDeathSounds[] =
+{
+    "VOC52",
+    "VOC61",
+    "VOC202",
+    "VOC209",
+    "VOC210",
+    "VOC229",
+    "VOC230",
+    "QFMRM3",
+    "QFMRM5"
+};
 
 //
 // P_DeathThink
@@ -271,10 +327,26 @@ void P_MovePlayer (player_t* player)
 //
 #define ANG5    (ANG90/18)
 
+static int timesdied = 0;
+
 void P_DeathThink(player_t* player)
 {
     angle_t angle;
     angle_t delta;
+
+    // haleyjd 20140828: [SVE] count up for sound
+    if(/*!netgame &&*/ !classicmode && player->powers[pw_communicator])
+    {
+        player->mo->reactiontime++;
+        if(player->mo->reactiontime == 3*TICRATE/2)
+        {
+            ++timesdied;
+            if(!(timesdied % 20))
+                I_StartVoice("SATBL"); // easter egg ;)
+            else
+                I_StartVoice(funnyDeathSounds[gametic % arrlen(funnyDeathSounds)]);
+        }
+    }
 
     P_MovePsprites(player);
 
@@ -286,8 +358,17 @@ void P_DeathThink(player_t* player)
         player->viewheight = 6*FRACUNIT;
 
     player->deltaviewheight = 0;
-    onground = (player->mo->z <= player->mo->floorz);
+
+    if(!classicmode)
+        onground = true; // [SVE] always "onground" when dead (fixes vanilla bugs)
+    else
+        onground = (player->mo->z <= player->mo->floorz);
+
     P_CalcHeight(player);
+
+    // haleyjd 20140907: [SVE] need to cap viewz to sector floor + 1
+    if(player->viewz <= player->mo->subsector->sector->floorheight)
+        player->viewz = player->mo->subsector->sector->floorheight + FRACUNIT;
 
     if(player->attacker && player->attacker != player->mo)
     {
@@ -341,6 +422,11 @@ void P_PlayerThink (player_t* player)
 {
     ticcmd_t*       cmd;
     weapontype_t    newweapon;
+
+    // haleyjd 20140902: [SVE] backup viewz and mobj location for interpolation
+    player->prevviewz = player->viewz;
+    player->prevpitch = player->pitch;
+    P_MobjBackupPosition(player->mo);
 
     // villsa [STRIFE] unused code (see ST_Responder)
     /*
@@ -540,6 +626,15 @@ void P_PlayerThink (player_t* player)
                 P_SetPsprite(player, ps_targleft,  S_NULL);
             }
         }
+        else if(!classicmode)
+        {
+            // [SVE]: check if left/right need to be turned back on after a level transition;
+            // code that is in P_MovePsprites takes care of the center.
+            if(player->psprites[ps_targright].state != &states[S_TRGT_02])
+                P_SetPsprite(player, ps_targright, S_TRGT_02);
+            if(player->psprites[ps_targleft].state != &states[S_TRGT_01])
+                P_SetPsprite(player, ps_targleft, S_TRGT_01);
+        }
     }
 
     if(player->powers[pw_invisibility])
@@ -589,6 +684,19 @@ void P_PlayerThink (player_t* player)
     }
     else // Sigil shock:
         player->fixedcolormap = INVERSECOLORMAP;
+
+    // [SVE] svillarreal - recoil pitch from weapons
+    if(player->recoilpitch && d_recoil && !classicmode)
+    {
+        fixed_t recoil = (player->recoilpitch >> 3);
+
+        if(player->recoilpitch - recoil > 0)
+            player->recoilpitch -= recoil;
+        else
+            player->recoilpitch = 0;
+    }
+    else
+        player->recoilpitch = 0;
 }
 
 
@@ -712,6 +820,10 @@ void P_DropInventoryItem(player_t* player, int sprite)
         mobjitem = P_SpawnMobj(x, y, z, type);
         mobjitem->flags |= (MF_SPECIAL|MF_DROPPED);
 
+        // haleyjd 20141108: [SVE] dropped items shouldn't give quest flags again
+        if(!classicmode)
+            mobjitem->flags &= ~MF_GIVEQUEST;
+
         if(P_CheckPosition(mobjitem, x, y))
         {
             mobjitem->angle = (angle << ANGLETOFINESHIFT);
@@ -764,7 +876,7 @@ boolean P_TossDegninOre(player_t* player)
 
     if(P_CheckPosition(ore, x, y))
     {
-        ore->target = mo;
+        P_SetTarget(&ore->target, mo);
         ore->angle = (angle << ANGLETOFINESHIFT);
         ore->momx = FixedMul(finecosine[angle], (5*FRACUNIT));
         ore->momy = FixedMul(finesine[angle], (5*FRACUNIT));
@@ -818,7 +930,7 @@ boolean P_SpawnTeleportBeacon(player_t* player)
 
     if(P_CheckPosition(beacon, x, y))
     {
-        beacon->target = mo;
+        P_SetTarget(&beacon->target, mo);
         beacon->miscdata = mo->miscdata;
         beacon->angle = (angle << ANGLETOFINESHIFT);
         beacon->momx = FixedMul(finecosine[angle], (5*FRACUNIT));
@@ -849,6 +961,13 @@ boolean P_UseInventoryItem(player_t* player, int item)
     {
         if(item != player->inventory[i].sprite)
             continue;
+
+        // [SVE]: If using degnin ore, drop it.
+        if(!classicmode && item == SPR_XPRK)
+        {
+            P_DropInventoryItem(player, SPR_XPRK);
+            return true;
+        }
 
         if(!P_ItemBehavior(player, item))
             return false;
@@ -916,4 +1035,16 @@ boolean P_ItemBehavior(player_t* player, int item)
     }
 
     return false;
+}
+
+// [crispy] return the corresponding player2_t for a given player_t
+player_t* p2fromp (player_t* player)
+{
+    int p;
+
+    for (p = 0; p < MAXPLAYERS; p++)
+        if (&players[p] == player)
+            return &players[p];
+
+    return NULL;
 }

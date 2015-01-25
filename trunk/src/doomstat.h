@@ -217,12 +217,11 @@ extern	player_t	players[MAXPLAYERS];
 // Alive? Disconnected?
 extern  boolean		playeringame[MAXPLAYERS];
 
-/*
 // Player spawn spots for deathmatch.
 #define MAX_DM_STARTS   10
 extern  mapthing_t      deathmatchstarts[MAX_DM_STARTS];
 extern  mapthing_t*	deathmatch_p;
-*/
+
 // Player spawn spots.
 extern  mapthing_t      playerstarts[MAXPLAYERS];
 
@@ -237,10 +236,39 @@ extern boolean          riftSpotInit[MAXRIFTSPOTS];
 // Parameters for world map / intermission.
 extern  wbstartstruct_t		wminfo;	
 
+// [SVE] hud toggle
+extern  boolean         fullscreenhud;
 
+// [SVE] for those Brutal Doom fans...
+extern  boolean		d_maxgore;
 
+// haleyjd 20140816: [SVE] Classic mode toggle
+// * true  == behave like vanilla Strife as much as is practical
+// * false == fix non-critical bugs and enable new gameplay elements
+extern  boolean		classicmode;
 
+// [SVE] svillarreal - Skip intro movies?
+extern  boolean		d_skipmovies;
 
+// [SVE] svillarreal - player recoil bobbing
+extern  boolean		d_recoil;
+
+// [SVE] haleyjd: track "cheating" state for achievements
+extern  boolean		d_cheating;
+
+// [SVE] autoaim toggle
+extern  int		autoaim;
+
+extern	boolean		mapwithspecialtags;
+
+extern  boolean		start_fastparm;
+extern  boolean		start_respawnparm;
+
+// [SVE] damage indicator
+extern  boolean         d_dmgindictor;
+
+extern	boolean		cast_running;
+extern	boolean		release_keys;
 
 //-----------------------------------------
 // Internal parameters, used for engine.
@@ -257,6 +285,11 @@ extern  boolean         precache;
 // wipegamestate can be set to -1
 //  to force a wipe on the next draw
 extern  gamestate_t     wipegamestate;
+
+extern	boolean		wipe_drawer;
+extern	boolean		frontend_wipe;         // wipe wanted
+
+extern	boolean		game_loaded;
 
 //extern  int             bodyqueslot; [STRIFE] unused
 
@@ -275,7 +308,6 @@ extern int		skyflatnum;
 extern	int		rndindex;
 
 extern  ticcmd_t        *netcmds;
-
 
 
 #endif

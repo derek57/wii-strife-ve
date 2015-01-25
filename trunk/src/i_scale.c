@@ -343,7 +343,7 @@ static byte *GenerateStretchTable(byte *palette, int pct)
     byte *col1;
     byte *col2;
 
-    result = Z_Malloc(256 * 256, PU_STATIC, NULL);
+    result = Z_Malloc(256 * 256, PU_STATIC, NULL, "GenerateStretchTable");
 
     for (x=0; x<256; ++x)
     {
@@ -423,8 +423,8 @@ void I_ResetScaleTables(byte *palette)
 {
     if (stretch_tables[0] != NULL)
     {
-        Z_Free(stretch_tables[0]);
-        Z_Free(stretch_tables[1]);
+        Z_Free(stretch_tables[0], "I_ResetScaleTables -> stretch_tables[0]");
+        Z_Free(stretch_tables[1], "I_ResetScaleTables -> stretch_tables[1]");
 
         printf("I_ResetScaleTables: Regenerating lookup tables..\n");
         stretch_tables[0] = GenerateStretchTable(palette, 20);
@@ -433,7 +433,7 @@ void I_ResetScaleTables(byte *palette)
 
     if (half_stretch_table != NULL)
     {
-        Z_Free(half_stretch_table);
+        Z_Free(half_stretch_table, "I_ResetScaleTables -> half_stretch_table");
 
         printf("I_ResetScaleTables: Regenerating lookup table..\n");
 
@@ -442,7 +442,7 @@ void I_ResetScaleTables(byte *palette)
 
     if (quarter_stretch_table != NULL)						// ADDED FOR HIRES
     {										// ADDED FOR HIRES
-        Z_Free(quarter_stretch_table);						// ADDED FOR HIRES
+        Z_Free(quarter_stretch_table,"I_ResetScaleTables -> quarter_stretch_table"); // ADDED FOR HIRES
 
         printf("I_ResetScaleTables: Regenerating lookup table..\n");		// ADDED FOR HIRES
 

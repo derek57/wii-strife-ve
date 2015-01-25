@@ -524,7 +524,7 @@ void R_Subsector (int num)
     }
     else
 	ceilingplane = NULL;
-		
+
     R_AddSprites (frontsector);	
 
     while (count--)

@@ -116,7 +116,11 @@ EV_Teleport
                 */
 
                 if (thing->player)
+                {
                     thing->player->viewz = thing->z+thing->player->viewheight;
+                    thing->player->prevviewz = thing->player->viewz;
+                    thing->player->prevpitch = thing->player->pitch;
+                }
 
                 // spawn teleport fog at source and destination
                 // haleyjd 09/22/10: [STRIFE] controlled by teleport flags
@@ -143,6 +147,7 @@ EV_Teleport
 
                 thing->angle = m->angle;
                 thing->momx = thing->momy = thing->momz = 0;
+                P_MobjBackupPosition(thing);
                 return 1;
             }
         }

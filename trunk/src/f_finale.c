@@ -42,6 +42,9 @@
 
 #include "p_dialog.h" // [STRIFE]
 
+#include "fe_funcs.h"
+#include "f_finale.h"
+
 typedef enum
 {
     F_STAGE_TEXT,
@@ -119,7 +122,7 @@ void	F_StartCast (void);
 void	F_CastTicker (void);
 boolean F_CastResponder (event_t *ev);
 void	F_CastDrawer (void);
-
+/*
 // [STRIFE] - Slideshow states enumeration
 enum
 {
@@ -165,7 +168,7 @@ enum
     SLIDE_DEMOEND1    =  25,
     SLIDE_DEMOEND2 // Next state = -1
 };
-
+*/
 //
 // F_StartFinale
 //
@@ -184,6 +187,10 @@ void F_StartFinale (void)
     gamestate = GS_FINALE;
     viewactive = false;
     automapactive = false;
+
+    if(!classicmode)
+	FE_ClearScreen();
+
     wipegamestate = -1; // [STRIFE]
 
     // [STRIFE] Setup the slide show
@@ -202,6 +209,14 @@ void F_StartFinale (void)
 
     switch(gamemap)
     {
+    case 2:  // haleyjd 20140819: [SVE]
+	finalestage = F_STAGE_TEXT;					// ADDED FOR DEMO
+	finalecount = 0;						// ADDED FOR DEMO
+	slideshow_tics = 7;						// ADDED FOR DEMO
+	slideshow_panel = DEH_String("PANEL0");				// ADDED FOR DEMO
+	S_ChangeMusic(mus_dark, 1);					// ADDED FOR DEMO
+        slideshow_state = SLIDE_EXITHACK;
+        break;
     case 3:  // Macil's exposition on the Programmer
 	finalestage = F_STAGE_TEXT;					// ADDED FOR DEMO
 	finalecount = 0;						// ADDED FOR DEMO
@@ -548,7 +563,11 @@ static void F_DoSlideShow(void)
 
     case SLIDE_DEMOEND1: // state #25 - only exists in 1.31
 //        slideshow_panel = DEH_String("PANEL7");			// MODIFIED FOR DEMO
-        finalecount = 0;						// ADDED FOR DEMO
+        finalecount = 0;	
+
+	if(!classicmode)
+	    FE_ClearScreen();
+					// ADDED FOR DEMO
         wipegamestate = -1;						// ADDED FOR DEMO
         slideshow_tics = 430;						// MOD. FOR DEMO: INC. BY +255
 	S_ChangeMusic(mus_drone, 1);					// ADDED FOR DEMO
@@ -556,6 +575,10 @@ static void F_DoSlideShow(void)
         break;
     case SLIDE_DEMOEND2: // state #26 - ditto
 //        slideshow_panel = DEH_String("VELLOGO");			// MODIFIED FOR DEMO
+
+	if(!classicmode)
+	    FE_ClearScreen();
+
         wipegamestate = -1;						// ADDED FOR DEMO
         S_StartMusic(mus_fast);						// ADDED FOR DEMO
         finalecount = 0;						// ADDED FOR DEMO
@@ -576,7 +599,12 @@ static void F_DoSlideShow(void)
         finalestage = F_STAGE_ARTSCREEN;
 
 	if(gamemap != 34)						// ADDED FOR DEMO
-	    wipegamestate = -1;						
+	{
+	    if(!classicmode)
+		FE_ClearScreen();
+
+	    wipegamestate = -1;
+	}
 	else								// ADDED FOR DEMO
 	    scroll_finished = true;					// ADDED FOR DEMO
 
@@ -649,6 +677,9 @@ void F_Ticker (void)
     }										// ADDED FOR DEMO
     // advance animation
     finalecount++;
+
+    if(!classicmode && finalestage == F_STAGE_ARTSCREEN)
+        return; // [SVE]: nothing else to do in artscreen
 
     if (finalestage == F_STAGE_CAST)
         F_CastTicker ();
@@ -811,6 +842,7 @@ boolean		castattacking;
 //
 void F_StartCast (void)
 {
+    cast_running = true;
     usergame = false;
     gameaction = ga_nothing;
     viewactive = false;
@@ -1114,7 +1146,7 @@ void F_CastPrint (char* text)
 	if (!c)
 	    break;
 	c = toupper(c) - HU_FONTSTART;
-	if (c < 0 || c> HU_FONTSIZE)
+        if (c < 0 || c > HU_FONTSIZE || c == '_') // [SVE]
 	{
 	    cx += 4;
 	    continue;
