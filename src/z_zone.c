@@ -16,11 +16,14 @@
 //	Zone Memory Allocation. Neat.
 //
 
+#include <stdlib.h>
+#include <string.h>
 
 #include "z_zone.h"
 #include "i_system.h"
 #include "doomtype.h"
 
+#include "m_saves.h"
 
 //
 // ZONE MEMORY ALLOCATION
@@ -63,7 +66,11 @@ typedef struct
 
 memzone_t*	mainzone;
 
+static const size_t header_size = (sizeof(memblock_t) + 15) & ~15;
 
+static memblock_t *blockbytag[PU_NUM_TAGS];
+
+char *func3;
 
 //
 // Z_ClearZone
@@ -123,7 +130,7 @@ void Z_Init (void)
 //
 // Z_Free
 //
-void Z_Free (void* ptr)
+void Z_Free (void* ptr, char *func)
 {
     memblock_t*		block;
     memblock_t*		other;
@@ -131,8 +138,8 @@ void Z_Free (void* ptr)
     block = (memblock_t *) ( (byte *)ptr - sizeof(memblock_t));
 
     if (block->id != ZONEID)
-	I_Error ("Z_Free: freed a pointer without ZONEID");
-		
+	I_Error("Z_Free: freed a pointer without ZONEID in function: %s coming from %s", func, func3);
+
     if (block->tag != PU_FREE && block->user != NULL)
     {
     	// clear the user's mark
@@ -185,7 +192,8 @@ void*
 Z_Malloc
 ( int		size,
   int		tag,
-  void*		user )
+  void*		user,
+  char*		func2 )
 {
     int		extra;
     memblock_t*	start;
@@ -193,6 +201,8 @@ Z_Malloc
     memblock_t* newblock;
     memblock_t*	base;
     void *result;
+
+    func3 = func2;
 
     size = (size + MEM_ALIGN - 1) & ~(MEM_ALIGN - 1);
     
@@ -236,7 +246,7 @@ Z_Malloc
 
                 // the rover can be the base block
                 base = base->prev;
-                Z_Free ((byte *)rover+sizeof(memblock_t));
+                Z_Free ((byte *)rover+sizeof(memblock_t), "Z_Malloc");
                 base = base->next;
                 rover = base->next;
             }
@@ -294,27 +304,28 @@ Z_Malloc
 //
 // Z_FreeTags
 //
-void
-Z_FreeTags
-( int		lowtag,
-  int		hightag )
+void Z_FreeTags(int lowtag, int	hightag)
 {
-    memblock_t*	block;
-    memblock_t*	next;
-	
-    for (block = mainzone->blocklist.next ;
-	 block != &mainzone->blocklist ;
-	 block = next)
-    {
-	// get link before freeing
-	next = block->next;
+    memblock_t *block;
 
-	// free block?
-	if (block->tag == PU_FREE)
-	    continue;
-	
-	if (block->tag >= lowtag && block->tag <= hightag)
-	    Z_Free ( (byte *)block+sizeof(memblock_t));
+    if(lowtag <= PU_FREE)
+        lowtag = PU_FREE + 1;
+
+    if(hightag > PU_CACHE)
+        hightag = PU_CACHE;
+
+    for(; lowtag <= hightag; lowtag++)
+    {
+        for(block = blockbytag[lowtag], blockbytag[lowtag] = NULL; block; )
+        {
+            memblock_t *next = block->next;
+
+            if(block->id != ZONEID)
+                I_Error("Z_FreeTags: freed a block without ZONEID");
+
+            Z_Free((byte *)block + header_size, "Z_FreeTags");
+            block = next;
+        }
     }
 }
 
@@ -397,26 +408,18 @@ void Z_FileDumpHeap (FILE* f)
 //
 // Z_CheckHeap
 //
-void Z_CheckHeap (void)
+void Z_CheckHeap(void)
 {
-    memblock_t*	block;
-	
-    for (block = mainzone->blocklist.next ; ; block = block->next)
+    memblock_t *block;
+    int lowtag;
+
+    for(lowtag = PU_FREE + 1; lowtag < PU_NUM_TAGS; lowtag++)
     {
-	if (block->next == &mainzone->blocklist)
-	{
-	    // all blocks have been hit
-	    break;
-	}
-	
-	if ( (byte *)block + block->size != (byte *)block->next)
-	    I_Error ("Z_CheckHeap: block size does not touch the next block\n");
-
-	if ( block->next->prev != block)
-	    I_Error ("Z_CheckHeap: next block doesn't have proper back link\n");
-
-	if (block->tag == PU_FREE && block->next->tag == PU_FREE)
-	    I_Error ("Z_CheckHeap: two consecutive free blocks\n");
+        for(block = blockbytag[lowtag]; block; block = block->next)
+        {
+            if(block->id != ZONEID)
+                I_Error("Z_CheckHeap: block found without ZONEID");
+        }
     }
 }
 
@@ -484,5 +487,109 @@ int Z_FreeMemory (void)
 unsigned int Z_ZoneSize(void)
 {
     return mainzone->size;
+}
+
+//
+// Z_Calloc
+//
+// haleyjd 20140816: [SVE] Sorely needed.
+//
+void *Z_Calloc(int n1, int n2, int tag, void *user)
+{
+    int size = n1*n2;
+    return memset(Z_Malloc(size, tag, user, "Z_Calloc"), 0, size);
+}
+
+//
+// Z_Realloc
+//
+// haleyjd 20140816: [SVE] Necessary to remove static limits
+//
+void *Z_Realloc(void *ptr, int size, int tag, void *user)
+{
+    void *p;
+    memblock_t *block, *newblock, *origblock;
+    size_t origsize;
+
+    // if not allocated at all, defer to Z_Malloc
+    if(!ptr)
+        return Z_Calloc(1, size, tag, user);
+
+    // also defer for a 0 byte request
+    if(size == 0)
+    {
+        Z_Free(ptr, "Z_Realloc -> ptr");
+        return Z_Calloc(1, size, tag, user);
+    }
+
+    block = origblock = (memblock_t *)((byte *)ptr - header_size);
+
+    if(block->id != ZONEID)
+        I_Error("Z_Realloc: reallocated a block without ZONEID");
+
+    origsize = block->size;
+
+    // nullify current user, if any
+    if(block->user)
+        *(block->user) = NULL;
+
+    // detach from list before reallocation
+    if((block->prev = block->next))
+        block->next->prev = block->prev;
+
+    block->next = NULL;
+    block->prev = NULL;
+
+    if(!(newblock = (memblock_t *)(realloc(block, size + header_size))))
+    {
+        if(blockbytag[PU_CACHE])
+        {
+            Z_FreeTags(PU_CACHE, PU_CACHE);
+            newblock = (memblock_t *)(realloc(block, size + header_size));
+        }
+    }
+
+    if(!(block = newblock))
+    {
+        if(origblock->size >= size)
+        {
+            // restore original alloc if shrinking realloc fails
+            block = origblock;
+            size = block->size;
+        }
+        else
+            I_Error("Z_Realloc: failed on allocation of %u bytes", (unsigned int)size);
+    }
+
+    block->size = size;
+    block->tag  = tag;
+
+    if(size > origsize)
+        memset((byte *)block + header_size + origsize, 0, size - origsize);
+
+    p = (byte *)block + header_size;
+
+    // set new user, if any
+    block->user = user;
+    if(user)
+        user = p;
+
+    // reattach to list at possibly new address, new tag
+    if((block->next = blockbytag[tag]))
+        block->next->prev = block->next;
+    blockbytag[tag] = block;
+    block->prev = blockbytag[tag];
+
+    return p;
+}
+
+void *Malloc (unsigned int size)
+{
+	void *zone = malloc (size);
+
+	if (!zone)
+		I_Error ( (char*)size);
+
+	return zone;
 }
 

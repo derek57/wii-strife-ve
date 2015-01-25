@@ -166,6 +166,9 @@ boolean P_CrossSubsector (int num)
     {
         line = seg->linedef;
 
+        if(!line)
+            continue;
+
         // allready checked other side?
         if (line->validcount == validcount)
             continue;

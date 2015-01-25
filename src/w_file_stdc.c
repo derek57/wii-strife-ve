@@ -52,7 +52,7 @@ static wad_file_t *W_StdC_OpenFile(char *path)
 
     // Create a new stdc_wad_file_t to hold the file handle.
 
-    result = Z_Malloc(sizeof(stdc_wad_file_t), PU_STATIC, 0);
+    result = Z_Malloc(sizeof(stdc_wad_file_t), PU_STATIC, 0, "W_StdC_OpenFile");
     result->wad.file_class = &stdc_wad_file;
     result->wad.mapped = NULL;
     result->wad.length = M_FileLength(fstream);
@@ -68,7 +68,7 @@ static void W_StdC_CloseFile(wad_file_t *wad)
     stdc_wad = (stdc_wad_file_t *) wad;
 
     fclose(stdc_wad->fstream);
-    Z_Free(stdc_wad);
+    Z_Free(stdc_wad, "W_StdC_CloseFile");
 }
 
 // Read data from the specified position in the file into the 

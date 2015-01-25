@@ -784,7 +784,7 @@ void displayFile()
 }
 */
 #include "video.h"
-#include "d2x-cios-installer.h"
+#include "mainmenu.h"
 #include "gui.h"
 struct stConsoleCursorLocation stTexteLocation;
 u8 getTextBoxRow(u8 chRow) {

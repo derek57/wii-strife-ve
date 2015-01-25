@@ -51,8 +51,8 @@ enum
         
 
 void	Z_Init (void);
-void*	Z_Malloc (int size, int tag, void *ptr);
-void    Z_Free (void *ptr);
+void*	Z_Malloc (int size, int tag, void *ptr, char* func2);
+void    Z_Free (void *ptr, char *func);
 void    Z_FreeTags (int lowtag, int hightag);
 void    Z_DumpHeap (int lowtag, int hightag);
 void    Z_FileDumpHeap (FILE *f);
@@ -69,5 +69,7 @@ unsigned int Z_ZoneSize(void);
 #define Z_ChangeTag(p,t)                                       \
     Z_ChangeTag2((p), (t), __FILE__, __LINE__)
 
+void *Z_Calloc(int n1, int n2, int tag, void *user);
+void *Z_Realloc(void *ptr, int size, int tag, void *user);
 
 #endif

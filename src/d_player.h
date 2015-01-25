@@ -73,7 +73,15 @@ typedef enum
     CF_ONFIRE           = 8,
     // villsa [STRIFE] new cheat
     // auto-use medkits
-    CF_AUTOHEALTH       = 16
+    CF_AUTOHEALTH       = 16,
+    // haleyjd [SVE] 20140914
+    // disable achievements if player is cheating or loading mods
+    CF_CHEATING         = 32,
+    // haleyjd [SVE] 20140917
+    // firing the torpedo weapon
+    CF_TORPEDO          = 64,
+    // haleyjd [SVE] 20141011
+    // player has found all three talismans
 
 } cheat_t;
 
@@ -103,6 +111,7 @@ typedef struct player_s
     // Determine POV,
     //  including viewpoint bobbing during movement.
     // Focal origin above r.z
+    fixed_t		viewy;
     fixed_t		viewz;
     // Base height above floor for viewz.
     fixed_t		viewheight;
@@ -110,6 +119,13 @@ typedef struct player_s
     fixed_t         	deltaviewheight;
     // bounded/scaled total momentum.
     fixed_t         	bob;	
+
+    // [SVE] svillarreal - recoil
+    fixed_t    		recoilpitch;
+
+    // haleyjd 20140902: [SVE] interpolation data
+    fixed_t     	prevviewz;
+    fixed_t     	prevpitch;
 
     // This is only used between levels,
     // mo->health is used during levels.
@@ -201,7 +217,6 @@ typedef struct player_s
     //boolean		didsecret;   [STRIFE] Removed this.
 
 } player_t;
-
 
 //
 // INTERMISSION

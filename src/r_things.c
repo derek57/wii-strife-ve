@@ -19,6 +19,8 @@
 
 
 
+#include <sys/param.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -192,7 +194,7 @@ void R_InitSpriteDefs (char** namelist)
     if (!numsprites)
 	return;
 		
-    sprites = Z_Malloc(numsprites *sizeof(*sprites), PU_STATIC, NULL);
+    sprites = Z_Malloc(numsprites *sizeof(*sprites), PU_STATIC, NULL, "R_InitSpriteDefs -> sprites");
 	
     start = firstspritelump-1;
     end = lastspritelump+1;
@@ -270,7 +272,7 @@ void R_InitSpriteDefs (char** namelist)
 	// allocate space for the frames present and copy sprtemp to it
 	sprites[i].numframes = maxframe;
 	sprites[i].spriteframes = 
-	    Z_Malloc (maxframe * sizeof(spriteframe_t), PU_STATIC, NULL);
+	    Z_Malloc (maxframe * sizeof(spriteframe_t), PU_STATIC, NULL, "R_InitSpriteDefs -> sprites[i].spriteframes");
 	memcpy (sprites[i].spriteframes, sprtemp, maxframe*sizeof(spriteframe_t));
     }
 
@@ -284,8 +286,10 @@ void R_InitSpriteDefs (char** namelist)
 //
 vissprite_t	vissprites[MAXVISSPRITES];
 vissprite_t*	vissprite_p;
+vissprite_t**	vissprite_ptrs;
 int		newvissprite;
 int             sprbotscreen;       // villsa [STRIFE]
+//static int      num_vissprite, num_vissprite_alloc, num_vissprite_ptrs;
 
 
 
@@ -419,6 +423,8 @@ R_DrawVisSprite
 
     dc_colormap = vis->colormap;
 
+    dc_blood = dc_colormap[vis->blood] << 8;
+
     // villsa [STRIFE]
     // haleyjd 09/06/10: updated MF_TRANSLATION for Strife
     translation = vis->mobjflags & MF_TRANSLATION;
@@ -444,6 +450,7 @@ R_DrawVisSprite
         {
             colfunc = R_DrawTRTLColumn;
             dc_translation = translationtables - 256 + (translation >> (MF_TRANSSHIFT - 8));
+//	    dc_transmap = vis->transmap;
         }
     }
     else if(vis->mobjflags & MF_MVIS)
@@ -461,9 +468,18 @@ R_DrawVisSprite
         colfunc = transcolfunc;
         dc_translation = translationtables - 256 + (translation >> (MF_TRANSSHIFT - 8));
     }
-
+/*
+    if (vis->transmap)
+    {
+        colfunc = fuzzcolfunc;
+        dc_transmap = vis->transmap;    //Fab:29-04-98: translucency table
+    }
+*/
     dc_iscale = abs(vis->xiscale)>>detailshift;
     dc_texturemid = vis->texturemid;
+
+    dc_texheight = 0;
+
     frac = vis->startfrac;
     spryscale = vis->scale;
     sprtopscreen = centeryfrac - FixedMul(dc_texturemid,spryscale);
@@ -492,7 +508,21 @@ R_DrawVisSprite
     colfunc = basecolfunc;
 }
 
-
+void R_interpolateThingPosition(const mobj_t *thing, spritepos_t *pos)
+{
+    if(viewlerp == FRACUNIT)
+    {
+        pos->x = thing->x;
+        pos->y = thing->y;
+        pos->z = thing->z;
+    }
+    else
+    {
+        pos->x = R_LerpCoord(viewlerp, thing->prevpos.x, thing->x);
+        pos->y = R_LerpCoord(viewlerp, thing->prevpos.y, thing->y);
+        pos->z = R_LerpCoord(viewlerp, thing->prevpos.z, thing->z);
+    }
+}
 
 //
 // R_ProjectSprite
@@ -501,6 +531,7 @@ R_DrawVisSprite
 //
 void R_ProjectSprite (mobj_t* thing)
 {
+    spritepos_t         spritepos; // haleyjd
     fixed_t		tr_x;
     fixed_t		tr_y;
     
@@ -529,10 +560,17 @@ void R_ProjectSprite (mobj_t* thing)
     angle_t		ang;
     fixed_t		iscale;
     
+    // haleyjd 20140902: [SVE] interpolate thing positions
+
+    R_interpolateThingPosition(thing, &spritepos);
+
     // transform the origin point
+    tr_x = spritepos.x - viewx;
+    tr_y = spritepos.y - viewy;
+/*	
     tr_x = thing->x - viewx;
     tr_y = thing->y - viewy;
-	
+*/
     gxt = FixedMul(tr_x,viewcos); 
     gyt = -FixedMul(tr_y,viewsin);
     
@@ -569,7 +607,8 @@ void R_ProjectSprite (mobj_t* thing)
     if (sprframe->rotate)
     {
 	// choose a different rotation based on player view
-	ang = R_PointToAngle (thing->x, thing->y);
+	ang = R_PointToAngle (spritepos.x, spritepos.y);
+//	ang = R_PointToAngle (thing->x, thing->y);
 	rot = (ang-thing->angle+(unsigned)(ANG45/2)*9)>>29;
 	lump = sprframe->lump[rot];
 	flip = (boolean)sprframe->flip[rot];
@@ -600,10 +639,17 @@ void R_ProjectSprite (mobj_t* thing)
     vis = R_NewVisSprite ();
     vis->mobjflags = thing->flags;
     vis->scale = xscale<<detailshift;
+
+    vis->gx = spritepos.x;
+    vis->gy = spritepos.y;
+    vis->gz = spritepos.z;
+
+    vis->blood = thing->blood;
+/*
     vis->gx = thing->x;
     vis->gy = thing->y;
     vis->gz = thing->z;
-
+*/
     // villsa [STRIFE]
     if(thing->flags & MF_FEETCLIPPED)
         vis->gz -= (10*FRACUNIT);
@@ -632,6 +678,13 @@ void R_ProjectSprite (mobj_t* thing)
     vis->patch = lump;
     
     // get light level
+
+/*
+    vis->transmap = NULL;
+
+    if (thing->frame & 0x70000)
+        vis->transmap = (thing->frame & 0x70000) - 0x10000 + translationtables;
+*/
     // villsa [STRIFE] unused
     /*if (thing->flags & MF_SHADOW)
     {
@@ -756,6 +809,7 @@ void R_DrawPSprite (pspdef_t* psp)
     vis->x1 = x1 < 0 ? 0 : x1;
     vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;	
     vis->scale = pspritescale<<detailshift;
+    vis->blood = 0;
     
     if (flip)
     {
@@ -783,6 +837,8 @@ void R_DrawPSprite (pspdef_t* psp)
         vis->startfrac += vis->xiscale*(vis->x1-x1);
 
     vis->patch = lump;
+
+//    vis->transmap = NULL;
 
     if (viewplayer->powers[pw_invisibility] > 4*32
         || (viewplayer->powers[pw_invisibility] & 8))
@@ -885,7 +941,14 @@ void R_SortVisSprites (void)
 
     if (!count)
 	return;
-		
+/*		
+    if (num_vissprite_ptrs < num_vissprite * 2)
+    {
+        free(vissprite_ptrs);
+        vissprite_ptrs = (vissprite_t **)malloc((num_vissprite_ptrs = num_vissprite_alloc * 2)
+            * sizeof(*vissprite_ptrs));
+    }
+*/
     for (ds=vissprites ; ds<vissprite_p ; ds++)
     {
 	ds->next = ds+1;
@@ -944,7 +1007,9 @@ void R_DrawSprite (vissprite_t* spr)
     // Scan drawsegs from end to start for obscuring segs.
     // The first drawseg that has a greater scale
     //  is the clip seg.
-    for (ds=ds_p-1 ; ds >= drawsegs ; ds--)
+    // haleyjd 20140831: [SVE] remove undefined behavior
+//    for (ds=ds_p-1 ; ds >= drawsegs ; ds--)
+    for(ds = ds_p; ds-- > drawsegs; )
     {
 	// determine if the drawseg obscures the sprite
 	if (ds->x1 > spr->x2
@@ -1047,6 +1112,8 @@ void R_DrawMasked (void)
     vissprite_t*	spr;
     drawseg_t*		ds;
 	
+//    int         i;
+
     R_SortVisSprites ();
 
     if (vissprite_p > vissprites)
@@ -1062,7 +1129,9 @@ void R_DrawMasked (void)
     }
     
     // render any remaining masked mid textures
-    for (ds=ds_p-1 ; ds >= drawsegs ; ds--)
+    // haleyjd 20140831: [SVE} remove undefined behavior
+    //for (ds=ds_p-1 ; ds >= drawsegs ; ds--)
+    for (ds = ds_p; ds-- > drawsegs; )
 	if (ds->maskedtexturecol)
 	    R_RenderMaskedSegRange (ds, ds->x1, ds->x2);
     
@@ -1073,4 +1142,94 @@ void R_DrawMasked (void)
 }
 
 
+//
+// R_DrawBloodSprite
+//
+void R_DrawBloodSprite(vissprite_t *spr)
+{
+    if (spr->x1 > spr->x2)
+        return;
+    else
+    {
+        drawseg_t       *ds;
+/*
+        int             clipbot[SCREENWIDTH];
+        int             cliptop[SCREENWIDTH];
+*/
+        short             clipbot[SCREENWIDTH];
+        short             cliptop[SCREENWIDTH];
+        int             x;
+        int             r1;
+        int             r2;
+        fixed_t         scale;
+        fixed_t         lowscale;
+
+        for (x = spr->x1; x <= spr->x2; x++)
+            clipbot[x] = cliptop[x] = -2;
+
+        // Scan drawsegs from end to start for obscuring segs.
+        // The first drawseg that has a greater scale
+        //  is the clip seg.
+        for (ds = ds_p - 1; ds >= drawsegs; ds--)
+        {
+            // determine if the drawseg obscures the sprite
+            if (ds->x1 > spr->x2 || ds->x2 < spr->x1 || (!ds->silhouette && !ds->maskedtexturecol))
+                continue;           // does not cover sprite
+/*
+	    if (ds->scale1 > ds->scale2)
+	    {
+		lowscale = ds->scale2;
+		scale = ds->scale1;
+	    }
+	    else
+	    {
+		lowscale = ds->scale1;
+		scale = ds->scale2;
+	    }
+*/
+            lowscale = MIN(ds->scale1, ds->scale2);
+            scale = MAX(ds->scale1, ds->scale2);
+
+            if (scale < spr->scale || (lowscale < spr->scale &&
+                !R_PointOnSegSide(spr->gx, spr->gy, ds->curline)))
+                // seg is behind sprite
+                continue;
+
+            r1 = MAX(ds->x1, spr->x1);
+            r2 = MIN(ds->x2, spr->x2);
+/*
+	    r1 = ds->x1 < spr->x1 ? spr->x1 : ds->x1;
+	    r2 = ds->x2 > spr->x2 ? spr->x2 : ds->x2;
+*/
+            // clip this piece of the sprite
+            // killough 3/27/98: optimized and made much shorter
+            if ((ds->silhouette & SIL_BOTTOM) && spr->gz < ds->bsilheight)  // bottom sil
+                for (x = r1; x <= r2; x++)
+                    if (clipbot[x] == -2)
+                        clipbot[x] = ds->sprbottomclip[x];
+
+            if ((ds->silhouette & SIL_TOP) && spr->gzt > ds->tsilheight)    // top sil
+                for (x = r1; x <= r2; x++)
+                    if (cliptop[x] == -2)
+                        cliptop[x] = ds->sprtopclip[x];
+        }
+
+        // all clipping has been performed, so draw the sprite
+
+        // check for unclipped columns
+        for (x = spr->x1; x <= spr->x2; x++)
+        {
+            if (clipbot[x] == -2)
+                clipbot[x] = viewheight;
+
+            if (cliptop[x] == -2)
+                cliptop[x] = -1;
+        }
+
+        mfloorclip = clipbot;
+        mceilingclip = cliptop;
+//        R_DrawVisSprite(spr);
+	R_DrawVisSprite (spr, spr->x1, spr->x2);
+    }
+}
 

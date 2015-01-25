@@ -317,6 +317,31 @@ extern int joy_y;
 extern int joy_1;
 extern int joy_2;
 
+// [SVE] haleyjd: HUD toggle
+extern boolean fullscreenhud;
+
+// [SVE] for those Brutal Doom fans...
+extern boolean d_maxgore;
+
+// haleyjd 20140816: [SVE] Classic mode toggle
+// * true  == behave like vanilla Strife as much as is practical
+// * false == fix non-critical bugs and enable new gameplay elements
+extern boolean classicmode;
+
+// [SVE] svillarreal - Skip intro movies?
+extern boolean d_skipmovies;				// FIXME: FOR WII NOT YET FULLY INCLUDED
+
+// [SVE] svillarreal - player recoil bobbing
+extern boolean d_recoil;				// FIXME: PARTIAL (CUSTOM / NON-SVE) SUPPORT
+
+// [SVE] autoaim toggle
+extern int autoaim;
+
+//extern int mus_engine;
+
+extern boolean fastparm;
+extern boolean respawnparm;
+
 void M_BindBaseControls(void)
 {
     M_BindVariable("sfx_volume",             &sfxVolume);
@@ -348,6 +373,14 @@ void M_BindBaseControls(void)
     M_BindVariable("map_rotate",             &am_rotate);
     M_BindVariable("detail",                 &detailLevel);
     M_BindVariable("xhair",                  &crosshair);
+    M_BindVariable("fullscreen_hud",         &fullscreenhud);
+    M_BindVariable("max_gore",               &d_maxgore);
+    M_BindVariable("classic_mode",           &classicmode);
+    M_BindVariable("recoil",                 &d_recoil);
+    M_BindVariable("auto_aim",               &autoaim);
+    M_BindVariable("fast_monsters",          &fastparm);
+    M_BindVariable("monsters_respawn",       &respawnparm);
+//    M_BindVariable("music_engine",           &mus_engine);
 //    M_BindVariable("btn_layout",             &button_layout);
 										// FIXME: IF ACTIVATED,
 //    M_BindVariable("vanilla_weapon_change",  &use_vanilla_weapon_change); 	// CRASHES GAME IF

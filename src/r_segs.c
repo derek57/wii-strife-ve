@@ -32,6 +32,7 @@
 #include "r_local.h"
 #include "r_sky.h"
 
+#include "i_swap.h"
 
 // OPTIMIZE: closed two sided lines as single sided
 
@@ -59,6 +60,7 @@ int		rw_x;
 int		rw_stopx;
 angle_t		rw_centerangle;
 fixed_t		rw_offset;
+
 fixed_t		rw_distance;
 fixed_t		rw_scale;
 fixed_t		rw_scalestep;
@@ -86,7 +88,6 @@ fixed_t		bottomstep;
 lighttable_t**	walllights;
 
 short*		maskedtexturecol;
-
 
 
 //
@@ -148,6 +149,8 @@ R_RenderMaskedSegRange
     }
     dc_texturemid += curline->sidedef->rowoffset;
 			
+    dc_texheight = textureheight[texnum] >> FRACBITS;
+
     if (fixedcolormap)
 	dc_colormap = fixedcolormap;
 
@@ -294,6 +297,9 @@ void R_RenderSegLoop (void)
 	    dc_yh = yh;
 	    dc_texturemid = rw_midtexturemid;
 	    dc_source = R_GetColumn(midtexture,texturecolumn);
+
+            dc_texheight = textureheight[midtexture] >> FRACBITS;
+
 	    colfunc ();
 	    ceilingclip[rw_x] = viewheight;
 	    floorclip[rw_x] = -1;
@@ -316,6 +322,9 @@ void R_RenderSegLoop (void)
 		    dc_yh = mid;
 		    dc_texturemid = rw_toptexturemid;
 		    dc_source = R_GetColumn(toptexture,texturecolumn);
+
+                    dc_texheight = textureheight[toptexture] >> FRACBITS;
+
 		    colfunc ();
 		    ceilingclip[rw_x] = mid;
 		}
@@ -346,6 +355,9 @@ void R_RenderSegLoop (void)
 		    dc_texturemid = rw_bottomtexturemid;
 		    dc_source = R_GetColumn(bottomtexture,
 					    texturecolumn);
+
+                    dc_texheight = textureheight[bottomtexture] >> FRACBITS;
+
 		    colfunc ();
 		    floorclip[rw_x] = mid;
 		}
@@ -723,7 +735,6 @@ R_StoreWallRange
 
     R_RenderSegLoop ();
 
-    
     // save sprite clipping info
     if ( ((ds_p->silhouette & SIL_TOP) || maskedtexture)
 	 && !ds_p->sprtopclip)

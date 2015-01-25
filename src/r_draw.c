@@ -56,6 +56,7 @@
 
 static byte *background_buffer = NULL; 
 
+byte*           dc_transmap;    // one of the translucency tables
 byte*		viewimage; 
 int		viewwidth;
 int		scaledviewwidth;
@@ -64,6 +65,7 @@ int		viewwindowx;
 int		viewwindowy; 
 byte*		ylookup[MAXHEIGHT]; 
 int		columnofs[MAXWIDTH]; 
+int		dc_texheight;
 
 // Color tables for different players,
 //  translate a limited part to another
@@ -95,6 +97,8 @@ byte*			dc_source;
 
 // just for profiling 
 int			dccount;
+
+fixed_t         	dc_blood;
 
 //
 // A column is a vertical slice/span from a wall texture that,
@@ -729,7 +733,7 @@ void R_InitTranslationTables (void)
     V_LoadXlaTable();
 
     // villsa [STRIFE] allocate a larger size for translation tables
-    translationtables = Z_Malloc (256*8, PU_STATIC, 0);
+    translationtables = Z_Malloc (256*8, PU_STATIC, 0, "R_InitTranslationTables");
 
     col1 = 0xFA;
     col2 = 0xE0;
@@ -1100,7 +1104,7 @@ void R_FillBackScreen (void)
     {
         if (background_buffer != NULL)
         {
-            Z_Free(background_buffer);
+            Z_Free(background_buffer, "R_FillBackScreen");
             background_buffer = NULL;
         }
 
@@ -1112,7 +1116,7 @@ void R_FillBackScreen (void)
     if (background_buffer == NULL)
     {
         background_buffer = Z_Malloc(SCREENWIDTH * (SCREENHEIGHT - SBARHEIGHT),
-                                     PU_STATIC, NULL);
+                                     PU_STATIC, NULL, "R_FillBackScreen");
     }
 
     // haleyjd 08/29/10: [STRIFE] Use configurable back_flat
@@ -1270,4 +1274,36 @@ void R_DrawViewBorder (void)
     // ? 
     V_MarkRect (0,0,SCREENWIDTH, SCREENHEIGHT-SBARHEIGHT); 
 } 
+
+void R_DrawBloodSplatColumn(void)
+{
+    int32_t             count = dc_yh - dc_yl + 1;
+    byte                *dest;
+//    byte                *dest = R_ADDRESS(0, dc_x, dc_yl);
+    const fixed_t       blood = dc_blood;
+
+    while (--count > 0)
+    {
+	*dest = ds_colormap[*dest + blood];
+//        *dest = tinttab75[*dest + blood];
+        dest += SCREENWIDTH;
+    }
+    *dest = ds_colormap[*dest + blood];
+//    *dest = tinttab75[*dest + blood];
+}
+
+void R_DrawSolidBloodSplatColumn(void)
+{
+    int32_t             count = dc_yh - dc_yl + 1;
+    byte                *dest;
+//    byte                *dest = R_ADDRESS(0, dc_x, dc_yl);
+    const fixed_t       blood = dc_blood;
+
+    while (--count > 0)
+    {
+        *dest = blood >> 8;
+        dest += SCREENWIDTH;
+    }
+    *dest = blood >> 8;
+}
 

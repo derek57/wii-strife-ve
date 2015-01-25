@@ -28,6 +28,7 @@
 // Carries out all thinking of monsters and players.
 void P_Ticker (void);
 
-
+void P_SetTarget(mobj_t **mop, mobj_t *target);		// [SVE]
+void P_RemoveThinkerDelayed(thinker_t *thinker);	// [SVE]
 
 #endif

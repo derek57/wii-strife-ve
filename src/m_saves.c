@@ -98,7 +98,7 @@ void ClearTmp(void)
         filepath = M_SafeFilePath(savepathtemp, f->d_name);
         remove(filepath);
 
-        Z_Free(filepath);
+        Z_Free(filepath, "ClearTmp");
     }
 
     closedir(sp2dir);
@@ -131,7 +131,7 @@ void ClearSlot(void)
         filepath = M_SafeFilePath(savepath, f->d_name);
         remove(filepath);
 
-        Z_Free(filepath);
+        Z_Free(filepath, "ClearSlot");
     }
 
     closedir(spdir);
@@ -169,9 +169,9 @@ void FromCurr(void)
         filelen = M_ReadFile(srcfilename, &filebuffer);
         M_WriteFile(dstfilename, filebuffer, filelen);
 
-        Z_Free(filebuffer);
-        Z_Free(srcfilename);
-        Z_Free(dstfilename);
+        Z_Free(filebuffer, "FromCurr -> filebuffer");
+        Z_Free(srcfilename, "FromCurr -> srcfilename");
+        Z_Free(dstfilename, "FromCurr -> dstfilename");
     }
 
     closedir(sp2dir);
@@ -211,9 +211,9 @@ void ToCurr(void)
         filelen = M_ReadFile(srcfilename, &filebuffer);
         M_WriteFile(dstfilename, filebuffer, filelen);
 
-        Z_Free(filebuffer);
-        Z_Free(srcfilename);
-        Z_Free(dstfilename);
+        Z_Free(filebuffer, "ToCurr -> filebuffer");
+        Z_Free(srcfilename, "ToCurr -> srcfilename");
+        Z_Free(dstfilename, "ToCurr -> dstfilename");
     }
 
     closedir(spdir);
@@ -244,8 +244,8 @@ void M_SaveMoveMapToHere(void)
         rename(mapsave, heresave);
     }
 
-    Z_Free(mapsave);
-    Z_Free(heresave);
+    Z_Free(mapsave, "M_SaveMoveMapToHere -> mapsave");
+    Z_Free(heresave, "M_SaveMoveMapToHere -> heresave");
 }
 
 //
@@ -271,8 +271,8 @@ void M_SaveMoveHereToMap(void)
         rename(heresave, mapsave);
     }
 
-    Z_Free(mapsave);
-    Z_Free(heresave);
+    Z_Free(mapsave, "M_SaveMoveHereToMap -> mapsave");
+    Z_Free(heresave, "M_SaveMoveHereToMap -> heresave");
 }
 
 //
@@ -289,7 +289,7 @@ boolean M_SaveMisObj(const char *path)
     destpath = M_SafeFilePath(path, "mis_obj");
     result   = M_WriteFile(destpath, mission_objective, OBJECTIVE_LEN);
 
-    Z_Free(destpath);
+    Z_Free(destpath, "M_SaveMisObj");
     return result;
 }
 
@@ -312,7 +312,7 @@ void M_ReadMisObj(void)
         fclose(f);
     }
 
-    Z_Free(srcpath);
+    Z_Free(srcpath, "M_ReadMisObj");
 }
 
 //=============================================================================
@@ -335,7 +335,7 @@ void M_ReadMisObj(void)
 //
 void *M_Calloc(size_t n1, size_t n2)
 {
-    return (n1 *= n2) ? memset(Z_Malloc(n1, PU_STATIC, NULL), 0, n1) : NULL;
+    return (n1 *= n2) ? memset(Z_Malloc(n1, PU_STATIC, NULL, "M_Calloc"), 0, n1) : NULL;
 }
 
 //
@@ -479,7 +479,7 @@ void M_CreateSaveDirs(const char *savedir)
 
         M_MakeDirectory(compositedir);
 
-        Z_Free(compositedir);
+        Z_Free(compositedir, "M_CreateSaveDirs");
     }
 }
 

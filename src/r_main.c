@@ -35,6 +35,8 @@
 
 #include "doomfeatures.h"
 
+#include "p_local.h"
+
 // Fineangles in the SCREENWIDTH wide window.
 #define FIELDOFVIEW		2048	
 
@@ -71,6 +73,8 @@ int                     viewpitch;  // villsa [STRIFE]
 
 angle_t			viewangle;
 
+fixed_t                 viewlerp; // haleyjd 20140902: [SVE]
+
 fixed_t			viewcos;
 fixed_t			viewsin;
 
@@ -105,6 +109,7 @@ int			extralight;
 boolean			BorderNeedRefresh;
 
 
+void (*bloodsplatcolfunc)(void);
 void (*colfunc) (void);
 void (*basecolfunc) (void);
 void (*fuzzcolfunc) (void);
@@ -713,7 +718,7 @@ void R_ExecuteSetViewSize (void)
     viewwidth = scaledviewwidth>>detailshift;
 	
     // villsa [STRIFE] calculate centery from player's pitch
-    centery = (setblocks*players[consoleplayer].pitch);
+    centery = (setblocks*(players[consoleplayer].pitch>>FRACBITS));
     centery = (unsigned int)(centery/10)+viewheight/2;
 
     centerx = viewwidth/2;
@@ -871,6 +876,8 @@ void R_Init (void)
 //    else
 	D_IntroTick();
 
+    bloodsplatcolfunc = R_DrawSolidBloodSplatColumn;
+
     framecount = 0;
 }
 
@@ -903,23 +910,110 @@ R_PointInSubsector
     return &subsectors[nodenum & ~NF_SUBSECTOR];
 }
 
+#define LLANG360 4294967296LL
+
+#define longabs(a) (a < 0 ? -a : a)
+
+//
+// R_LerpAngle
+//
+// Do linear interpolation on an angle_t BAM from astart to aend.
+//
+angle_t R_LerpAngle(fixed_t lerp, angle_t astart, angle_t aend)
+{
+   int64_t start = astart;
+   int64_t end   = aend;
+   int64_t diff  = start - end;
+   int64_t value = longabs(diff);
+   if(value > ANG180)
+   {
+      if(end > start)
+         start += LLANG360;
+      else
+         end += LLANG360;
+   }
+   value = start + ((end - start) * lerp / 65536);
+   if(value >= 0 && value < LLANG360)
+      return (angle_t)value;
+   else
+      return (angle_t)(value % LLANG360);
+}
+
+//
+// R_GetLerp
+//
+// haleyjd 20140902: [SVE] interpolation
+//
+fixed_t R_GetLerp(void)
+{
+//    if(d_interpolate &&
+//        !(paused || (menupause && !demoplayback && !netgame)))
+//        return I_TimerGetFrac();
+//    else
+        return FRACUNIT;
+}
+
+//
+// R_LerpCoord
+//
+// Do linear interpolation on a fixed_t coordinate value from oldpos to
+// newpos.
+//
+fixed_t R_LerpCoord(fixed_t lerp, fixed_t oldpos, fixed_t newpos)
+{
+   return oldpos + FixedMul(lerp, newpos - oldpos);
+}
+
+//
+// R_interpolateViewPoint
+//
+// Interpolate a rendering view point based on the player's location.
+//
+void R_interpolateViewPoint(player_t *player, fixed_t lerp)
+{
+    if(lerp == FRACUNIT)
+    {
+        viewx     = player->mo->x;
+        viewy     = player->mo->y;
+        viewz     = player->viewz;
+        viewangle = player->mo->angle + viewangleoffset;
+    }
+    else
+    {
+        viewx     = R_LerpCoord(lerp, player->mo->prevpos.x,     player->mo->x);
+        viewy     = R_LerpCoord(lerp, player->mo->prevpos.y,     player->mo->y);
+        viewz     = R_LerpCoord(lerp, player->prevviewz,         player->viewz);
+        viewangle = R_LerpAngle(lerp, player->mo->prevpos.angle, player->mo->angle) + viewangleoffset;
+    }
+}
+
 //
 // R_SetupPitch
 // villsa [STRIFE] new function
 // Calculate centery/centeryfrac for player viewpitch
 //
-
 void R_SetupPitch(player_t* player)
 {
     int pitchfrac;
+    int pitchfrac2;
+
     int i = 0;
 
     if(viewpitch != player->pitch)
     {
-        viewpitch   = player->pitch;
-//        pitchfrac   = (setblocks * player->pitch) / 10;		// CHANGED FOR HIRES
-	pitchfrac = (setblocks * (player->pitch << hires)) / 10;	// CHANGED FOR HIRES
-        centery     = pitchfrac + viewheight / 2;
+        if (viewpitch > 90*FRACUNIT)
+            viewpitch = 90*FRACUNIT;
+
+        if (viewpitch < -110*FRACUNIT)
+            viewpitch = -110*FRACUNIT;
+
+//	pitchfrac  = (setblocks *  player->pitch)			/ 10;	// FOR HIRES (ORIGINAL)
+
+        pitchfrac  = (setblocks * (player->recoilpitch	>> FRACBITS))	/ 5;	// [SVE] (RECOIL)
+	pitchfrac2 = (setblocks * (player->pitch	<< hires))	/ 10;	// FOR HIRES (HIRES)
+
+        centery     = pitchfrac + pitchfrac2 + viewheight / 2;
+
         centeryfrac = centery << FRACBITS;
 
         for(i = 0; i < viewheight; i++)
@@ -930,7 +1024,6 @@ void R_SetupPitch(player_t* player)
     }
 }
 
-
 //
 // R_SetupFrame
 //
@@ -938,14 +1031,19 @@ void R_SetupFrame (player_t* player)
 {		
     int		i;
     
+    // haleyjd 20140902: [SVE] interpolation
+    viewlerp = R_GetLerp();
+
     R_SetupPitch(player);  // villsa [STRIFE]
 
     viewplayer = player;
+
+    R_interpolateViewPoint(player, viewlerp);
+
     viewx = player->mo->x;
     viewy = player->mo->y;
     viewangle = player->mo->angle + viewangleoffset;
     extralight = player->extralight;
-
     viewz = player->viewz;
     
     viewsin = finesine[viewangle>>ANGLETOFINESHIFT];

@@ -42,6 +42,7 @@
 #include "sounds.h"
 
 #include "v_video.h"
+#include "p_spec.h"
 
 //
 // Locally used constants, shortcuts.
@@ -77,6 +78,9 @@ char *chat_macros[10] =
     HUSTR_CHATMACRO9
 };
 */
+
+#define HU_NOTIFICATIONY    160
+
 // villsa [STRIFE]
 char player_names[8][16] =
 {
@@ -120,9 +124,24 @@ extern int		crosshair;
 
 static boolean          headsupactive = false;
 
+// [SVE] haleyjd: notification positions for notification widget
+enum notificationpos_e
+{
+    NOTIFY_POS_STATBAR,
+    NOTIFY_POS_FULLSCREEN
+};
+
+// [SVE] svillarreal
+static hu_stext_t       w_notification;
+static boolean          notification_on;
+static int              notification_counter;
+static int              notification_pos;
+static int              notification_y;
+
 static char hud_monsecstr[80];				// ADDED FOR PSP-STATS
 
 extern int		screenSize;
+extern int		screenblocks;
 // haleyjd 20130915 [STRIFE]: need nickname
 //extern char *nickname;
 
@@ -235,6 +254,7 @@ void HU_Start(void)
 //    int         i;
     char*       s;
     char*       t;
+    boolean	netgame = false;
 
     // haleyjd 20120211: [STRIFE] not called here.
     //if (headsupactive)
@@ -253,7 +273,12 @@ void HU_Start(void)
                        HU_FONTSTART);
 
     // haleyjd 08/31/10: [STRIFE] Get proper map name.
-    s = HU_TITLE;
+    // [SVE]: rangecheck to allow maps >= number of built-in maps
+    if(gamemap - 1 < HU_NUMMAPNAMES)
+        s = HU_TITLE;
+    else
+        s = "New Area";
+
     t = hud_monsecstr;
 
     // [STRIFE] Removed Chex Quest stuff.
@@ -287,7 +312,24 @@ void HU_Start(void)
                         HU_INPUTX, HU_INPUTY,
                         hu_font,
                         HU_FONTSTART, &chat_on);
+*/
+        if(screenblocks > 10)
+        {
+            notification_pos = NOTIFY_POS_FULLSCREEN;
+            notification_y   = HU_NOTIFICATIONY + 24;
+        }
+        else
+        {
+            notification_pos = NOTIFY_POS_STATBAR;
+            notification_y   = HU_NOTIFICATIONY;
+        }
 
+        // [SVE] svillarreal - create the notification widget
+        HUlib_initSText(&w_notification,
+                        -1, notification_y, netgame ? 1 : HU_MSGHEIGHT,
+                        yfont,
+                        HU_FONTSTART, &notification_on);
+/*
         // create the inputbuffer widgets
         for (i=0 ; i<MAXPLAYERS ; i++)
             HUlib_initIText(&w_inputbuffer[i], 0, 0, 0, 0, &always_off);
@@ -315,6 +357,9 @@ void HU_Start(void)
 void HU_Drawer(void)
 {
 //    const char* t; // cph - const				// ADDED FOR PSP-STATS
+    static boolean lasthudchanged = false;
+    boolean hudchanged;
+    boolean netgame = false;
 
     if(!automapactive && !demoplayback && crosshair == 1)
     {
@@ -324,10 +369,11 @@ void HU_Drawer(void)
 	    V_DrawPatch(158, 98, W_CacheLumpName(DEH_String("XHAIR"), PU_CACHE));
     }
     HUlib_drawSText(&w_message);
+    HUlib_drawSText(&w_notification);
 //    HUlib_drawIText(&w_chat);
     if (automapactive)
     {
-        HUlib_drawTextLine(&w_title, false);
+        HUlib_drawTextLine(&w_title, false, false);
 /*
         // display the hud kills/items/secret display if optioned
         if (show_stats == 1)
@@ -363,6 +409,21 @@ void HU_Drawer(void)
         }
 */
     }
+
+    hudchanged = (screenblocks > 10);
+
+    // [SVE] svillarreal - need to change the offset for notifications
+    // if the hud changed at all
+    if(lasthudchanged != hudchanged)
+    {
+        notification_pos = hudchanged ? NOTIFY_POS_FULLSCREEN : NOTIFY_POS_STATBAR;
+        notification_y   = hudchanged ? HU_NOTIFICATIONY + 24 : HU_NOTIFICATIONY;
+
+        HUlib_initSText(&w_notification, -1, notification_y, netgame ? 1 : HU_MSGHEIGHT,
+                        yfont, HU_FONTSTART, &notification_on);
+
+        lasthudchanged = hudchanged;
+    }
 }
 
 //
@@ -376,6 +437,49 @@ void HU_Erase(void)
 //    HUlib_eraseIText(&w_chat);
     HUlib_eraseTextLine(&w_title);
     HUlib_eraseTextLine(&w_monsec);
+}
+
+//
+// HU_SetNotification
+//
+// [SVE] svillarreal - broadcast a special message
+//
+
+void HU_SetNotification(char *message)
+{
+    S_StartSound(NULL, sfx_yeah);
+    notification_on = true;
+    notification_counter = HU_MSGTIMEOUT/2;
+
+    HUlib_addMessageToSText(&w_notification, NULL, message);
+    w_notification.l[w_notification.cl].x = (ORIGWIDTH/2) - (HUlib_yellowTextWidth(message)/2);
+}
+
+// 
+// HU_ShowTime
+//
+// [SVE] haleyjd 20141213: show timer countdown
+//
+void HU_ShowTime(void)
+{
+    char timestr[90];
+    int minutes;
+    int seconds;
+
+    if(!levelTimer || levelTimeCount <= 0)
+        return;
+
+    // [SVE]: enhanced output
+    minutes = ((levelTimeCount/TICRATE) / 60) % 60;
+    seconds = (levelTimeCount/TICRATE) % 60;
+
+    M_snprintf(timestr, sizeof(timestr), "%02d:%02d", minutes, seconds);
+
+    notification_on = true;
+    notification_counter = 2;
+
+    HUlib_addMessageToSText(&w_notification, NULL, timestr);
+    w_notification.l[w_notification.cl].x = (SCREENWIDTH/2) - (HUlib_yellowTextWidth(timestr)/2);
 }
 
 //
@@ -480,16 +584,37 @@ void HU_addMessage(char *prefix, char *message)
 //
 void HU_Ticker(void)
 {
+    int i/*, rc*/;
 /*
-    int i, rc;
     char c;
     //char *prefix;  STRIFE-TODO
 */
+    // [SVE]: show time limit if active
+    HU_ShowTime();
+
     // tick down message counter if message is up
     if (message_counter && !--message_counter)
     {
         message_on = false;
         message_nottobefuckedwith = false;
+    }
+
+    // [SVE] svillarreal - update notification widget
+    if(--notification_counter > 0)
+        notification_on = !automapactive;
+    else
+    {
+        w_notification.cl = 0;
+
+        // clear all text
+        for(i = 0; i < w_notification.h; i++)
+        {
+            w_notification.l[i].l[0] = 0;
+            w_notification.l[i].len = 0;
+        }
+
+        notification_on = false;
+        notification_counter = 0;
     }
 
     // haleyjd 20110219: [STRIFE] this condition WAS removed			(ENABLED FOR PSP)
@@ -781,3 +906,4 @@ boolean HU_Responder(event_t *ev)
 */
     return eatkey;
 }
+

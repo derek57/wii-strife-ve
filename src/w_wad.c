@@ -176,7 +176,7 @@ wad_file_t *W_AddFile (char *filename)
         // them back.  Effectively we're constructing a "fake WAD directory"
         // here, as it would appear on disk.
 
-	fileinfo = Z_Malloc(sizeof(filelump_t), PU_STATIC, 0);
+	fileinfo = Z_Malloc(sizeof(filelump_t), PU_STATIC, 0, "W_AddFile -> fileinfo (1)");
 	fileinfo->filepos = LONG(0);
 	fileinfo->size = LONG(wad_file->length);
 
@@ -206,7 +206,7 @@ wad_file_t *W_AddFile (char *filename)
 	header.numlumps = LONG(header.numlumps);
 	header.infotableofs = LONG(header.infotableofs);
 	length = header.numlumps*sizeof(filelump_t);
-	fileinfo = Z_Malloc(length, PU_STATIC, 0);
+	fileinfo = Z_Malloc(length, PU_STATIC, 0, "W_AddFile -> fileinfo (2)");
 
         W_Read(wad_file, header.infotableofs, fileinfo, length);
 	newnumlumps += header.numlumps;
@@ -232,11 +232,11 @@ wad_file_t *W_AddFile (char *filename)
         ++filerover;
     }
 
-    Z_Free(fileinfo);
+    Z_Free(fileinfo, "W_AddFile -> fileinfo");
 
     if (lumphash != NULL)
     {
-        Z_Free(lumphash);
+        Z_Free(lumphash, "W_AddFile -> lumphash");
         lumphash = NULL;
     }
 
@@ -420,7 +420,7 @@ void *W_CacheLumpNum(int lumpnum, int tag)
     {
         // Not yet loaded, so load it now
 
-        lump->cache = Z_Malloc(W_LumpLength(lumpnum), tag, &lump->cache);
+        lump->cache = Z_Malloc(W_LumpLength(lumpnum), tag, &lump->cache, "W_CacheLumpNum");
 	W_ReadLump (lumpnum, lump->cache);
         result = lump->cache;
     }
@@ -550,13 +550,13 @@ void W_GenerateHashTable(void)
 
     if (lumphash != NULL)
     {
-        Z_Free(lumphash);
+        Z_Free(lumphash, "W_GenerateHashTable -> lumphash");
     }
 
     // Generate hash table
     if (numlumps > 0)
     {
-        lumphash = Z_Malloc(sizeof(lumpinfo_t *) * numlumps, PU_STATIC, NULL);
+        lumphash = Z_Malloc(sizeof(lumpinfo_t *) * numlumps, PU_STATIC, NULL, "W_GenerateHashTable");
         memset(lumphash, 0, sizeof(lumpinfo_t *) * numlumps);
 
         for (i=0; i<numlumps; ++i)
@@ -707,7 +707,7 @@ void W_CheckSize(int wad)		// FOR THE PSP SOURCE PORT (TAKEN FROM PSPHEXEN BUT H
 	    fseek(fprw, 0, 2);		// file pointer at the end of file
 	    fsizerw = ftell(fprw);	// take a position of file pointer un size variable
 
-	    if(fsizerw != 2683696)
+	    if(fsizerw != 2897623)
 		print_resource_pwad_error = true;
 
 	    fclose(fprw);

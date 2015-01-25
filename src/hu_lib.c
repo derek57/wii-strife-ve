@@ -98,6 +98,50 @@ void HUlib_drawYellowText(int x, int y, char *text)
 }
 
 //
+// HUlib_yellowTextWidth
+//
+// haleyjd 20141009: [SVE]
+// NB: Only works if the string doesn't get wrapped.
+//
+int HUlib_yellowTextWidth(const char *text)
+{
+    int width = 0;
+    int widestwidth = 0;
+    const char *rover = text;
+    char c;
+
+    while((c = *rover++))
+    {
+        if(c == '\n')
+        {
+            if(width > widestwidth)
+                widestwidth = width;
+            width = 0;
+            continue;
+        }
+
+        if(c == '_')
+            c = ' ';
+
+        c = toupper(c) - HU_FONTSTART;
+
+        if(c >= 0 && c < HU_FONTSIZE)
+        {
+            patch_t *patch = yfont[(int) c];
+            width += SHORT(patch->width);
+        }
+        else
+        {
+            width += 4;
+        }
+    }
+    if(width > widestwidth)
+        widestwidth = width;
+
+    return widestwidth;
+}
+
+//
 // HUlib_init
 //
 // [STRIFE] Verified unmodified.
@@ -179,44 +223,78 @@ boolean HUlib_delCharFromTextLine(hu_textline_t* t)
 // HUlib_drawTextLine
 //
 // haleyjd 09/18/10: [STRIFE] Modified to not draw underscores in text.
+// [SVE] svillarreal - longtext param added
 //
-void
-HUlib_drawTextLine
-( hu_textline_t*        l,
-  boolean               drawcursor )
+void HUlib_drawTextLine(hu_textline_t* l, boolean drawcursor, boolean longtext)
 {
     int                 i;
     int                 w;
     int                 x;
     unsigned char       c;
+    int                 start;
 
     // draw the new stuff
     x = l->x;
+    start = 0;
 
-    for(i = 0; i < l->len; i++)
+    // [SVE] svillarreal - if text is going off the screen, then pick a position
+    // to offset the text by
+    if(longtext)
+    {
+        for(i = 0; i < l->len; i++)
+        {
+            c = toupper(l->l[i]);
+            if(c != ' ' && c >= l->sc && c < '_') // [STRIFE]: Underscores excluded
+            {
+                w = SHORT(l->f[c - l->sc]->width);
+                if(x+w > SCREENWIDTH)
+                {
+                    start = l->len - i;
+                    break;
+                }
+
+                x += w;
+            }
+            else
+            {
+                x += 4;
+
+                if(x >= SCREENWIDTH)
+                {
+                    start = l->len - i;
+                    break;
+                }
+            }
+        }
+
+        x = l->x;
+    }
+
+    for(i = start; i < l->len; i++)
     {
         c = toupper(l->l[i]);
-        if (c != ' ' && c >= l->sc && c < '_') // [STRIFE]: Underscores excluded
+        if(c != ' ' && c >= l->sc && c < '_') // [STRIFE]: Underscores excluded
         {
             w = SHORT(l->f[c - l->sc]->width);
-            if (x+w > SCREENWIDTH)
+            if(x+w > SCREENWIDTH)
                 break;
-            V_DrawPatch(x, l->y, l->f[c - l->sc]);
+
+            V_DrawPatchDirect(x, l->y, l->f[c - l->sc]);
             x += w;
         }
         else
         {
             x += 4;
-            if (x >= SCREENWIDTH)
+
+            if(x >= SCREENWIDTH)
                 break;
         }
     }
 
     // draw the cursor if requested
-    if (drawcursor
-        && x + SHORT(l->f['_' - l->sc]->width) <= SCREENWIDTH)
+    if(drawcursor && x + SHORT(l->f['_' - l->sc]->width) <= SCREENWIDTH)
     {
-        V_DrawPatch(x, l->y, l->f['_' - l->sc]);
+        V_DrawPatchDirect(x, l->y, l->f['_' - l->sc]);
     }
 }
 
@@ -348,7 +426,7 @@ void HUlib_drawSText(hu_stext_t* s)
         l = &s->l[idx];
 
         // need a decision made here on whether to skip the draw
-        HUlib_drawTextLine(l, false); // no cursor, please
+        HUlib_drawTextLine(l, false, false); // no cursor, please
     }
 }
 

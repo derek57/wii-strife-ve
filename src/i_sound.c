@@ -55,6 +55,7 @@ char *snd_musiccmd = "";
 static sound_module_t *sound_module;
 static music_module_t *music_module;
 
+int default_snd_musicdevice = SNDDEVICE_GENMIDI; // [SVE]
 int snd_musicdevice = SNDDEVICE_SB;
 int snd_sfxdevice = SNDDEVICE_SB;
 

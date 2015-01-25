@@ -38,6 +38,7 @@
 #define MAPBMASK		(MAPBLOCKSIZE-1)
 #define MAPBTOFRAC		(MAPBLOCKSHIFT-FRACBITS)
 
+#define MLOOKUNIT	1
 
 // player radius for movement checking
 #define PLAYERRADIUS	16*FRACUNIT
@@ -58,11 +59,30 @@
 // follow a player exlusively for 3 seconds
 #define	BASETHRESHOLD	 	100
 
+#define UNLIMITED                               32768
+#define BLOODSPLATS_MIN                         0
+#define BLOODSPLATS_DEFAULT                     UNLIMITED
+#define BLOODSPLATS_MAX                         UNLIMITED
+/*
+#define MIRROR                                  1
+#define SLIDE                                   2
+#define SMEARBLOOD                              4
+*/
+#define MOREBLOOD                               8
+#define CORPSES_MIN                             0
+#define CORPSES_DEFAULT                         (/*MIRROR | SLIDE | SMEARBLOOD |*/ MOREBLOOD)
+#define CORPSES_MAX                             (/*MIRROR | SLIDE | SMEARBLOOD |*/ MOREBLOOD)
 
+
+extern mobj_t           *bloodSplatQueue[BLOODSPLATS_MAX];
+extern int              bloodSplatQueueSlot;
+extern int              bloodsplats;
 
 //
 // P_TICK
 //
+
+player_t* p2fromp (player_t* player);
 
 // both the head and tail of the thinker list
 extern	thinker_t	thinkercap;	
@@ -109,6 +129,9 @@ extern int		itemrespawntime[ITEMQUESIZE];
 extern int		iquehead;
 extern int		iquetail;
 
+extern mobj_t           *bloodSplatQueue[BLOODSPLATS_MAX];
+extern int              bloodSplatQueueSlot;
+extern int              bloodsplats;
 
 void P_RespawnSpecials (void);
 
@@ -124,13 +147,14 @@ mobj_t* P_SubstNullMobj (mobj_t* th);
 boolean	P_SetMobjState (mobj_t* mobj, statenum_t state);
 void 	P_MobjThinker (mobj_t* mobj);
 
-void	P_SpawnPuff (fixed_t x, fixed_t y, fixed_t z);
+//void	P_SpawnPuff (fixed_t x, fixed_t y, fixed_t z);
+mobj_t *P_SpawnPuff(fixed_t x, fixed_t y, fixed_t z);
 mobj_t* P_SpawnSparkPuff(fixed_t x, fixed_t y, fixed_t z);  // villsa [STRIFE]
 void 	P_SpawnBlood (fixed_t x, fixed_t y, fixed_t z, int damage);
 mobj_t* P_SpawnMissile (mobj_t* source, mobj_t* dest, mobjtype_t type);
 mobj_t* P_SpawnFacingMissile(mobj_t* source, mobj_t* target, mobjtype_t type);  // villsa [STRIFE]
 mobj_t* P_SpawnPlayerMissile(mobj_t* source, mobjtype_t type);
-mobj_t* P_SpawnMortar(mobj_t *source, mobjtype_t type); // villsa [STRIFE]
+mobj_t* P_SpawnMortar(mobj_t *source, mobj_t *target, mobjtype_t type); // villsa [STRIFE]
 void    P_ExplodeMissile (mobj_t* mo); // villsa [STRIFE]
 
 
@@ -144,6 +168,8 @@ void A_AlertSpectreC(mobj_t* actor);
 void A_FaceTarget (mobj_t* actor);
 void P_FreePrisoners(void);
 void P_DestroyConverter(void);
+
+fixed_t P_PitchToFixedSlope(const int pitch);
 
 //
 // P_MAPUTL
@@ -198,7 +224,7 @@ boolean P_BlockThingsIterator (int x, int y, boolean(*func)(mobj_t*) );
 #define PT_ADDTHINGS	2
 #define PT_EARLYOUT		4
 
-extern divline_t	trace;
+extern divline_t	p_trace;
 
 boolean
 P_PathTraverse

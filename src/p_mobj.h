@@ -38,6 +38,16 @@
 
 
 
+// haleyjd 20140902: [SVE]
+// prevpos_t represents an Mobj or camera's previous position for purposes of
+// frame interpolation in the renderer. - haleyjd 01/04/14
+typedef struct prevpos_s
+{
+   fixed_t x;
+   fixed_t y;
+   fixed_t z;
+   angle_t angle;
+} prevpos_t;
 
 
 
@@ -231,6 +241,35 @@ typedef enum
 
 } mobjflag_t;
 
+// haleyjd 20140818: [SVE] flags2 enumeration
+// [SVE] svillarreal - updated 20141109
+typedef enum
+{
+    MF2_NOSTONECOLD         = 0x00000001,   // not killed by STONECOLD cheat
+    MF2_DRAWBILLBOARD       = 0x00000002,   // render sprite as a billboard
+    MF2_DRAWOUTLINE         = 0x00000004,   // render outline around sprite
+    MF2_NOTHINGBLOCK        = 0x00000008,   // does not collide with other mobjs
+    MF2_MARKDECAL           = 0x00000010,   // leave a decal in some way
+    MF2_NOREBELATTACK       = 0x00000020,   // rebels shouldn't attack w/o provocation
+    MF2_IGNORENOMONSTERS    = 0x00000040,   // will always spawn even if -nomonsters is set
+
+    // Mirrored horizontally
+    MF2_MIRRORED            = 0x00002000,
+
+    // Object's feet won't be clipped in liquid
+    MF2_NOFOOTCLIP          = 0x00040000,
+
+    // Object is blood
+    MF2_BLOOD               = 0x00400000,
+
+    // Object is drawn first
+    MF2_DRAWFIRST           = 0x00800000,
+
+    // Object's thing triangle is not displayed in automap
+    MF2_DONOTMAP            = 0x01000000
+
+} mobjflag2_t;
+
 typedef unsigned long long uint_64_t;			// ADDED FOR PSP-STATS
 // On picking up, count this item object
 //  towards intermission item total.
@@ -260,6 +299,9 @@ typedef struct mobj_s
     angle_t             angle;  // orientation
     spritenum_t         sprite; // used to find patch_t and flip value
     int                 frame;  // might be ORed with FF_FULLBRIGHT
+
+    // haleyjd 20140902: [SVE] interpolation data
+    prevpos_t           prevpos;
 
     // Interaction info, by BLOCKMAP.
     // Links in blocks (if needed).
@@ -326,9 +368,32 @@ typedef struct mobj_s
     // * In single-player this tracks dialog state.
     byte                miscdata;
     
+    void                (*colfunc)(void);
+
+    int                 bloodsplats;
+
+    int                 blood;
+
 } mobj_t;
 
 // haleyjd [STRIFE] Exported
 void P_CheckMissileSpawn (mobj_t* th);
+
+void P_MobjBackupPosition(mobj_t *mo);	// [SVE]
+
+#define FUZZYBLOOD              -1
+#define CORPSEBLOODSPLATS       512
+
+//
+// P_NullMobjThinker
+//
+void P_NullMobjThinker(mobj_t *mobj);
+
+//
+// P_SpawnBloodSplat
+//
+void P_SpawnBloodSplat(fixed_t x, fixed_t y, int blood, int maxheight);
+void P_SpawnBloodSplat2(fixed_t x, fixed_t y, int blood, int maxheight);
+void P_NullBloodSplatSpawner(fixed_t x, fixed_t y, int blood, int maxheight);
 
 #endif

@@ -17,6 +17,7 @@
 //
 
 
+#include <math.h>
 #include <stdio.h>
 
 #include "deh_str.h"
@@ -46,6 +47,8 @@
 #include "am_map.h"
 
 #include "doomfeatures.h"
+
+#include "p_locations.h"
 
 // Automap colors
 #define BACKGROUND      240         // haleyjd [STRIFE]
@@ -176,6 +179,14 @@ mline_t thintriangle_guy[] = {
 };
 #undef R
 
+// haleyjd 20140825: [SVE] objective marker
+#define R (FRACUNIT)
+mline_t cross_mark[] =
+{
+  { { -R, 0 }, { R, 0 } },
+  { { 0, -R }, { 0, R } },
+};
+#undef R
 
 
 
@@ -339,8 +350,8 @@ void AM_addMark(void)
 {
     markpoints[markpointnum].x = m_x + m_w/2;
     markpoints[markpointnum].y = m_y + m_h/2;
-    markpointnum = (markpointnum + 1) % AM_NUMMARKPOINTS;
-
+    //markpointnum = (markpointnum + 1) % AM_NUMMARKPOINTS;
+    ++markpointnum; // [STRIFE]: does not wrap around
 }
 
 //
@@ -1392,10 +1403,49 @@ void AM_drawMarks(void)
 }
 
 // villsa [STRIFE] unused
-/*void AM_drawCrosshair(int color)
+/*
+void AM_drawCrosshair(int color)
 {
     fb[(f_w*(f_h+1))/2] = color; // single point for now
-}*/
+}
+*/
+
+//
+// AM_drawActiveLocation
+//
+// haleyjd 20140825: [SVE] Draw one active location.
+//
+static void AM_drawActiveLocation(location_t *loc)
+{
+    if(loc->levelnum == gamemap)
+    {
+  	fixed_t x = loc->x, y = loc->y;
+
+  	if (automapactive & am_rotate)
+  	    AM_rotate(&x, &y, ANG90-plr->mo->angle, plr->mo->x, plr->mo->y);
+
+	if(leveltime & 16)
+	    AM_drawLineCharacter(cross_mark, arrlen(cross_mark), 24*FRACUNIT, loc->angle, 
+                             SHOOTABLECOLORS, x, y);
+/*
+        if(use3drenderer)
+        {
+            RB_DrawObjectiveMarker(loc->x, loc->y);
+        }
+*/
+    }
+}
+
+//
+// AM_drawObjectives
+//
+// haleyjd 20140825: [SVE] New function for drawing objective markers on the
+// automap.
+//
+static void AM_drawObjectives(void)
+{
+    P_ActiveLocationIterator(AM_drawActiveLocation);
+}
 
 void AM_Drawer (void)
 {
@@ -1414,6 +1464,10 @@ void AM_Drawer (void)
     if(cheating == 2 || plr->powers[pw_allmap] > 1)
         AM_drawThings();
 
+    // haleyjd 20140825: [SVE] draw objective markers
+    if(!classicmode)
+        AM_drawObjectives();
+
     // villsa [STRIFE] not used
     //AM_drawCrosshair(XHAIRCOLORS);
 
@@ -1421,3 +1475,4 @@ void AM_Drawer (void)
     V_MarkRect(f_x, f_y, f_w, f_h);
 
 }
+

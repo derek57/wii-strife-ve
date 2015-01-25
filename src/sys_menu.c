@@ -14,7 +14,7 @@
 #include "sys_globals.h"
 
 #include "video.h"
-#include "d2x-cios-installer.h"
+#include "mainmenu.h"
 #include "gui.h"
 
 #include "doomfeatures.h"

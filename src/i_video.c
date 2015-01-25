@@ -52,6 +52,8 @@
 #include <wiiuse/wpad.h>
 #include <wiilight.h>
 
+#include "r_local.h"
+
 #define WII_LIGHT_OFF                0
 #define WII_LIGHT_ON                 1
 
@@ -213,6 +215,9 @@ static boolean native_surface;
 
 int screen_width = SCREENWIDTH;
 int screen_height = SCREENHEIGHT;
+
+int default_screen_width = SCREENWIDTH;
+int default_screen_height = SCREENHEIGHT;
 
 // Color depth.
 
@@ -461,15 +466,15 @@ void I_EnableLoadingDisk(void)
     // Draw the patch into a temporary buffer
 
 //    tmpbuf = Z_Malloc(SCREENWIDTH * (disk->height + 1), PU_STATIC, NULL);		// CHANGED FOR HIRES
-    tmpbuf = Z_Malloc(SCREENWIDTH * ((disk->height + 1) << hires), PU_STATIC, NULL);	// CHANGED FOR HIRES
+    tmpbuf = Z_Malloc(SCREENWIDTH * ((disk->height + 1) << hires), PU_STATIC, NULL, "I_EnableLoadingDisk -> tmpbuf");	// CHANGED FOR HIRES
     V_UseBuffer(tmpbuf);
 
     // Draw the disk to the screen:
 
     V_DrawPatch(0, 0, disk);
 
-    disk_image = Z_Malloc(LOADING_DISK_W * LOADING_DISK_H, PU_STATIC, NULL);
-    saved_background = Z_Malloc(LOADING_DISK_W * LOADING_DISK_H, PU_STATIC, NULL);
+    disk_image = Z_Malloc(LOADING_DISK_W * LOADING_DISK_H, PU_STATIC, NULL, "I_EnableLoadingDisk -> disk_image");
+    saved_background = Z_Malloc(LOADING_DISK_W * LOADING_DISK_H, PU_STATIC, NULL, "I_EnableLoadingDisk -> saved_background");
 
     for (y=0; y<LOADING_DISK_H; ++y) 
     {
@@ -483,7 +488,7 @@ void I_EnableLoadingDisk(void)
 
     W_ReleaseLumpName(disk_name);
     V_RestoreBuffer();
-    Z_Free(tmpbuf);
+    Z_Free(tmpbuf, "I_EnableLoadingDisk");
 }
 
 //
@@ -2282,7 +2287,7 @@ void I_InitGraphics(void)
     else
     {
 	I_VideoBuffer = (unsigned char *) Z_Malloc(SCREENWIDTH * SCREENHEIGHT,
-                                                   PU_STATIC, NULL);
+                                                   PU_STATIC, NULL, "I_InitGraphics");
     }
 
     V_RestoreBuffer();

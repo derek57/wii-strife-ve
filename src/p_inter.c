@@ -43,6 +43,9 @@
 
 #include "doomfeatures.h"
 
+#include "p_tick.h"
+#include "st_stuff.h"
+
 #define BONUSADD    6
 
 #ifdef SHAREWARE
@@ -56,6 +59,9 @@ extern boolean STRIFE_1_1_SHAREWARE;
 int maxammo[NUMAMMO]    = { 250, 50, 25, 400, 100, 30, 16 };
 int clipammo[NUMAMMO]   = { 10, 4, 2, 20, 4, 6, 4 };
 
+// [SVE] svillarreal
+mobj_t *curignitemobj = NULL;
+int numignitechains = 0;
 
 //
 // GET STUFF
@@ -75,9 +81,12 @@ boolean P_GiveAmmo(player_t* player, ammotype_t ammo, int num)
 
     if(ammo == am_noammo)
         return false;
-
+/*
     if(ammo > NUMAMMO)
         I_Error ("P_GiveAmmo: bad type %i", ammo);
+*/
+    if(ammo > NUMAMMO)
+        return false; // haleyjd 20140816: [SVE] stability
 
     if(player->ammo[ammo] == player->maxammo[ammo])
         return false;
@@ -239,6 +248,7 @@ boolean P_GiveBody(player_t* player, int num)
 {
     int maxhealth;
     int healing;
+    mobj_t *mo; // haleyjd 20110225: needed below...
 
     maxhealth = MAXHEALTH + player->stamina;
 
@@ -286,6 +296,13 @@ boolean P_GiveBody(player_t* player, int num)
 
         // Set health. BUG: Oddly, mo->health is NOT set here...
         player->health = healing;
+
+        // haleyjd 20140817: [SVE] fix above problem.
+        if(!classicmode)
+        {
+            mo = P_SubstNullMobj(player->mo);
+            mo->health = player->health;
+        }
     }
 
     return true;
@@ -759,6 +776,7 @@ static char plrkilledmsg[80];
 void P_KillMobj(mobj_t* source, mobj_t* target)
 {
     mobjtype_t  item;
+//    mobjtype_t  type = target->type;
     mobj_t*     mo;
     line_t      junk;
     int         i;
@@ -776,6 +794,9 @@ void P_KillMobj(mobj_t* source, mobj_t* target)
     target->flags |= MF_CORPSE|MF_DROPOFF;
 
     target->height = FRACUNIT;  // villsa [STRIFE] set to fracunit instead of >>= 2
+
+    if (!(target->flags & MF_SHADOW))
+        target->bloodsplats = CORPSEBLOODSPLATS;
 
     if(source && source->player)
     {
@@ -880,7 +901,13 @@ void P_KillMobj(mobj_t* source, mobj_t* target)
             P_SetMobjState(target, S_DISR_00);  // 373
         else
         {
-            if(target->health < -target->info->spawnhealth 
+            int minhealth = target->info->spawnhealth;
+
+            // [SVE] svillarreal - increase chance of gibbing
+            if(d_maxgore)
+                minhealth >>= 1;
+
+            if(target->health < -minhealth && -target->info->spawnhealth 
                 && target->info->xdeathstate)
                 P_SetMobjState(target, target->info->xdeathstate);
             else
@@ -1042,32 +1069,16 @@ void P_KillMobj(mobj_t* source, mobj_t* target)
         mo->flags |= (MF_SPECIAL|MF_DROPPED);   // special versions of items
     }
 
-    // FOR PSP: STRIFE v1.1 Shareware: on the first map, the green Acolyte SHOULD drop a Passcard
-    // which is required for the player to be able to open up the first door in the sector.
-    //
-    // While the allocation of the items in the Shareware EXE differs those of the registered version,
-    // it was not possible to drop this item with this source port (YET). BUT NOW IT IS!!! ;-)
-/*
-#ifdef SHAREWARE
-    if(STRIFE_1_1_SHAREWARE && passcard_was_dropped == 0 && gamemap == 33) // IN 'DEMO' , 1 TIME , MAP 1
+    // [SVE] svillarreal
+    if((target->type >= MT_GUARD1 && target->type <= MT_SHADOWGUARD) &&
+        curignitemobj == target)
     {
-    	if(mobjinfo[item].flags & MF_NOTDMATCH && item == MT_KEY_TRAVEL) // ONLY THE PASSCARD
-    	{
-    	    int r;
-
-    	    mo = P_SpawnMobj(target->x, target->y, target->z + (24*FRACUNIT), MT_KEY_TRAVEL); // DROP IT
-    	    r = P_Random();
-    	    mo->momx += ((r & 7) - (P_Random() & 7)) << FRACBITS;
-    	    r = P_Random();
-    	    mo->momy += ((r & 7) - (P_Random() & 7)) << FRACBITS;
-    	    mo->flags |= (MF_SPECIAL|MF_DROPPED);   			// special versions of items
-
-	    passcard_was_dropped = 1;					// THE PASSCARD HAS BEEN DROPPED
-	}
+        // reset the chain if 'fully' dead
+        P_SetTarget(&curignitemobj, NULL);
+        numignitechains = 0;
     }
-#endif
-*/
 }
+
 
 //
 // P_IsMobjBoss
@@ -1118,6 +1129,16 @@ void P_DamageMobj(mobj_t* target, mobj_t* inflictor, mobj_t* source, int damage)
 
     if(target->health <= 0)
         return;
+
+    // haleyjd 20140827: [SVE] don't allow damaging or killing objects that hold
+    // progress-blocking items that the player doesn't have yet and the things 
+    // don't drop when killed.
+    if(!classicmode && P_CheckForBlockingItems(target))
+    {
+        target->flags &= ~MF_NODIALOG;
+        target->flags |= (target->info->flags & MF_NODIALOG);
+        return;
+    }
 
     player = target->player;
 
@@ -1225,7 +1246,7 @@ void P_DamageMobj(mobj_t* target, mobj_t* inflictor, mobj_t* source, int damage)
         || target->type == MT_RLEADER)
     {
         if(source)
-            target->target = source;
+            P_SetTarget(&target->target, source);
 
         P_SetMobjState(target, target->info->painstate);
         return;
@@ -1286,6 +1307,11 @@ void P_DamageMobj(mobj_t* target, mobj_t* inflictor, mobj_t* source, int damage)
             damage = target->health - 1;
         }
 
+        // [SVE] svillarreal
+        if(d_dmgindictor && player == &players[consoleplayer])
+        {
+            ST_AddDamageMarker(source);
+        }
 
         // Below certain threshold,
         // ignore damage in GOD mode.
@@ -1335,7 +1361,7 @@ void P_DamageMobj(mobj_t* target, mobj_t* inflictor, mobj_t* source, int damage)
 
         // haleyjd 20110203 [STRIFE]: target->target set here
         if(target != source)
-            target->target = source;
+            P_SetTarget(&target->target, source);
 
         if(player->damagecount > 100)
             player->damagecount = 100;  // teleport stomp does 10k points...
@@ -1352,7 +1378,7 @@ void P_DamageMobj(mobj_t* target, mobj_t* inflictor, mobj_t* source, int damage)
     // villsa [STRIFE] auto use medkits
     if(player && player->health < 50)
     {
-        if(/*deathmatch || */player->cheats & CF_AUTOHEALTH)
+        if(player->cheats & CF_AUTOHEALTH)
         {
             while(player->health < 50 && P_UseInventoryItem(player, SPR_MDKT));
             while(player->health < 50 && P_UseInventoryItem(player, SPR_STMP));
@@ -1396,6 +1422,43 @@ void P_DamageMobj(mobj_t* target, mobj_t* inflictor, mobj_t* source, int damage)
                 P_SetPsprite(target->player, ps_flash, S_NULL);
             }
 
+            // [SVE] svillarreal - Spontaneous Combustion achievement
+            if((target->type >= MT_GUARD1 && target->type <= MT_SHADOWGUARD) &&
+                inflictor->type == MT_SFIREBALL)
+            {
+                if(curignitemobj == NULL && inflictor->target &&
+                    inflictor->target->player)
+                {
+                    P_SetTarget(&curignitemobj, target);
+                    numignitechains = 0;
+                }
+                else if(inflictor == curignitemobj || !(inflictor->flags & MF_MISSILE))
+                {
+                    P_SetTarget(&curignitemobj, target);
+                    numignitechains++;
+
+                    if(numignitechains == 3)
+                    {
+#ifdef _USE_STEAM_
+                        if(!I_SteamHasAchievement("SVE_ACH_FLAME_CHAIN") &&
+                            !P_CheckPlayersCheating(ACH_ALLOW_SP))
+                        {
+                            if(players[consoleplayer].powers[pw_communicator] == true)
+                                I_StartVoice(DEH_String("VOC219"));
+
+                            I_SteamSetAchievement("SVE_ACH_FLAME_CHAIN");
+                        }
+                        else
+#endif
+                        if(players[consoleplayer].powers[pw_communicator] == true &&
+                            !(M_Random() & 3) && !classicmode)
+                        {
+                            I_StartVoice(DEH_String("VOC219"));
+                        }
+                    }
+                }
+            }
+
             P_SetMobjState(target, S_BURN_00);  // 349
             S_StartSound(target, sfx_burnme);
 
@@ -1434,7 +1497,7 @@ void P_DamageMobj(mobj_t* target, mobj_t* inflictor, mobj_t* source, int damage)
     {
         // if not intent on another player,
         // chase after this one
-        target->target = source;
+        P_SetTarget(&target->target, source);
         target->threshold = BASETHRESHOLD;
 
         if(target->state == &states[target->info->spawnstate]

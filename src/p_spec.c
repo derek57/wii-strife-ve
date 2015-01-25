@@ -53,6 +53,7 @@
 
 extern boolean STRIFE_1_0_REGISTERED;
 extern boolean STRIFE_1_X_REGISTERED;
+extern boolean message_dontfuckwithme;
 
 //
 // Animating textures and planes
@@ -803,7 +804,9 @@ P_CrossSpecialLine
 
     case 52:
         // EXIT! - haleyjd 09/21/10: [STRIFE] Exit to level tag/100
-        G_ExitLevel (line->tag / 100);
+        // haleyjd 20140816: [SVE] no zombie exits
+        if(classicmode || (thing->player && thing->player->health >= 0))
+            G_ExitLevel(line->tag / 100);
         break;
 
     case 53:
@@ -1307,6 +1310,7 @@ P_CrossSpecialLine
         {
             int map  = line->tag / 100;
             int spot = line->tag % 100;
+            const char *mapname;
 
             if(thing->player->weaponowned[wp_sigil])
             {
@@ -1316,9 +1320,14 @@ P_CrossSpecialLine
                     map = 10;
             }
 
+            // [SVE]: rangecheck, to allow maps >= # of built-in maps
+            if(map - 1 < HU_NUMMAPNAMES)
+                mapname = DEH_String(mapnames[map - 1]) + 8;
+            else
+                mapname = DEH_String(" New Area");
+
             DEH_snprintf(crosslinestr, sizeof(crosslinestr), 
-                         "Entering%s", 
-                         DEH_String(mapnames[map - 1]) + 8);
+                         "Entering%s", mapname);
             thing->player->message = crosslinestr;
 /*
             if(netgame && deathmatch)
@@ -1528,7 +1537,14 @@ void P_PlayerInSpecialSector (player_t* player)
         player->secretcount++;	// [STRIFE] Don't have a secret count.
         sector->special = 0;
         if(player - players == consoleplayer)
+	{
+            if(!classicmode) // [SVE]
+            {
+                player->message = "You found a secret area!";
+                message_dontfuckwithme = true;
+            }
             S_StartSound(NULL, sfx_yeah);
+	}
         break;
 
     case 11:
@@ -1566,9 +1582,12 @@ void P_PlayerInSpecialSector (player_t* player)
         break;
 
     default:
+        // haleyjd 20140816: [SVE] stability
+/*
         I_Error ("P_PlayerInSpecialSector: "
                  "unknown special %i",
                  sector->special);
+*/
         break;
     };
 }
@@ -1599,11 +1618,10 @@ void P_UpdateSpecials (void)
         if(levelTimeCount) // [STRIFE] Does not allow to go negative
             levelTimeCount--;
         
-        /*
         // [STRIFE] Not done here. Exit lines check this manually instead.
-        if (!levelTimeCount)
+        // [SVE]: restored as is expected behavior.
+        if(!levelTimeCount)
             G_ExitLevel(0);
-        */
     }
 
     //  ANIMATE FLATS AND TEXTURES GLOBALLY
@@ -1841,7 +1859,7 @@ int EV_DoDonut(line_t*	line)
             }
 
 	    //	Spawn rising slime
-	    floor = Z_Malloc (sizeof(*floor), PU_LEVSPEC, 0);
+	    floor = Z_Malloc (sizeof(*floor), PU_LEVSPEC, 0, "EV_DoDonut -> floor (1)");
 	    P_AddThinker (&floor->thinker);
 	    s2->specialdata = floor;
 	    floor->thinker.function.acp1 = (actionf_p1) T_MoveFloor;
@@ -1855,7 +1873,7 @@ int EV_DoDonut(line_t*	line)
 	    floor->floordestheight = s3_floorheight;
 	    
 	    //	Spawn lowering donut-hole
-	    floor = Z_Malloc (sizeof(*floor), PU_LEVSPEC, 0);
+	    floor = Z_Malloc (sizeof(*floor), PU_LEVSPEC, 0, "EV_DoDonut -> floor (2)");
 	    P_AddThinker (&floor->thinker);
 	    s1->specialdata = floor;
 	    floor->thinker.function.acp1 = (actionf_p1) T_MoveFloor;

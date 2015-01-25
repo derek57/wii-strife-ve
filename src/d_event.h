@@ -107,6 +107,8 @@ typedef enum
     BT2_INVDROP         = 16,
     // Jump up and down
     BT2_JUMP            = 32,
+    // [SVE]: If this bit is set, client has full 3D look range
+    BT2_LOOKRANGE       = 64,
     // Use medkit
     BT2_HEALTH          = 128,
   

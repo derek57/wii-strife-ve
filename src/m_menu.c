@@ -61,13 +61,17 @@
 #include "p_dialog.h"
 
 #include "doomfeatures.h"
+#include "fe_funcs.h"
+#include "hu_lib.h"
+#include "f_wipe.h"
+#include "f_finale.h"
 /*
 #include <psppower.h>
 #include <psprtc.h>	// FOR PSP: FILE 'PSPRTC.H' HAS TO BE HERE AT THIS POSITION - HELL WHY ???
 #include "pspsysmem_kernel.h"
-*/
-extern void		M_QuitStrife(int);
 
+extern void		M_QuitStrife(int choice);
+*/
 extern default_t	doom_defaults_list[];		// FOR PSP: KEY BINDINGS
 
 extern patch_t*         hu_font[HU_FONTSIZE];
@@ -86,6 +90,7 @@ extern boolean		STRIFE_1_X_REGISTERED;
 
 extern boolean		display_ticker;
 extern boolean		BorderNeedRefresh;
+extern boolean		merchantOn;
 
 extern int		cheating;
 extern int		mspeed;
@@ -108,7 +113,7 @@ static int		keyaskedfor;
 static boolean		askforkey = false;
 
 int			cheeting;
-int			map = 0;
+int			map_cheat = 0;
 //int			spot = 0;
 int			musnum = 1;
 int			crosshair = 0;
@@ -129,7 +134,7 @@ int			fps = 0;		// FOR PSP: calculating the frames per second
 int			followplayer = 1;
 int			drawgrid;
 //int			show_stats = 0;
-
+//int			mus_engine = 0;
 int			show_talk = 1;
 int			messages_disabled = 0;
 /*
@@ -138,10 +143,16 @@ int			messages_disabled = 0;
 int			key_controls_start_in_cfg_at_pos = 19;	// FOR PSP: ACTUALLY IT'S +2 !!!
 int			key_controls_end_in_cfg_at_pos = 32;	// FOR PSP: ACTUALLY IT'S +2 !!!
 */
-int			key_controls_start_in_cfg_at_pos = 18;	// FOR PSP: ACTUALLY IT'S +2 !!!
-int			key_controls_end_in_cfg_at_pos = 34;	// FOR PSP: ACTUALLY IT'S +2 !!!
+int			key_controls_start_in_cfg_at_pos = 25;	// FOR PSP: ACTUALLY IT'S +2 !!!
+int			key_controls_end_in_cfg_at_pos = 41;	// FOR PSP: ACTUALLY IT'S +2 !!!
 
 boolean			am_rotate;
+boolean			text_flag_boomstix = false;
+boolean			text_flag_donnytrump = false;
+boolean			text_flag_stonecold = false;
+boolean			text_flag_pumpup = false;
+boolean			text_flag_warping = false;
+boolean			text_flag_end = false;
 /*
 int			max_free_ram = 0;
 char			allocated_ram_textbuffer[50];
@@ -163,7 +174,7 @@ int			showMessages = 1;
 
 // Blocky mode, has default, 0 = high, 1 = normal
 int			detailLevel = 0;
-int			screenblocks = 10;
+int			screenblocks = 10; // [SVE]: default 10
 
 // temp for screenblocks (0-9)
 int			screenSize;
@@ -180,6 +191,7 @@ char*			messageString;
 int			messx;
 int			messy;
 int			messageLastMenuActive;
+boolean                 messageLastMenuPause; // haleyjd [SVE]: forgotten by Rogue
 
 int		turnspeed = 7;
 fixed_t         forwardmove = 29;
@@ -211,6 +223,7 @@ boolean                 menuactive;
 boolean                 menupause;      // haleyjd 08/29/10: [STRIFE] New global
 int                     menupausetime;  // haleyjd 09/04/10: [STRIFE] New global
 boolean                 menuindialog;   // haleyjd 09/04/10: ditto
+boolean                 music_cheat_used = false;
 
 // haleyjd 08/27/10: [STRIFE] SKULLXOFF == -28, LINEHEIGHT == 19
 #define CURSORXOFF		-28
@@ -245,7 +258,7 @@ char    		*cursorNameSmall[8] = {"M_CURS1S", "M_CURS2S", "M_CURS3S", "M_CURS4S",
 
 // haleyjd 20110210 [STRIFE]: skill level for menus
 int			menuskill;
-int menuepisode; // [SVE]: allow starting demo maps from menus
+boolean			menuepisode = false; // [SVE]: allow starting demo maps from menus
 
 // current menudef
 menu_t*			currentMenu;
@@ -255,6 +268,7 @@ menu_t*			currentMenu;
 // character slot, or to just save the current game. In the v1.31 disassembly
 // this was the new dword_8632C variable.
 boolean			namingCharacter; 
+
 
 //
 // PROTOTYPES
@@ -270,6 +284,7 @@ void M_StartCast(int choice); // [SVE]
 void M_ReadThis(int choice);
 void M_ReadThis2(int choice);
 void M_ReadThis3(int choice); // [STRIFE]
+void M_QuitStrife(int choice);
 
 //void M_ChangeMessages(int choice); [STRIFE]
 void M_WalkingSpeed(int choice);
@@ -309,10 +324,19 @@ void M_Messages(int choice);
 void M_DialogText(int choice);
 void M_Crosshair(int choice);
 
+void M_HUD(int choice);			// [SVE]
+void M_BloodGore(int choice);		// [SVE]
+void M_ClassicMode(int choice);		// [SVE]
+void M_WeaponRecoil(int choice);	// [SVE]
+void M_Autoaim(int choice);		// [SVE]
+void M_Spawn(int choice);		// [SVE]
+void M_FastMonsters(int choice);	// [SVE]
+
 void M_SfxVol(int choice);
 void M_Voices(int choice);
 void M_VoiceVol(int choice); // [STRIFE]
 void M_MusicVol(int choice);
+//void M_Engine(int choice);
 void M_Map(int choice);
 void M_God(int choice);
 void M_Noclip(int choice);
@@ -323,9 +347,11 @@ void M_Stonecold(int choice);
 void M_Lego(int choice);
 void M_Pumpup(int choice);
 void M_Topo(int choice);
-//void M_GPS(int choice);
+/*
 void M_Gripper(int choice);
-//void M_Dots(int choice);
+void M_GPS(int choice);
+void M_Dots(int choice);
+*/
 void M_Rift(int choice);
 void M_RiftNow(int choice);
 void M_Spin(int choice);
@@ -375,13 +401,13 @@ void M_DrawSave(void);
 void M_DrawSaveLoadBorder(int x,int y);
 void M_SetupNextMenu(menu_t *menudef);
 void M_DrawThermo(int x,int y,int thermWidth,int thermDot);
+void M_DrawThermoSVE(int x,int y,int thermWidth,int thermDot);
 void M_DrawEmptyCell(menu_t *menu,int item);
 void M_DrawSelCell(menu_t *menu,int item);
 int  M_StringWidth(char *string);
 int  M_StringHeight(char *string);
 void M_StartMessage(char *string,void *routine,boolean input);
 void M_StopMessage(void);
-
 
 char *maptext[] =			// ADDED FOR PSP
 {
@@ -418,53 +444,92 @@ char *maptext[] =			// ADDED FOR PSP
 	"ABANDONED FRONT BASE",
 	"TRAINING FACILITY",
 //					DEMO ADDITIONS ???
-	"SANCTUARY (DEMO VER.)",
-	"TOWN (DEMO VER.)",
+	"SANCTUARY",
+	"TOWN",
 	"MOVEMENT BASE (DEMO VER.)",
-	"MAP35 (DEVELOPER MAP)",
-	"MAP36 (DEVELOPER MAP)",
+	"MAP35",
+	"MAP36",
 };
 
 char *mustext[] =			// ADDED FOR PSP
 {
-	" ",
-	"TITLE MUSIC",
-	"SANCTUARY",
-	"TOWN",
-	"FRONT BASE",
-	"POWER STATION",
-	"PRISON",
-	"SEWERS",
-	"CASTLE",
-	"AUDIENCE CHAMBER",
-	"CASTLE: PROGRAMMER'S KEEP",
-	"NEW FRONT BASE",
-	"BORDERLANDS",
-	"THE TEMPLE OF THE ORACLE",
-	"CATACOMBS",
-	"MINES",
-	"FORTRESS: ADMINISTRATION",
-	"FORTRESS: BISHOP'S TOWER",
-	"FORTRESS: THE BAILEY",
-	"FORTRESS: STORES",
-	"FORTRESS: SECURITY COMPLEX",
-	"FACTORY: RECEIVING",
-	"FACTORY: MANUFACTURING",
-	"FACTORY: FORGE",
-	"ORDER COMMONS",
-	"FACTORY: CONVERSION CHAPEL",
-	"CATACOMBS: RUINED TEMPLE",
-	"PROVING GROUNDS",
-	"THE LAB",
-	"ALIEN SHIP",
-	"ENTITY'S LAIR",
-	"ABANDONED FRONT BASE",
-	"TRAINING FACILITY",
-	"UNKNOWN MUSIC TITLE #1",	// LEFTOVERS FROM ROGUE???
-	"UNKNOWN MUSIC TITLE #2",	// LEFTOVERS FROM ROGUE???
-	"UNKNOWN MUSIC (DEMO VER.)",	// DEMO ADDITIONS
-	"SANCTUARY (DEMO VER.)",	// DEMO ADDITIONS
-	"FRONT BASE (DEMO VER.)",	// DEMO ADDITIONS
+    "",
+    "01",
+    "02",
+    "03",
+    "04",
+    "05",
+    "06",
+    "07",
+    "08",
+    "09",
+    "10",
+    "11",
+    "",
+    "12",
+    "13",
+    "",
+    "",
+    "14",
+    "15",
+    "",
+    "",
+    "16",
+    "17",
+    "",
+    "18",
+    "19",
+    "20",
+    "21",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "22",
+    "23",
+};
+
+char *mustextdemo[] =			// ADDED FOR PSP
+{
+    "",
+    "01",
+    "",
+    "02",
+    "",
+    "03",
+    "04",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "05",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "06",
+    "07",
+    "08",
 };
 /*
 char *spottext[] =			// FOR PSP (BUT DOESN'T WORK (YET))
@@ -585,7 +650,7 @@ menu_t  MainDef =
     NULL,
     MainMenu,
     M_DrawMainMenu,
-    97,55, // haleyjd 08/28/10: [STRIFE] changed y coord
+    97,65, // haleyjd 08/28/10: [STRIFE] changed y coord
     0
 };
 
@@ -612,7 +677,7 @@ menuitem_t FilesMenu[]=
 menu_t  FilesDef =
 {
     files_end,
-    NULL,
+    &MainDef,
     FilesMenu,
     M_DrawFilesMenu,
     97,45, // haleyjd 08/28/10: [STRIFE] changed y coord
@@ -838,6 +903,57 @@ menu_t  ScreenDef =
 
 enum
 {
+    mousesens,
+    controls_empty1,
+    turnsens,
+    controls_empty2,
+    strafesens,
+    controls_empty3,
+    controls_freelook,
+    mousespeed,
+    controls_empty4,
+    controls_keybindings,
+    controls_end
+} controls_e;
+
+// haleyjd 08/29/10:
+// [STRIFE] 
+// * Added voice volume
+// * Moved mouse sensitivity here (who knows why...)
+menuitem_t ControlsMenu[]=
+{
+//    {2,"M_WSPEED",M_WalkingSpeed,'m'},
+    {2,"",M_WalkingSpeed,'m'},
+    {-1,"",0,'\0'},
+//    {2,"M_TSPEED",M_TurningSpeed,'t'},
+    {2,"",M_TurningSpeed,'t'},
+    {-1,"",0,'\0'},
+//    {2,"M_SSPEED",M_StrafingSpeed,'s'},
+    {2,"",M_StrafingSpeed,'s'},
+    {-1,"",0,'\0'},
+/*
+    {2,"M_FRLOOK",M_Freelook,'f'},
+    {2,"M_FLKSPD",M_FreelookSpeed,'l'},
+*/
+    {2,"",M_Freelook,'f'},
+    {2,"",M_FreelookSpeed,'l'},
+    {-1,"",0,'\0'},
+//    {1,"M_KBNDGS",M_KeyBindings,'b'}
+    {1,"",M_KeyBindings,'b'}
+};
+
+menu_t  ControlsDef =
+{
+    controls_end,
+    &OptionsDef,
+    ControlsMenu,
+    M_DrawControls,
+    50,0,       // [STRIFE] changed y coord 64 -> 35
+    0
+};
+
+enum
+{
     keybindings_up,
     keybindings_down,
     keybindings_left,
@@ -890,61 +1006,10 @@ menuitem_t KeyBindingsMenu[]=
 menu_t  KeyBindingsDef =
 {
     keybindings_end,
-    &OptionsDef,
+    &ControlsDef,
     KeyBindingsMenu,
     M_DrawKeyBindings,
     50,20,       // [STRIFE] changed y coord 64 -> 35
-    0
-};
-
-enum
-{
-    mousesens,
-    controls_empty1,
-    turnsens,
-    controls_empty2,
-    strafesens,
-    controls_empty3,
-    controls_freelook,
-    mousespeed,
-    controls_empty4,
-    controls_keybindings,
-    controls_end
-} controls_e;
-
-// haleyjd 08/29/10:
-// [STRIFE] 
-// * Added voice volume
-// * Moved mouse sensitivity here (who knows why...)
-menuitem_t ControlsMenu[]=
-{
-//    {2,"M_WSPEED",M_WalkingSpeed,'m'},
-    {2,"",M_WalkingSpeed,'m'},
-    {-1,"",0,'\0'},
-//    {2,"M_TSPEED",M_TurningSpeed,'t'},
-    {2,"",M_TurningSpeed,'t'},
-    {-1,"",0,'\0'},
-//    {2,"M_SSPEED",M_StrafingSpeed,'s'},
-    {2,"",M_StrafingSpeed,'s'},
-    {-1,"",0,'\0'},
-/*
-    {2,"M_FRLOOK",M_Freelook,'f'},
-    {2,"M_FLKSPD",M_FreelookSpeed,'l'},
-*/
-    {2,"",M_Freelook,'f'},
-    {2,"",M_FreelookSpeed,'l'},
-    {-1,"",0,'\0'},
-//    {1,"M_KBNDGS",M_KeyBindings,'b'}
-    {1,"",M_KeyBindings,'b'}
-};
-
-menu_t  ControlsDef =
-{
-    controls_end,
-    &OptionsDef,
-    ControlsMenu,
-    M_DrawControls,
-    35,5,       // [STRIFE] changed y coord 64 -> 35
     0
 };
 
@@ -985,11 +1050,17 @@ enum
     game_maprotation,
     game_followmode,
 //    game_statistics,
-    game_empty1,
     game_messages,
     game_dialogtext,
     game_crosshair,
 //    game_weapon,				// FIXME: IF ACTIVATED, CRASHES GAME IF WEAPON CHANGES
+    game_classicmode,
+    game_gore,
+    game_fullscreenhud,
+    game_recoil,
+    game_autoaim,
+    game_respawn,
+    game_fast,
     game_end
 } game_e;
 
@@ -999,6 +1070,7 @@ enum
 // * Moved mouse sensitivity here (who knows why...)
 menuitem_t GameMenu[]=
 {
+/*
     {2,"M_MAPGRD",M_MapGrid,'g'},
     {2,"M_MAPROT",M_MapRotation,'r'},
     {2,"M_FLWMDE",M_FollowMode,'f'},
@@ -1006,8 +1078,22 @@ menuitem_t GameMenu[]=
     {-1,"",0,'\0'},
     {2,"",M_Messages,'m'},
     {2,"M_DLGTXT",M_DialogText,'t'},
-    {2,"M_XHAIR",M_Crosshair,'c'}/*,
-    {2,"M_WPNCHG",M_WeaponChange,'w'}*/		// FIXME: IF ACTIVATED, CRASHES GAME IF WEAPON CHANGES
+    {2,"M_XHAIR",M_Crosshair,'c'},
+//    {2,"M_WPNCHG",M_WeaponChange,'w'}		// FIXME: IF ACTIVATED, CRASHES GAME IF WEAPON CHANGES
+*/
+    {2,"",M_MapGrid,'g'},
+    {2,"",M_MapRotation,'r'},
+    {2,"",M_FollowMode,'f'},
+    {2,"",M_Messages,'t'},
+    {2,"",M_DialogText,'d'},
+    {2,"",M_Crosshair,'c'},
+    {2,"",M_ClassicMode,'c'},
+    {2,"",M_BloodGore,'b'},
+    {2,"",M_HUD,'h'},
+    {2,"",M_WeaponRecoil,'w'},
+    {2,"",M_Autoaim,'a'},
+    {2,"",M_Spawn,'s'},
+    {2,"",M_FastMonsters,'m'}
 };
 
 menu_t  GameDef =
@@ -1016,7 +1102,7 @@ menu_t  GameDef =
     &OptionsDef,
     GameMenu,
     M_DrawGame,
-    33,35,       // [STRIFE] changed y coord 64 -> 35
+    80,30,       // [STRIFE] changed y coord 64 -> 35
     0
 };
 
@@ -1071,6 +1157,7 @@ enum
     sfx_voices,
     voice_vol,
     sfx_empty3,
+//    music_engine,
 /*
     sfx_mouse,
     sfx_empty4,
@@ -1090,7 +1177,8 @@ menuitem_t SoundMenu[]=
     {-1,"",0,'\0'},
     {2,"M_VOICES",M_Voices,'d'}, 
     {2,"",M_VoiceVol,'v'}, 
-    {-1,"",0,'\0'}
+    {-1,"",0,'\0'}/*,
+    {2,"",M_Engine,'e'}*/
 /*
     {2,"M_MSENS",M_ChangeSensitivity,'m'},
     {-1,"",0,'\0'}
@@ -1103,7 +1191,7 @@ menu_t  SoundDef =
     &OptionsDef,
     SoundMenu,
     M_DrawSound,
-    80,50,       // [STRIFE] changed y coord 64 -> 35
+    80,30,       // [STRIFE] changed y coord 64 -> 35
     0
 };
 
@@ -1122,14 +1210,14 @@ enum
     cheats_lego,
     cheats_pumpup,
     cheats_topo,
-//    cheats_gps,
+/*
     cheats_gripper,
-//    cheats_dots,
-    cheats_empty1,
+    cheats_gps,
+    cheats_dots,
+*/
     cheats_rift,
-    cheats_empty2,
+    cheats_empty1,
     cheats_riftnow,
-    cheats_empty3,
 /*
     cheats_scoot,
     cheats_scootnow,
@@ -1150,14 +1238,14 @@ menuitem_t CheatsMenu[]=
     {2,"",M_Lego,'l'},
     {2,"",M_Pumpup,'p'},
     {2,"",M_Topo,'t'},
-//    {2,"",M_GPS,'c'},
+/*
     {2,"",M_Gripper,'b'},
-//    {2,"",M_Dots,'d'},
-    {-1,"",0,'\0'},
+    {2,"",M_GPS,'c'},
+    {2,"",M_Dots,'d'},
+*/
     {2,"",M_Rift,'r'},
     {-1,"",0,'\0'},
     {2,"",M_RiftNow,'e'},
-    {-1,"",0,'\0'},
 /*
     {2,"",M_Scoot,'j'},
     {2,"",M_ScootNow,'s'},
@@ -1168,10 +1256,10 @@ menuitem_t CheatsMenu[]=
 menu_t  CheatsDef =
 {
     cheats_end,
-    &OptionsDef,
+    &FilesDef,
     CheatsMenu,
     M_DrawCheats,
-    80,20,       // [STRIFE] changed y coord 64 -> 35
+    45,20,       // [STRIFE] changed y coord 64 -> 35
     0
 };
 
@@ -1202,7 +1290,7 @@ menuitem_t LoadMenu[]=
 menu_t  LoadDef =
 {
     load_end,
-    &MainDef,
+    &FilesDef,
     LoadMenu,
     M_DrawLoad,
     80,54,
@@ -1225,7 +1313,7 @@ menuitem_t SaveMenu[]=
 menu_t  SaveDef =
 {
     load_end,
-    &MainDef,
+    &FilesDef,
     SaveMenu,
     M_DrawSave,
     80,54,
@@ -1243,7 +1331,7 @@ void M_DrawNameChar(void);
 menu_t NameCharDef =
 {
     load_end,
-    &NewDef,
+    &EpiDef,
     SaveMenu,
     M_DrawNameChar,
     80,54,
@@ -1266,7 +1354,7 @@ void M_ReadSaveStrings(void)
     for(i = 0; i < load_end; i++)
     {
         if(fname)
-            Z_Free(fname);
+            Z_Free(fname, "M_ReadSaveStrings");
         fname = M_SafeFilePath(savegamedir, M_MakeStrifeSaveDir(i, "\\name"));
 
         handle = fopen(fname, "rb");
@@ -1283,7 +1371,7 @@ void M_ReadSaveStrings(void)
     }
 
     if(fname)
-        Z_Free(fname);
+        Z_Free(fname, "M_ReadSaveStrings");
 }
 
 //
@@ -1300,6 +1388,12 @@ void M_DrawNameChar(void)
 
     for (i = 0;i < load_end; i++)
     {
+        // [SVE]
+        NameCharDef.menuitems[i].x = LoadDef.x - 10;
+        NameCharDef.menuitems[i].y = (LoadDef.y + LINEHEIGHT*i) - 4;
+        NameCharDef.menuitems[i].w = 209;
+        NameCharDef.menuitems[i].h = LINEHEIGHT - 4;
+
         M_DrawSaveLoadBorder(LoadDef.x,LoadDef.y+LINEHEIGHT*i);
         M_WriteText(LoadDef.x,LoadDef.y+LINEHEIGHT*i,savegamestrings[i]);
     }
@@ -1319,7 +1413,7 @@ void M_DrawNameChar(void)
 //
 void M_DoNameChar(int choice)
 {
-    int map;
+    int map_init;
 
     // 20130301: clear naming character flag for 1.31 save logic
     if(gameversion == exe_strife_1_31)
@@ -1334,15 +1428,17 @@ void M_DoNameChar(int choice)
     
     if(menuepisode)			// [SVE]: allow demo episode select
     {					// HACK AGAINST [SVE]: add more demo style
-        map = 33;
+        map_init = 33;
+
 	isdemoversion = true;		// HACK AGAINST [SVE]: add more demo style
     }					// HACK AGAINST [SVE]: add more demo style
     else
     {					// HACK AGAINST [SVE]: add more demo style
-        map = 2;
+        map_init = 2;
+
 	isdemoversion = false;		// HACK AGAINST [SVE]: add more demo style
     }					// HACK AGAINST [SVE]: add more demo style
-    G_DeferedInitNew(menuskill, map);
+    G_DeferedInitNew(menuskill, map_init);
     M_ClearMenus(0);
 }
 
@@ -1358,6 +1454,12 @@ void M_DrawLoad(void)
 
     for (i = 0;i < load_end; i++)
     {
+        // [SVE]
+        LoadDef.menuitems[i].x = LoadDef.x - 10;
+        LoadDef.menuitems[i].y = (LoadDef.y + LINEHEIGHT*i) - 4;
+        LoadDef.menuitems[i].w = 209;
+        LoadDef.menuitems[i].h = LINEHEIGHT - 4;
+
         M_DrawSaveLoadBorder(LoadDef.x,LoadDef.y+LINEHEIGHT*i);
         M_WriteText(LoadDef.x,LoadDef.y+LINEHEIGHT*i,savegamestrings[i]);
     }
@@ -1409,7 +1511,7 @@ void M_LoadSelect(int choice)
     quickSaveSlot = choice;
     M_ClearMenus(0);
 
-    Z_Free(name);
+    Z_Free(name, "M_LoadSelect");
 }
 
 //
@@ -1441,6 +1543,12 @@ void M_DrawSave(void)
     V_DrawPatch(72, 28, W_CacheLumpName(DEH_String("M_SAVEG"), PU_CACHE));
     for (i = 0;i < load_end; i++)
     {
+        // [SVE]
+        SaveDef.menuitems[i].x = SaveDef.x - 10;
+        SaveDef.menuitems[i].y = (SaveDef.y + LINEHEIGHT*i) - 4;
+        SaveDef.menuitems[i].w = 209;
+        SaveDef.menuitems[i].h = LINEHEIGHT - 4;
+
         M_DrawSaveLoadBorder(LoadDef.x,LoadDef.y+LINEHEIGHT*i);
         M_WriteText(LoadDef.x,LoadDef.y+LINEHEIGHT*i,savegamestrings[i]);
     }
@@ -1485,12 +1593,7 @@ void M_DoSave(int slot)
 
 void M_SaveSelect(int choice)
 {
-    int realmap;
-
-    if(gamemap == 0)
-	realmap = gamemap + 2;
-    else
-	realmap = gamemap;
+    frontend_wipe = false;
 
     // we are going to be intercepting all chars
     saveStringEnter = 1;
@@ -1511,10 +1614,10 @@ void M_SaveSelect(int choice)
 
     if(load_extra_wad == 1 && load_voices == 0)
 	sprintf(savegamestrings[choice], "MAP%2.2d %d/%d/%d %2.2d:%2.2d *",
-		realmap, year, month, day, hour, min);
+		gamemap, year, month, day, hour, min);
     else
 	sprintf(savegamestrings[choice], "MAP%2.2d %d/%d/%d %2.2d:%2.2d",
-		realmap, year, month, day, hour, min);
+		gamemap, year, month, day, hour, min);
 
     M_StringCopy(saveOldString, savegamestrings[choice], sizeof(saveOldString));
     if (!strcmp(savegamestrings[choice],EMPTYSTRING))
@@ -1736,10 +1839,24 @@ void M_DrawScreen(void)
 
     // haleyjd 08/26/10: [STRIFE] Removed messages, sensitivity, detail.
 
-    M_DrawThermo(OptionsDef.x+62,OptionsDef.y+LINEHEIGHT*(gamma+1),
+
+    if(classicmode)
+    {
+	M_DrawThermo(OptionsDef.x+62,OptionsDef.y+LINEHEIGHT*(gamma+1),
                  5,usegamma);
-    M_DrawThermo(OptionsDef.x+45,OptionsDef.y+LINEHEIGHT*(scrnsize+1),
+	M_DrawThermo(OptionsDef.x+45,OptionsDef.y+LINEHEIGHT*(scrnsize+1),
                  9,screenSize);
+    }
+    else
+    {
+	M_WriteText(80, 75, DEH_String("BRIGHTNESS"));
+	M_WriteText(80, 95, DEH_String("SCREEN SIZE"));
+
+	M_DrawThermoSVE(ScreenDef.x+122,OptionsDef.y-5+LINEHEIGHT*(gamma+1),
+                 5,usegamma);
+	M_DrawThermoSVE(ScreenDef.x+90,OptionsDef.y-23+LINEHEIGHT*(scrnsize+1),
+                 9,screenSize);
+    }
 /*
     if(devparm)
     {
@@ -1788,13 +1905,6 @@ void M_KeyBindingsClearControls (int ch)	// XXX (FOR PSP): NOW THIS IS RATHER IM
 
 void M_KeyBindingsClearAll (int choice)
 {
-    *doom_defaults_list[18].location = 0;
-    *doom_defaults_list[19].location = 0;
-    *doom_defaults_list[20].location = 0;
-    *doom_defaults_list[21].location = 0;
-    *doom_defaults_list[22].location = 0;
-    *doom_defaults_list[23].location = 0;
-    *doom_defaults_list[24].location = 0;
     *doom_defaults_list[25].location = 0;
     *doom_defaults_list[26].location = 0;
     *doom_defaults_list[27].location = 0;
@@ -1804,26 +1914,33 @@ void M_KeyBindingsClearAll (int choice)
     *doom_defaults_list[31].location = 0;
     *doom_defaults_list[32].location = 0;
     *doom_defaults_list[33].location = 0;
+    *doom_defaults_list[34].location = 0;
+    *doom_defaults_list[35].location = 0;
+    *doom_defaults_list[36].location = 0;
+    *doom_defaults_list[37].location = 0;
+    *doom_defaults_list[38].location = 0;
+    *doom_defaults_list[39].location = 0;
+    *doom_defaults_list[40].location = 0;
 }
 
 void M_KeyBindingsReset (int choice)
 {
-    *doom_defaults_list[18].location = CLASSIC_CONTROLLER_R;
-    *doom_defaults_list[19].location = CLASSIC_CONTROLLER_L;
-    *doom_defaults_list[20].location = CLASSIC_CONTROLLER_MINUS;
-    *doom_defaults_list[21].location = CLASSIC_CONTROLLER_LEFT;
-    *doom_defaults_list[22].location = CLASSIC_CONTROLLER_DOWN;
-    *doom_defaults_list[23].location = CLASSIC_CONTROLLER_RIGHT;
-    *doom_defaults_list[24].location = CLASSIC_CONTROLLER_ZL;
-    *doom_defaults_list[25].location = CLASSIC_CONTROLLER_ZR;
-    *doom_defaults_list[26].location = CLASSIC_CONTROLLER_HOME;
-    *doom_defaults_list[27].location = CLASSIC_CONTROLLER_PLUS;
-    *doom_defaults_list[28].location = CLASSIC_CONTROLLER_Y;
-    *doom_defaults_list[29].location = CLASSIC_CONTROLLER_X;
-    *doom_defaults_list[30].location = CLASSIC_CONTROLLER_A;
-    *doom_defaults_list[31].location = CLASSIC_CONTROLLER_B;
-    *doom_defaults_list[32].location = CLASSIC_CONTROLLER_UP;
-    *doom_defaults_list[33].location = CONTROLLER_1;
+    *doom_defaults_list[25].location = CLASSIC_CONTROLLER_R;
+    *doom_defaults_list[26].location = CLASSIC_CONTROLLER_L;
+    *doom_defaults_list[27].location = CLASSIC_CONTROLLER_MINUS;
+    *doom_defaults_list[28].location = CLASSIC_CONTROLLER_LEFT;
+    *doom_defaults_list[29].location = CLASSIC_CONTROLLER_DOWN;
+    *doom_defaults_list[30].location = CLASSIC_CONTROLLER_RIGHT;
+    *doom_defaults_list[31].location = CLASSIC_CONTROLLER_ZL;
+    *doom_defaults_list[32].location = CLASSIC_CONTROLLER_ZR;
+    *doom_defaults_list[33].location = CLASSIC_CONTROLLER_HOME;
+    *doom_defaults_list[34].location = CLASSIC_CONTROLLER_PLUS;
+    *doom_defaults_list[35].location = CLASSIC_CONTROLLER_Y;
+    *doom_defaults_list[36].location = CLASSIC_CONTROLLER_X;
+    *doom_defaults_list[37].location = CLASSIC_CONTROLLER_A;
+    *doom_defaults_list[38].location = CLASSIC_CONTROLLER_B;
+    *doom_defaults_list[39].location = CLASSIC_CONTROLLER_UP;
+    *doom_defaults_list[40].location = CONTROLLER_1;
 }
 
 void M_DrawKeyBindings(void)
@@ -1878,7 +1995,7 @@ void M_DrawKeyBindings(void)
 	else
 	{
 	    M_WriteText(195, (i*10+20),
-		Key2String(*(doom_defaults_list[i+FirstKey+18].location)));
+		Key2String(*(doom_defaults_list[i+FirstKey+25].location)));
 	}
     }
 }
@@ -1925,36 +2042,68 @@ void M_Controls(int choice)
 
 void M_DrawControls(void)
 {
-//    V_DrawPatch (50, 0, W_CacheLumpName(DEH_String("M_CTLSET"), PU_CACHE));
+    if(classicmode)
+    {
+	V_DrawPatch (50, 0, W_CacheLumpName(DEH_String("M_WSPEED"), PU_CACHE));
+	V_DrawPatch (50, 40, W_CacheLumpName(DEH_String("M_TSPEED"), PU_CACHE));
+	V_DrawPatch (50, 80, W_CacheLumpName(DEH_String("M_SSPEED"), PU_CACHE));
+	V_DrawPatch (50, 120, W_CacheLumpName(DEH_String("M_FRLOOK"), PU_CACHE));
+	V_DrawPatch (50, 140, W_CacheLumpName(DEH_String("M_FLKSPD"), PU_CACHE));
+	V_DrawPatch (50, 179, W_CacheLumpName(DEH_String("M_KBNDGS"), PU_CACHE));
 
-    V_DrawPatch (50, 0, W_CacheLumpName(DEH_String("M_WSPEED"), PU_CACHE));
-    V_DrawPatch (50, 40, W_CacheLumpName(DEH_String("M_TSPEED"), PU_CACHE));
-    V_DrawPatch (50, 80, W_CacheLumpName(DEH_String("M_SSPEED"), PU_CACHE));
-    V_DrawPatch (50, 120, W_CacheLumpName(DEH_String("M_FRLOOK"), PU_CACHE));
-    V_DrawPatch (50, 140, W_CacheLumpName(DEH_String("M_FLKSPD"), PU_CACHE));
-    V_DrawPatch (50, 179, W_CacheLumpName(DEH_String("M_KBNDGS"), PU_CACHE));
+	if(mouselook == 0)
+	    V_DrawPatch(177, 122, 
+		    W_CacheLumpName(DEH_String("M_SETOFF"), PU_CACHE));
+	else if(mouselook == 1)
+	    V_DrawPatch(177, 122, 
+		    W_CacheLumpName(DEH_String("M_NORMAL"), PU_CACHE));
+	else if(mouselook == 2)
+	    V_DrawPatch(177, 122, 
+		    W_CacheLumpName(DEH_String("M_INVRSE"), PU_CACHE));
 
-    if(mouselook == 0)
-	V_DrawPatch(170, 122, 
-		W_CacheLumpName(DEH_String("M_SETOFF"), PU_CACHE));
-    else if(mouselook == 1)
-	V_DrawPatch(170, 122, 
-		W_CacheLumpName(DEH_String("M_NORMAL"), PU_CACHE));
-    else if(mouselook == 2)
-	V_DrawPatch(170, 122, 
-		W_CacheLumpName(DEH_String("M_INVRSE"), PU_CACHE));
+	M_DrawThermo(OptionsDef.x-10,OptionsDef.y-56+LINEHEIGHT*(mousesens+1),
+                    29,forwardmove-19);
 
-    M_DrawThermo(OptionsDef.x-25,OptionsDef.y-58+LINEHEIGHT*(mousesens+1),
-                 29,forwardmove-19);
+	M_DrawThermo(OptionsDef.x-10,OptionsDef.y-54+LINEHEIGHT*(turnsens+1),
+                    6,turnspeed-5);
 
-    M_DrawThermo(OptionsDef.x-25,OptionsDef.y-56+LINEHEIGHT*(turnsens+1),
-                 6,turnspeed-5);
+	M_DrawThermo(OptionsDef.x-10,OptionsDef.y-52+LINEHEIGHT*(strafesens+1),
+                    17,sidemove-16);
 
-    M_DrawThermo(OptionsDef.x-25,OptionsDef.y-53+LINEHEIGHT*(strafesens+1),
-                 17,sidemove-16);
+	M_DrawThermo(OptionsDef.x-10,OptionsDef.y-50+LINEHEIGHT*(mousespeed+1),
+                    11,mspeed);
+    }
+    else
+    {
+	V_DrawPatch (50, 0, W_CacheLumpName(DEH_String("M_CTLSET"), PU_CACHE));
 
-    M_DrawThermo(OptionsDef.x-25,OptionsDef.y-53+LINEHEIGHT*(mousespeed+1),
-                 11,mspeed);
+	M_WriteText(20, 45, DEH_String("SPEEDS:"));
+	M_WriteText(20, 55, DEH_String("WALK"));
+	M_WriteText(20, 75, DEH_String("TURN"));
+	M_WriteText(20, 95, DEH_String("STRAFE"));
+	M_WriteText(20, 115, DEH_String("FREELOOK MODE"));
+	M_WriteText(20, 125, DEH_String("FREELOOK"));
+	M_WriteText(20, 145, DEH_String("KEY BINDINGS..."));
+
+	if(mouselook == 0)
+	    M_WriteText(289, 115, DEH_String("OFF"));
+	else if(mouselook == 1)
+	    M_WriteText(256, 115, DEH_String("NORMAL"));
+	else if(mouselook == 2)
+	    M_WriteText(257, 115, DEH_String("INVERSE"));
+
+	M_DrawThermoSVE(ControlsDef.x+20,ControlsDef.y+32+LINEHEIGHT*(mousesens+1),
+                    29,forwardmove-19);
+
+	M_DrawThermoSVE(ControlsDef.x+204,ControlsDef.y+15+LINEHEIGHT*(turnsens+1),
+                    6,turnspeed-5);
+
+	M_DrawThermoSVE(ControlsDef.x+116,ControlsDef.y-3+LINEHEIGHT*(strafesens+1),
+                    17,sidemove-16);
+
+	M_DrawThermoSVE(ControlsDef.x+164,ControlsDef.y-31+LINEHEIGHT*(mousespeed+1),
+                    11,mspeed);
+    }
 }
 /*
 void M_CpuSpeed(int choice)
@@ -2138,15 +2287,33 @@ void M_DrawSystem(void)
     V_DrawPatch(188, 67, 
                       W_CacheLumpName(DEH_String("M_222MHZ"), PU_CACHE));
 */
-    if(display_fps)
-	V_DrawPatch (244, 85, W_CacheLumpName(DEH_String("M_SETON"), PU_CACHE));
-    else
-	V_DrawPatch (244, 85, W_CacheLumpName(DEH_String("M_SETOFF"), PU_CACHE));
+    if(classicmode)
+    {
+	if(display_fps)
+	    V_DrawPatch (244, 85, W_CacheLumpName(DEH_String("M_SETON"), PU_CACHE));
+	else
+	    V_DrawPatch (244, 85, W_CacheLumpName(DEH_String("M_SETOFF"), PU_CACHE));
 
-    if(display_ticker)
-	V_DrawPatch (244, 106, W_CacheLumpName(DEH_String("M_SETON"), PU_CACHE));
+	if(display_ticker)
+	    V_DrawPatch (244, 106, W_CacheLumpName(DEH_String("M_SETON"), PU_CACHE));
+	else
+	    V_DrawPatch (244, 106, W_CacheLumpName(DEH_String("M_SETOFF"), PU_CACHE));
+    }
     else
-	V_DrawPatch (244, 106, W_CacheLumpName(DEH_String("M_SETOFF"), PU_CACHE));
+    {
+	M_WriteText(80, 90, DEH_String("FPS COUNTER"));
+	M_WriteText(80, 100, DEH_String("DISPLAY TICKER"));
+
+	if(display_fps)
+	    M_WriteText(220, 90, DEH_String("ON"));
+	else
+	    M_WriteText(220, 90, DEH_String("OFF"));
+
+	if(display_ticker)
+	    M_WriteText(220, 100, DEH_String("ON"));
+	else
+	    M_WriteText(220, 100, DEH_String("OFF"));
+    }
 /*
     if(frame_limit == 0)
 	V_DrawPatch (244, 127, W_CacheLumpName(DEH_String("M_SETOFF"), PU_CACHE));
@@ -2296,6 +2463,125 @@ void M_Crosshair(int choice)
     }
 }
 
+void M_HUD(int choice)			// [SVE]
+{
+    switch(choice)
+    {
+    case 0:
+        if (fullscreenhud)
+            fullscreenhud = false;
+        players[consoleplayer].message = DEH_String(FHSTR_OFF);
+        break;
+    case 1:
+        if (fullscreenhud == false)
+            fullscreenhud = true;
+        players[consoleplayer].message = DEH_String(FHSTR_ON);
+        break;
+    }
+}
+
+void M_BloodGore(int choice)		// [SVE]
+{
+    switch(choice)
+    {
+    case 0:
+        if (d_maxgore)
+            d_maxgore = false;
+        players[consoleplayer].message = DEH_String(MGSTR_OFF);
+        break;
+    case 1:
+        if (d_maxgore == false)
+            d_maxgore = true;
+        players[consoleplayer].message = DEH_String(MGSTR_ON);
+        break;
+    }
+}
+
+void M_ClassicMode(int choice)		// [SVE]
+{
+    switch(choice)
+    {
+    case 0:
+        if (classicmode)
+            classicmode = false;
+        players[consoleplayer].message = DEH_String(CMSTR_OFF);
+        break;
+    case 1:
+        if (classicmode == false)
+            classicmode = true;
+        players[consoleplayer].message = DEH_String(CMSTR_ON);
+        break;
+    }
+}
+
+void M_WeaponRecoil(int choice)	// [SVE]
+{
+    switch(choice)
+    {
+    case 0:
+        if (d_recoil)
+            d_recoil = false;
+        players[consoleplayer].message = DEH_String(WRSTR_OFF);
+        break;
+    case 1:
+        if (d_recoil == false)
+            d_recoil = true;
+        players[consoleplayer].message = DEH_String(WRSTR_ON);
+        break;
+    }
+}
+
+void M_Autoaim(int choice)		// [SVE]
+{
+    switch(choice)
+    {
+    case 0:
+        if (autoaim)
+            autoaim = false;
+        players[consoleplayer].message = DEH_String(AASTR_OFF);
+        break;
+    case 1:
+        if (autoaim == false)
+            autoaim = true;
+        players[consoleplayer].message = DEH_String(AASTR_ON);
+        break;
+    }
+}
+
+void M_Spawn(int choice)		// [SVE]
+{
+    switch(choice)
+    {
+    case 0:
+        if (respawnparm)
+            respawnparm = false;
+        players[consoleplayer].message = DEH_String(RPSTR_OFF);
+        break;
+    case 1:
+        if (respawnparm == false)
+            respawnparm = true;
+        players[consoleplayer].message = DEH_String(RPSTR_ON);
+        break;
+    }
+}
+
+void M_FastMonsters(int choice)	// [SVE]
+{
+    switch(choice)
+    {
+    case 0:
+        if (fastparm)
+            fastparm = false;
+        players[consoleplayer].message = DEH_String(FPSTR_OFF);
+        break;
+    case 1:
+        if (fastparm == false)
+            fastparm = true;
+        players[consoleplayer].message = DEH_String(FPSTR_ON);
+        break;
+    }
+}
+
 void M_Game(int choice)
 {
     M_SetupNextMenu(&GameDef);
@@ -2303,51 +2589,184 @@ void M_Game(int choice)
 
 void M_DrawGame(void)
 {
-    V_DrawPatch (70, 15, W_CacheLumpName(DEH_String("M_GMESET"), PU_CACHE));
+    V_DrawPatch (70, 10, W_CacheLumpName(DEH_String("M_GMESET"), PU_CACHE));
 //    V_DrawPatch (45, 45, W_CacheLumpName(DEH_String("M_AMOPTS"), PU_CACHE));
+/*
     V_DrawPatch (47, 96, W_CacheLumpName(DEH_String("M_SLASHS"), PU_CACHE));
     V_DrawPatch (33, 106, W_CacheLumpName(DEH_String("M_MESSGS"), PU_CACHE));
-
-    if(drawgrid == 1)
-	V_DrawPatch (244, 35, W_CacheLumpName(DEH_String("M_SETON"), PU_CACHE));
-    else if(drawgrid == 0)
-	V_DrawPatch (244, 35, W_CacheLumpName(DEH_String("M_SETOFF"), PU_CACHE));
-
-    if(am_rotate == true)
-	V_DrawPatch (244, 55, W_CacheLumpName(DEH_String("M_SETON"), PU_CACHE));
-    else if(am_rotate == false)
-	V_DrawPatch (244, 55, W_CacheLumpName(DEH_String("M_SETOFF"), PU_CACHE));
-
-    if(followplayer == 1)
-	V_DrawPatch (244, 75, W_CacheLumpName(DEH_String("M_SETON"), PU_CACHE));
-    else if(followplayer == 0)
-	V_DrawPatch (244, 75, W_CacheLumpName(DEH_String("M_SETOFF"), PU_CACHE));
-/*
-    if(show_stats == 1)
-	V_DrawPatch (234, 104, W_CacheLumpName(DEH_String("M_SETON"), PU_CACHE));
-    else if (show_stats == 0)
-	V_DrawPatch (234, 104, W_CacheLumpName(DEH_String("M_SETOFF"), PU_CACHE));
 */
-    if(showMessages == 1)
-	V_DrawPatch (244, 108, W_CacheLumpName(DEH_String("M_SETON"), PU_CACHE));
-    else if (showMessages == 0)
-	V_DrawPatch (244, 108, W_CacheLumpName(DEH_String("M_SETOFF"), PU_CACHE));
+    if(!classicmode)
+    {
+	M_WriteText(72, 30, DEH_String("AUTOMAP GRID"));
+	M_WriteText(72, 40, DEH_String("AUTOMAP ROTATION"));
+	M_WriteText(72, 50, DEH_String("AUTOMAP FOLLOW"));
+	M_WriteText(72, 60, DEH_String("SHOW MESSAGES"));
+	M_WriteText(72, 70, DEH_String("DIALOG TEXT"));
+	M_WriteText(72, 80, DEH_String("CROSSHAIR"));
+	M_WriteText(72, 90, DEH_String("CLASSIC MODE"));
 
-    if(dialogshowtext == 1)
-	V_DrawPatch (244, 128, W_CacheLumpName(DEH_String("M_SETON"), PU_CACHE));
-    else if (dialogshowtext == 0)
-	V_DrawPatch (244, 128, W_CacheLumpName(DEH_String("M_SETOFF"), PU_CACHE));
+	M_WriteText(72, 100, DEH_String("MORE BLOOD & GORE"));
+	M_WriteText(72, 110, DEH_String("FULLSCREEN HUD"));
+	M_WriteText(72, 120, DEH_String("WEAPON RECOIL"));
+	M_WriteText(72, 130, DEH_String("AUTOAIM"));
+	M_WriteText(72, 140, DEH_String("RESPAWN MACHINES"));
+	M_WriteText(72, 150, DEH_String("FAST ENEMIES"));
 
-    if(crosshair == 1)
-	V_DrawPatch (244, 148, W_CacheLumpName(DEH_String("M_SETON"), PU_CACHE));
-    else if (crosshair == 0)
-	V_DrawPatch (244, 148, W_CacheLumpName(DEH_String("M_SETOFF"), PU_CACHE));
-/*											// FIXME: IF
-    if(use_vanilla_weapon_change == 1)							// ACTIVATED,
-	V_DrawPatch (244, 167, W_CacheLumpName(DEH_String("M_SLOW"), PU_CACHE));	// CRASHES GAME
-    else if(use_vanilla_weapon_change == 0)						// IF WEAPON
-	V_DrawPatch (244, 167, W_CacheLumpName(DEH_String("M_FAST"), PU_CACHE));	// CHANGES
-*/
+	if(d_maxgore)
+	    M_WriteText(230, 100, DEH_String("ON"));
+	else
+	    M_WriteText(230, 100, DEH_String("OFF"));
+
+	if(fullscreenhud)
+	    M_WriteText(230, 110, DEH_String("ON"));
+	else
+	    M_WriteText(230, 110, DEH_String("OFF"));
+
+	if(d_recoil)
+	    M_WriteText(230, 120, DEH_String("ON"));
+	else
+	    M_WriteText(230, 120, DEH_String("OFF"));
+
+	if(autoaim)
+	    M_WriteText(230, 130, DEH_String("ON"));
+	else
+	    M_WriteText(230, 130, DEH_String("OFF"));
+
+	if(respawnparm)
+	    M_WriteText(230, 140, DEH_String("ON"));
+	else
+	    M_WriteText(230, 140, DEH_String("OFF"));
+
+	if(fastparm)
+	    M_WriteText(230, 150, DEH_String("ON"));
+	else
+	    M_WriteText(230, 150, DEH_String("OFF"));
+    }
+    else
+    {
+	M_WriteText(72, 60, DEH_String("AUTOMAP GRID"));
+	M_WriteText(72, 70, DEH_String("AUTOMAP ROTATION"));
+	M_WriteText(72, 80, DEH_String("AUTOMAP FOLLOW"));
+	M_WriteText(72, 90, DEH_String("SHOW MESSAGES"));
+	M_WriteText(72, 100, DEH_String("DIALOG TEXT"));
+	M_WriteText(72, 110, DEH_String("CROSSHAIR"));
+	M_WriteText(72, 120, DEH_String("CLASSIC MODE"));
+    }
+
+    if(!classicmode)
+    {
+	if(drawgrid == 1)
+	    M_WriteText(230, 30, DEH_String("ON"));
+	else if(drawgrid == 0)
+	    M_WriteText(230, 30, DEH_String("OFF"));
+
+	if(am_rotate == true)
+	    M_WriteText(230, 40, DEH_String("ON"));
+	else if(am_rotate == false)
+	    M_WriteText(230, 40, DEH_String("OFF"));
+
+	if(followplayer == 1)
+	    M_WriteText(230, 50, DEH_String("ON"));
+	else if(followplayer == 0)
+	    M_WriteText(230, 50, DEH_String("OFF"));
+
+	if(showMessages == 1)
+	    M_WriteText(230, 60, DEH_String("ON"));
+	else if (showMessages == 0)
+	    M_WriteText(230, 60, DEH_String("OFF"));
+
+	if(dialogshowtext == 1)
+	    M_WriteText(230, 70, DEH_String("ON"));
+	else if (dialogshowtext == 0)
+	    M_WriteText(230, 70, DEH_String("OFF"));
+
+	if(crosshair == 1)
+	    M_WriteText(230, 80, DEH_String("ON"));
+	else if (crosshair == 0)
+	    M_WriteText(230, 80, DEH_String("OFF"));
+
+	if(classicmode)
+	    M_WriteText(230, 90, DEH_String("ON"));
+	else
+	    M_WriteText(230, 90, DEH_String("OFF"));
+    }
+    else
+    {
+	if(drawgrid == 1)
+	    M_WriteText(230, 60, DEH_String("ON"));
+	else if(drawgrid == 0)
+	    M_WriteText(230, 60, DEH_String("OFF"));
+
+	if(am_rotate == true)
+	    M_WriteText(230, 70, DEH_String("ON"));
+	else if(am_rotate == false)
+	    M_WriteText(230, 70, DEH_String("OFF"));
+
+	if(followplayer == 1)
+	    M_WriteText(230, 80, DEH_String("ON"));
+	else if(followplayer == 0)
+	    M_WriteText(230, 80, DEH_String("OFF"));
+
+	if(showMessages == 1)
+	    M_WriteText(230, 90, DEH_String("ON"));
+	else if (showMessages == 0)
+	    M_WriteText(230, 90, DEH_String("OFF"));
+
+	if(dialogshowtext == 1)
+	    M_WriteText(230, 100, DEH_String("ON"));
+	else if (dialogshowtext == 0)
+	    M_WriteText(230, 100, DEH_String("OFF"));
+
+	if(crosshair == 1)
+	    M_WriteText(230, 110, DEH_String("ON"));
+	else if (crosshair == 0)
+	    M_WriteText(230, 110, DEH_String("OFF"));
+
+	if(classicmode)
+	    M_WriteText(230, 120, DEH_String("ON"));
+	else
+	    M_WriteText(230, 120, DEH_String("OFF"));
+    }
+
+    if(classicmode)
+    {
+	M_WriteText(230, 90, DEH_String("ON"));
+	autoaim = true;
+	respawnparm = false;
+	start_respawnparm = false;
+	fastparm = false;
+	start_fastparm = false;
+
+	if(!music_cheat_used)
+	{
+	    if(gamestate == GS_LEVEL)
+	    {
+		if(!isdemoversion)
+		    S_ChangeMusic(gamemap + 1, 1);		// [SVE]
+		else
+		{
+		    if(gamemap == 32)
+			S_ChangeMusic(mus_map1, 1);		// [SVE]
+		    else if(gamemap == 33)
+			S_ChangeMusic(mus_tavern, 1);		// [SVE]
+		    else if(gamemap == 34)
+			S_ChangeMusic(mus_map3, 1);		// [SVE]
+		    else if(gamemap == 35)
+			S_ChangeMusic(mus_fight2, 1);		// [SVE]
+		    else if(gamemap == 36)
+			S_ChangeMusic(mus_fmstl, 1);		// [SVE]
+		}
+	    }
+	}
+	else
+	    S_ChangeMusic(musnum, 1);		// [SVE]
+    }
+    else
+    {
+	M_WriteText(230, 90, DEH_String("OFF"));
+	autoaim = false;
+	S_ChangeMusic(mus_panthr, 1);	// [SVE]
+    }
 }
 
 void M_Debug(int choice)
@@ -2415,15 +2834,33 @@ void M_DrawDebug(void)
     else
 	V_DrawPatch (234, 95, W_CacheLumpName(DEH_String("M_SETOFF"), PU_CACHE));
 */
-    if(coordinates_info)
-	V_DrawPatch (234, 78, W_CacheLumpName(DEH_String("M_SETON"), PU_CACHE));
-    else
-	V_DrawPatch (234, 78, W_CacheLumpName(DEH_String("M_SETOFF"), PU_CACHE));
+    if(classicmode)
+    {
+	if(coordinates_info)
+	    V_DrawPatch (234, 78, W_CacheLumpName(DEH_String("M_SETON"), PU_CACHE));
+	else
+	    V_DrawPatch (234, 78, W_CacheLumpName(DEH_String("M_SETOFF"), PU_CACHE));
 
-    if(version_info)
-	V_DrawPatch (234, 95, W_CacheLumpName(DEH_String("M_SETON"), PU_CACHE));
+	if(version_info)
+	    V_DrawPatch (234, 95, W_CacheLumpName(DEH_String("M_SETON"), PU_CACHE));
+	else
+	    V_DrawPatch (234, 95, W_CacheLumpName(DEH_String("M_SETOFF"), PU_CACHE));
+    }
     else
-	V_DrawPatch (234, 95, W_CacheLumpName(DEH_String("M_SETOFF"), PU_CACHE));
+    {
+	M_WriteText(80, 90, DEH_String("COORDINATES"));
+	M_WriteText(80, 100, DEH_String("VERSION INFO"));
+
+	if(coordinates_info)
+	    M_WriteText(220, 90, DEH_String("ON"));
+	else
+	    M_WriteText(220, 90, DEH_String("OFF"));
+
+	if(version_info)
+	    M_WriteText(220, 100, DEH_String("ON"));
+	else
+	    M_WriteText(220, 100, DEH_String("OFF"));
+    }
 }
 
 //
@@ -2435,25 +2872,63 @@ void M_DrawDebug(void)
 //
 void M_DrawSound(void)
 {
-    V_DrawPatch (60, 15, W_CacheLumpName(DEH_String("M_SNDSET"), PU_CACHE));
+    V_DrawPatch (60, 5, W_CacheLumpName(DEH_String("M_SNDSET"), PU_CACHE));
 
-    M_DrawThermo(SoundDef.x,SoundDef.y+LINEHEIGHT*(sfx_vol+1),
+    if(classicmode)
+    {
+	M_DrawThermo(SoundDef.x,SoundDef.y+LINEHEIGHT*(sfx_vol+1),
                  16,sfxVolume);
 
-    M_DrawThermo(SoundDef.x,SoundDef.y+LINEHEIGHT*(music_vol+1),
+	M_DrawThermo(SoundDef.x,SoundDef.y+LINEHEIGHT*(music_vol+1),
                  16,musicVolume);
 
-    if(fsize != 9934413)	// HACK: NOT FOR SHARE 1.0 & 1.1
+	if(fsize != 9934413)	// HACK: NOT FOR SHARE 1.0 & 1.1
+	{
+	    if(disable_voices == 1)
+		V_DrawPatch (207, 106, W_CacheLumpName(DEH_String("M_SETOFF"), PU_CACHE));
+	    else
+		V_DrawPatch (207, 106, W_CacheLumpName(DEH_String("M_SETON"), PU_CACHE));
+
+	    M_DrawThermo(SoundDef.x,SoundDef.y+LINEHEIGHT*(voice_vol+1),
+		    16,voiceVolume);
+
+	    V_DrawPatchDirect(80, 125, W_CacheLumpName(DEH_String("M_VOIVOL"), PU_CACHE));
+/*
+	    if(devparm)
+	    {
+		if(mus_engine == 1)
+		    V_DrawPatch (207, 174, W_CacheLumpName(DEH_String("M_OPL2"), PU_CACHE));
+		else
+		    V_DrawPatch (207, 174, W_CacheLumpName(DEH_String("M_ROLAND"), PU_CACHE));
+	    }
+	    V_DrawPatchDirect(80, 174, W_CacheLumpName(DEH_String("M_ENGINE"), PU_CACHE));
+*/
+	}
+    }
+    else
     {
-	if(disable_voices == 1)
-	    V_DrawPatch (207, 126, W_CacheLumpName(DEH_String("M_SETOFF"), PU_CACHE));
-	else
-	    V_DrawPatch (207, 126, W_CacheLumpName(DEH_String("M_SETON"), PU_CACHE));
+	M_WriteText(30, 75, DEH_String("SOUND VOLUME"));
+	M_WriteText(30, 95, DEH_String("MUSIC VOLUME"));
+	M_WriteText(30, 115, DEH_String("VOICES"));
 
-	M_DrawThermo(SoundDef.x,SoundDef.y+LINEHEIGHT*(voice_vol+1),
-                 16,voiceVolume);
+	M_DrawThermoSVE(SoundDef.x+65,SoundDef.y+22+LINEHEIGHT*(sfx_vol+1),
+                 16,sfxVolume);
 
-	V_DrawPatchDirect(80, 145, W_CacheLumpName(DEH_String("M_VOIVOL"), PU_CACHE));
+	M_DrawThermoSVE(SoundDef.x+65,SoundDef.y+4+LINEHEIGHT*(music_vol+1),
+                 16,musicVolume);
+
+	if(fsize != 9934413)	// HACK: NOT FOR SHARE 1.0 & 1.1
+	{
+	    if(disable_voices == 1)
+		M_WriteText(260, 115, DEH_String("OFF"));
+	    else
+		M_WriteText(265, 115, DEH_String("ON"));
+
+	    M_DrawThermoSVE(SoundDef.x+65,SoundDef.y-23+LINEHEIGHT*(voice_vol+1),
+		    16,voiceVolume);
+
+	    M_WriteText(30, 125, DEH_String("VOICE VOLUME"));
+	}
     }
 /*
     M_DrawThermo(SoundDef.x,SoundDef.y+LINEHEIGHT+10*(sfx_mouse+1),
@@ -2541,7 +3016,28 @@ void M_MusicVol(int choice)
 
     S_SetMusicVolume(musicVolume * 8);
 }
-
+/*
+void M_Engine(int choice)
+{
+    switch(choice)
+    {
+    case 0:
+        if(mus_engine)
+	{
+            snd_musicdevice = SNDDEVICE_SB;
+	    mus_engine--;
+	}
+        break;
+    case 1:
+        if(mus_engine < 1)
+	{
+            snd_musicdevice = SNDDEVICE_GENMIDI;
+	    mus_engine++;
+	}
+        break;
+    }
+}
+*/
 void DetectState(void)
 {
     if(/*!netgame && */!demoplayback && gamestate == GS_LEVEL
@@ -2659,6 +3155,8 @@ void M_Weapons(int choice)
 	    players[consoleplayer].ammo[i] = players[consoleplayer].maxammo[i];
 
     	players[consoleplayer].message = DEH_String(STSTR_FAADDED);
+
+	text_flag_boomstix = true;
     }
     DetectState();
 }
@@ -2706,6 +3204,7 @@ void M_Artifacts(int choice)
     {
     	players[consoleplayer].message = DEH_String("YOU GOT THE MIDAS TOUCH, BABY");
     	P_GiveItemToPlayer(&players[0], SPR_HELT, MT_TOKEN_TOUGHNESS);
+	text_flag_donnytrump = true;
     }
     DetectState();
 }
@@ -2717,6 +3216,7 @@ void M_Stonecold(int choice)
     {
     	stonecold = true;
     	players[consoleplayer].message = DEH_String("Kill 'em.  Kill 'em All");
+	text_flag_stonecold = true;
     }
     DetectState();
 }
@@ -2795,6 +3295,7 @@ void M_Pumpup(int choice)
     	// [STRIFE] PUMPUPT gives targeter
     	P_GivePower(&players[0], pw_targeter);
     	players[consoleplayer].message = DEH_String("you got the stuff!");
+	text_flag_pumpup = true;
     }
     DetectState();
 }
@@ -2810,6 +3311,20 @@ void M_Topo(int choice)
     DetectState();
 }
 /*
+void M_Gripper(int choice)
+{
+    if(!demoplayback && gamestate == GS_LEVEL
+	&& gameskill != sk_nightmare && players[consoleplayer].playerstate == PST_LIVE)
+    {
+    	players[consoleplayer].cheats ^= CF_NOMOMENTUM;
+    	if(players[consoleplayer].cheats & CF_NOMOMENTUM)
+    	    players[consoleplayer].message = DEH_String("STEALTH BOOTS ON");
+    	else
+    	    players[consoleplayer].message = DEH_String("STEALTH BOOTS OFF");
+    }
+    DetectState();
+}
+
 void M_GPS(int choice)
 {
     if(!demoplayback && gamestate == GS_LEVEL && gameskill != sk_nightmare
@@ -2826,21 +3341,7 @@ void M_GPS(int choice)
     }
     DetectState();
 }
-*/
-void M_Gripper(int choice)
-{
-    if(/*!netgame && */!demoplayback && gamestate == GS_LEVEL
-	&& gameskill != sk_nightmare && players[consoleplayer].playerstate == PST_LIVE)
-    {
-    	players[consoleplayer].cheats ^= CF_NOMOMENTUM;
-    	if(players[consoleplayer].cheats & CF_NOMOMENTUM)
-    	    players[consoleplayer].message = DEH_String("STEALTH BOOTS ON");
-    	else
-    	    players[consoleplayer].message = DEH_String("STEALTH BOOTS OFF");
-    }
-    DetectState();
-}
-/*
+
 void M_Dots(int choice)
 {
     if(!demoplayback && gamestate == GS_LEVEL && gameskill != sk_nightmare
@@ -2864,18 +3365,18 @@ void M_Rift(int choice)
     	switch(choice)
     	{
     	case 0:
-    	    if   ((map >=  2 && !isdemoversion)
-	    ||    (map >= 33 && isdemoversion))
-		   map--;
+    	    if   ((map_cheat >=  2 && !isdemoversion)
+	    ||    (map_cheat >= 33 && isdemoversion))
+		   map_cheat--;
     	    break;
     	case 1:
-	    if    (map <  36)	// FOR PSP: STRIFE v1.0 Shareware includes MAP35 & MAP36, but...
-	    {			// ...the IWAD is missing some textures (maybe they are DEV-MAPS?)
-		if(map ==  0 && isdemoversion)
-		   map  = 32;
-    	    	   map++;
-		if(map == 35 && !isdemoversion)
-		   map =  34;
+	    if    (map_cheat <  36)	// FOR PSP: STRIFE v1.0 Shareware includes MAP35 & 36, but...
+	    {				// ...the IWAD is missing some textures (maybe DEV-MAPS?)
+		if(map_cheat ==  0 && isdemoversion)
+		   map_cheat  = 32;
+    	    	   map_cheat++;
+		if(map_cheat == 35 && !isdemoversion)
+		   map_cheat =  34;
 	    }
     	    break;
     	}
@@ -2890,7 +3391,11 @@ void M_RiftNow(int choice)
     {
     	// So be it.
     	players[consoleplayer].message = DEH_String(STSTR_CLEV);
-    	G_RiftExitLevel(map, 0, players[consoleplayer].mo->angle);
+    	G_RiftExitLevel(map_cheat, 0, players[consoleplayer].mo->angle);
+
+	music_cheat_used = false;
+	M_ClearMenus(0);
+	text_flag_warping = true;
     }
     DetectState();
 }
@@ -2929,7 +3434,7 @@ void M_ScootNow(int choice)		// ...IT DOESN'T WORK AS EXPECTED (YET)
 */
 void M_Spin(int choice)
 {
-    if(/*!netgame && */!demoplayback && gamestate == GS_LEVEL
+    if(!demoplayback && gamestate == GS_LEVEL
 	&& gameskill != sk_nightmare && players[consoleplayer].playerstate == PST_LIVE)
     {
     	switch(choice)
@@ -2993,7 +3498,7 @@ void M_Spin(int choice)
 	    }
     	    break;
     	}
-
+	music_cheat_used = true;
         players[consoleplayer].message = DEH_String(STSTR_MUS);
         S_ChangeMusic(musnum, 1);
     }
@@ -3004,142 +3509,177 @@ void M_DrawCheats(void)
 {
     V_DrawPatch (110, 0, W_CacheLumpName(DEH_String("M_CHEATS"), PU_CACHE));
 
-    M_WriteText(72, 20, DEH_String("SHOW UNSEEN MAP AREAS"));
+    M_WriteText(52, 20, DEH_String("SHOW NON-VISITED MAP AREAS"));
 
     if(!isdemoversion)
-	M_WriteText(72, 30, DEH_String("OMNIPOTENT (GOD)"));
+	M_WriteText(52, 30, DEH_String("OMNIPOTENT"));
     else
-	M_WriteText(72, 30, DEH_String("IBGOD (GOD)"));
+	M_WriteText(52, 30, DEH_String("IBGOD"));
+
+    M_WriteText(150, 30, DEH_String("(GOD)"));
 
     if (players[consoleplayer].cheats & CF_GODMODE)
-	M_WriteText(215, 30, DEH_String("ON"));
+	M_WriteText(247, 30, DEH_String("ON"));
     else
-	M_WriteText(215, 30, DEH_String("OFF"));
+	M_WriteText(241, 30, DEH_String("OFF"));
 
     if(!isdemoversion)
-	M_WriteText(72, 40, DEH_String("ELVIS (NOCLIP)"));
+	M_WriteText(52, 40, DEH_String("ELVIS"));
     else
-	M_WriteText(72, 40, DEH_String("SPIRIT (NOCLIP)"));
+	M_WriteText(52, 40, DEH_String("SPIRIT"));
+
+    M_WriteText(150, 40, DEH_String("(NOCLIP)"));
 
     if (players[consoleplayer].cheats & CF_NOCLIP)
-	M_WriteText(215, 40, DEH_String("ON"));
+	M_WriteText(247, 40, DEH_String("ON"));
     else
-	M_WriteText(215, 40, DEH_String("OFF"));
+	M_WriteText(241, 40, DEH_String("OFF"));
 
     if(!isdemoversion)
-	M_WriteText(72, 110, DEH_String("TOPO (MAP)"));
+	M_WriteText(52, 50, DEH_String("BOOMSTIX"));
     else
-	M_WriteText(72, 110, DEH_String("IDDT (MAP)"));
+	M_WriteText(52, 50, DEH_String("GUNS"));
+
+    M_WriteText(150, 50, DEH_String("(GUNS)"));
+
+    if(text_flag_boomstix && !classicmode)
+	M_WriteText(226, 50, DEH_String("GIVEN"));
+
+    if(!isdemoversion)
+	M_WriteText(52, 60, DEH_String("JIMMY"));
+    else
+	M_WriteText(52, 60, DEH_String("OPEN"));
+
+    if(players[consoleplayer].cards[FIRSTKEYSETAMOUNT - 1])
+    {
+        if(players[consoleplayer].cards[NUMCARDS - 1] || isdemoversion)
+	    M_WriteText(259, 60, DEH_String("2"));
+        else
+	    M_WriteText(261, 60, DEH_String("1"));
+    }
+    else
+	M_WriteText(257, 60, DEH_String("0"));
+
+    M_WriteText(150, 60, DEH_String("(KEYS)"));
+
+    if(!isdemoversion)
+	M_WriteText(52, 70, DEH_String("DONNYTRUMP"));
+    else
+	M_WriteText(52, 70, DEH_String("MONEY"));
+
+    M_WriteText(150, 70, DEH_String("(GOLD)"));
+
+    if(text_flag_donnytrump && !classicmode)
+	M_WriteText(226, 70, DEH_String("GIVEN"));
+
+    if(!isdemoversion)
+	M_WriteText(52, 80, DEH_String("STONECOLD"));
+    else
+	M_WriteText(52, 80, DEH_String("KILLEM"));
+
+    M_WriteText(150, 80, DEH_String("(KILL ALL)"));
+
+    if(text_flag_stonecold && !classicmode)
+	M_WriteText(229, 80, DEH_String("DONE"));
+
+    if(!isdemoversion)
+    {
+	M_WriteText(52, 90, DEH_String("LEGO"));
+	M_WriteText(150, 90, DEH_String("(SIGIL PARTS)"));
+    }
+    else
+	M_WriteText(52, 90, DEH_String("- NOT FOR TEASER CAMPAIGN -"));
+
+    if(!isdemoversion && !classicmode)
+    {
+	if(players[consoleplayer].weaponowned[wp_sigil] == false)
+	    M_WriteText(257, 90, DEH_String("0"));
+
+	if(players[consoleplayer].sigiltype == 0 && players[consoleplayer].weaponowned[wp_sigil] == true)
+	    M_WriteText(261, 90, DEH_String("1"));
+	else if(players[consoleplayer].sigiltype == 1)
+	    M_WriteText(259, 90, DEH_String("2"));
+	else if(players[consoleplayer].sigiltype == 2)
+	    M_WriteText(259, 90, DEH_String("3"));
+	else if(players[consoleplayer].sigiltype == 3)
+	    M_WriteText(259, 90, DEH_String("4"));
+	else if(players[consoleplayer].sigiltype == 4)
+	    M_WriteText(259, 90, DEH_String("5"));
+    }
+    if(!isdemoversion)
+	M_WriteText(52, 100, DEH_String("PUMPUP"));
+    else
+	M_WriteText(52, 100, DEH_String("LISTIT"));
+
+    M_WriteText(150, 100, DEH_String("(ITEMS)"));
+
+    if(text_flag_pumpup && !classicmode)
+	M_WriteText(226, 100, DEH_String("GIVEN"));
+
+    if(!isdemoversion)
+	M_WriteText(52, 110, DEH_String("TOPO"));
+    else
+	M_WriteText(52, 110, DEH_String("IDDT"));
+
+    M_WriteText(150, 110, DEH_String("(MAP)"));
 
     if(!cheating)
-	M_WriteText(215, 110, DEH_String("OFF"));
+	M_WriteText(241, 110, DEH_String("OFF"));
     else if (cheating && cheeting!=2)
-	M_WriteText(195, 110, DEH_String("WALLS"));
+	M_WriteText(221, 110, DEH_String("WALLS"));
     else if (cheating && cheeting==2)	  
-	M_WriteText(215, 110, DEH_String("ALL"));
-
+	M_WriteText(241, 110, DEH_String("ALL"));
+/*
     if(!isdemoversion)
-    {
-	M_WriteText(72, 50, DEH_String("BOOMSTIX"));
-	M_WriteText(193, 50, DEH_String("(GUNS)"));
-    }
+	M_WriteText(52, 120, DEH_String("GRIPPER"));
     else
-	M_WriteText(72, 50, DEH_String("GUNS"));
-
-    if(!isdemoversion)
-	M_WriteText(72, 60, DEH_String("JIMMY"));
-    else
-	M_WriteText(72, 60, DEH_String("OPEN"));
-
-    M_WriteText(194, 60, DEH_String("(KEYS)"));
-
-    if(!isdemoversion)
-	M_WriteText(72, 70, DEH_String("DONNYTRUMP"));
-    else
-	M_WriteText(72, 70, DEH_String("MONEY"));
-
-    M_WriteText(193, 70, DEH_String("(GOLD)"));
-
-    if(!isdemoversion)
-	M_WriteText(72, 80, DEH_String("STONECOLD"));
-    else
-	M_WriteText(72, 80, DEH_String("KILLEM"));
-
-    M_WriteText(171, 80, DEH_String("(KILL ALL)"));
-
-    if(!isdemoversion)
-    {
-	M_WriteText(72, 90, DEH_String("LEGO"));
-	M_WriteText(148, 90, DEH_String("(SIGIL PARTS)"));
-    }
-    else
-	M_WriteText(72, 90, DEH_String("- NOT AVAIL. IN TEASER -"));
-
-    if(!isdemoversion)
-	M_WriteText(72, 100, DEH_String("PUMPUP"));
-    else
-	M_WriteText(72, 100, DEH_String("LISTIT"));
-
-    M_WriteText(188, 100, DEH_String("(ITEMS)"));
-
-//    M_WriteText(72, 110, DEH_String("GPS"));		// FOR PSP: IT WORKS, BUT IS NOT REALLY NEEDED
-
-    if(!isdemoversion)
-	M_WriteText(72, 120, DEH_String("GRIPPER"));
-    else
-	M_WriteText(72, 120, DEH_String("STIC"));
+	M_WriteText(52, 120, DEH_String("STIC"));
 
     M_WriteText(143, 120, DEH_String("(SLOW SPEED)"));
-
-//    M_WriteText(72, 130, DEH_String("DOTS"));		// FOR PSP: IT WORKS, BUT IS NOT REALLY NEEDED
-
-    if(!isdemoversion)
-	M_WriteText(72, 136, DEH_String("RIFT (WARP TO MAP):"));
-    else
-	M_WriteText(72, 136, DEH_String("GOTO (WARP TO MAP):"));
-
-    M_WriteText(72, 160, DEH_String("EXECUTE WARPING"));
-
-/*
-    M_WriteText(72, 160, DEH_String("WARP TO SPOT:"));
-    M_WriteText(72, 170, DEH_String("EXECUTE WARPING TO SPOT"));	// FOR PSP: (DOESN'T WORK)
 */
     if(!isdemoversion)
-	M_WriteText(72, 180, DEH_String("SPIN (PLAY MUSIC TITLE):"));
+	M_WriteText(52, 120, DEH_String("RIFT:"));
     else
-	M_WriteText(72, 180, DEH_String("IDMUS (PLAY MUSIC NUM):"));
+	M_WriteText(52, 120, DEH_String("GOTO:"));
 
-    if(map == 0)
+    M_WriteText(150, 120, DEH_String("(WARP TO MAP)"));
+
+    if(map_cheat == 0)
     {
 	if(!isdemoversion)
-	    map =  1;
+	    map_cheat =  1;
 	else
-	    map = 32;
+	    map_cheat = 32;
     }
 
-    M_WriteText(72, 145, maptext[map]);
-/*
-    if( spot == 0)
-	spot =  1;
+    M_WriteText(52, 130, maptext[map_cheat]);
 
-    M_WriteText(230, 160, spottext[spot]);				// FOR PSP: (DOESN'T WORK (YET))
-*/
+    if(isdemoversion)
+    {
+	if(map_cheat == 32 || map_cheat == 33)
+	    M_WriteText(150, 130, "(DEMO VER.)");
+	else if(map_cheat == 35 || map_cheat == 36)
+	    M_WriteText(150, 130, "(DEV. MAP)");
+    }
+    M_WriteText(52, 140, DEH_String("EXECUTE WARPING"));
+
+    if(text_flag_warping && !classicmode)
+	M_WriteText(236, 50, DEH_String("DONE"));
+
+    if(!isdemoversion)
+	M_WriteText(52, 150, DEH_String("SPIN:"));
+    else
+	M_WriteText(52, 150, DEH_String("IDMUS:"));
+
+    M_WriteText(150, 150, DEH_String("(PLAY MUSIC)"));
+
     if (musnum == 0)
 	musnum =  1;
 
-    M_WriteText(72, 190, mustext[musnum]);
-/*
-    if(!isdemoversion)
-    {
-	if(musnum == 2 || musnum == 4 || musnum == 7 || musnum == 25)
-	    musnum++;
-    }
+    if(isdemoversion)
+	M_WriteText(248, 150, mustextdemo[musnum]);
     else
-    {
-	if(musnum == 12 || musnum == 15 || musnum == 19 || musnum == 23 || musnum == 28)
-	    musnum++;
-    }
-*/
+	M_WriteText(248, 150, mustext[musnum]);
 }
 
 void M_Cheats(int choice)
@@ -3214,7 +3754,12 @@ void M_Episode(int choice)
 {
     // [STRIFE]: start "Name Your Character" menu
     // [SVE]: moved to after episode selection
-    menuepisode = choice;
+
+    if(choice > 0)
+	menuepisode = true;
+    else
+	menuepisode = false;
+
     currentMenu = &NameCharDef;
     itemOn = NameCharDef.lastOn;
     M_ReadSaveStrings();
@@ -3338,8 +3883,33 @@ u32 WaitButtons(void);
 void M_EndGameResponse(int ch)
 {
 //    if (key != key_menu_confirm)
-    if (ch != key_menu_forward)
+    if (ch != key_menu_forward || (usergame && devparm))
+    {
+	if(!music_cheat_used)
+	{
+	    if(gamestate == GS_LEVEL)
+	    {
+		if(!isdemoversion)
+		    S_ChangeMusic(gamemap + 1, 1);		// [SVE]
+		else
+		{
+		    if(gamemap == 32)
+			S_ChangeMusic(mus_map1, 1);		// [SVE]
+		    else if(gamemap == 33)
+			S_ChangeMusic(mus_tavern, 1);		// [SVE]
+		    else if(gamemap == 34)
+			S_ChangeMusic(mus_map3, 1);		// [SVE]
+		    else if(gamemap == 35)
+			S_ChangeMusic(mus_fight2, 1);		// [SVE]
+		    else if(gamemap == 36)
+			S_ChangeMusic(mus_fmstl, 1);		// [SVE]
+		}
+	    }
+	}
+	else
+	    S_ChangeMusic(musnum, 1);		// [SVE]
         return;
+    }
 /*
     u32 buttons = WaitButtons();
 
@@ -3358,6 +3928,7 @@ void M_EndGameResponse(int ch)
 
 void M_EndGame(int choice)
 {
+    text_flag_end = true;
     choice = 0;
     if (!usergame)
     {
@@ -3488,10 +4059,11 @@ void M_QuitResponse(int ch)
     else
 */
     {
+        int i = gametic % 8 + 1;
         S_StartMusic(mus_fast);
-        DEH_snprintf(buffer, sizeof(buffer), "qfmrm%i", gametic % 8 + 1);
+        DEH_snprintf(buffer, sizeof(buffer), "qfmrm%i", i);
         I_StartVoice(buffer);
-        D_QuitGame();
+        D_QuitGame(3*TICRATE + ((i == 7) * 51)); // [SVE]: fix for QFMRM7
     }
 }
 
@@ -3642,6 +4214,37 @@ M_DrawThermo
                       W_CacheLumpName(DEH_String("M_THERMO"), PU_CACHE));
 }
 
+//
+// M_DrawThermo
+//
+// haleyjd 08/28/10: [STRIFE] Changes to some patch coordinates.
+//
+void
+M_DrawThermoSVE
+( int	x,
+  int	y,
+  int	thermWidth,
+  int	thermDot )
+{
+    int         xx;
+    int         yy; // [STRIFE] Needs a temp y coordinate variable
+    int         i;
+
+    xx = x;
+    yy = y + 6; // [STRIFE] +6 to y coordinate
+    V_DrawPatch(xx + 2, yy - 2, W_CacheLumpName(DEH_String("M_SLIDEL"), PU_CACHE));
+    xx += 8;
+    for (i=0;i<thermWidth;i++)
+    {
+        V_DrawPatch(xx, yy - 2, W_CacheLumpName(DEH_String("M_SLIDEM"), PU_CACHE));
+        xx += 8;
+    }
+    V_DrawPatch(xx, yy - 2, W_CacheLumpName(DEH_String("M_SLIDER"), PU_CACHE));
+
+    // [STRIFE] +2 to initial y coordinate
+    V_DrawPatch((x + 9) + thermDot * 8, y + 4,
+                      W_CacheLumpName(DEH_String("M_SLIDEC"), PU_CACHE));
+}
 
 // haleyjd: These are from DOOM v0.5 and the prebeta! They drew those ugly red &
 // blue checkboxes... preserved for historical interest, as not in Strife.
@@ -3675,7 +4278,9 @@ M_StartMessage
     messageString = string;
     messageRoutine = routine;
     messageNeedsInput = input;
+    messageLastMenuPause = menupause; // haleyjd: [SVE] forgotten by Rogue
     menuactive = true;
+    menupause  = true;                // haleyjd: [SVE] ditto
     return;
 }
 
@@ -3684,6 +4289,7 @@ M_StartMessage
 void M_StopMessage(void)
 {
     menuactive = messageLastMenuActive;
+    menupause  = messageLastMenuPause;  // [SVE]
     messageToPrint = 0;
 }
 
@@ -3784,7 +4390,13 @@ M_WriteText
 
         // haleyjd 09/04/10: [STRIFE] Different linebreak handling
 //        if (cx + w > SCREENWIDTH - 20)				// CHANGED FOR HIRES
-	if (cx + w > ORIGWIDTH - 20)					// CHANGED FOR HIRES
+	if (cx + w > ORIGWIDTH - 20 && currentMenu != &ControlsDef)	// CHANGED FOR HIRES
+        {
+            cx = x;
+            cy += 11;
+            --ch;
+        }
+	else if (cx + w > ORIGWIDTH && currentMenu == &ControlsDef)	// CHANGED FOR HIRES
         {
             cx = x;
             cy += 11;
@@ -4008,7 +4620,7 @@ boolean M_Responder (event_t* ev)
     if (askforkey && data->btns_d)		// KEY BINDINGS
     {
 	M_KeyBindingsClearControls(ev->data1);
-	*doom_defaults_list[keyaskedfor + 18 + FirstKey].location = ev->data1;
+	*doom_defaults_list[keyaskedfor + 25 + FirstKey].location = ev->data1;
 	askforkey = false;
 	return true;
     }
@@ -4179,7 +4791,7 @@ boolean M_Responder (event_t* ev)
             }
             break;
 */
-        case KEY_ESCAPE:
+        case KEY_BACKSPACE:
             saveStringEnter = 0;
             M_StringCopy(savegamestrings[quickSaveSlot], saveOldString,
                          sizeof(savegamestrings[quickSaveSlot]));
@@ -4239,7 +4851,7 @@ boolean M_Responder (event_t* ev)
     {
         if (messageNeedsInput)
         {
-	    if (!(ch == key_menu_confirm || ch == key_menu_forward || ch == key_menu_activate))
+	    if (!(ch == key_menu_confirm || ch == key_menu_forward || ch == key_menu_back))
             {
                 return false;
             }
@@ -4430,6 +5042,8 @@ boolean M_Responder (event_t* ev)
     {
         if (ch == key_menu_activate)
         {
+	    frontend_wipe = true;
+
             M_StartControlPanel ();
             S_StartSound(NULL, sfx_swtchn);
             return true;
@@ -4439,163 +5053,217 @@ boolean M_Responder (event_t* ev)
 
     // Keys usable within menu
 
-    if (ch == key_menu_down)
+    if(release_keys)
     {
-        // Move down to next item
+	if (ch == key_menu_down)
+	{
+            // Move down to next item
+            int oldItemOn = itemOn;
 
-        do
-        {
-            if (itemOn+1 > currentMenu->numitems-1)
+            do
+            {
+                if (itemOn+1 > currentMenu->numitems-1)
+                {
+		    if (FirstKey == FIRSTKEY_MAX)	// FOR PSP (if too menu items) ;-)
+		    {
+	                itemOn = 0;
+		        FirstKey = 0;
+		    }
+		    else
+		    {
+		        FirstKey++;
+		    }
+	        }
+                else
+		    itemOn++;
+	        if(currentMenu == &CheatsDef && itemOn == 7 && isdemoversion)
+		    itemOn++;
+	        if(classicmode && currentMenu == &GameDef && itemOn == 7)
+		    itemOn = 0;
+            } while(currentMenu->menuitems[itemOn].status==-1);
+
+	    if(!classicmode && currentMenu == &ScreenDef && itemOn == 3)
+		itemOn = 0;
+
+            // [SVE]: play sound only once, and only if it actually moved
+            if(itemOn != oldItemOn)
+                S_StartSound(NULL, sfx_pstop);
+
+	    if(currentMenu->lastOn != itemOn)
 	    {
-		if (FirstKey == FIRSTKEY_MAX)	// FOR PSP (if too menu items) ;-)
-		{
-	            itemOn = 0;
-		    FirstKey = 0;
-		}
-		else
-		{
-		    FirstKey++;
-		}
+	    	S_StartSound(NULL, sfx_pstop);
+	    	if(merchantOn)
+		    FE_MerchantSetState(S_MRGT_00);
 	    }
-            else
-		itemOn++;
-	    if(currentMenu == &CheatsDef && itemOn == 7 && isdemoversion)
-		itemOn++;
-            S_StartSound(NULL, sfx_pstop);
-        } while(currentMenu->menuitems[itemOn].status==-1);
 
-        return true;
-    }
-    else if (ch == key_menu_up)
-    {
-        // Move back up to previous item
-
-        do
+            return true;
+        }
+        else if (ch == key_menu_up)
         {
-            if (!itemOn)
-	    {
-		if (FirstKey == 0)		// FOR PSP (if too menu items) ;-)
-		{
-                    itemOn = currentMenu->numitems-1;
-		    FirstKey = FIRSTKEY_MAX;
-		}
-		else
-		{
+            // Move back up to previous item
+            int oldItemOn = itemOn;
+
+            do
+            {
+                if (!itemOn)
+	        {
+		    if (FirstKey == 0)		// FOR PSP (if too menu items) ;-)
+		    {
+                        itemOn = currentMenu->numitems-1;
+	    	        FirstKey = FIRSTKEY_MAX;
+		    }
+		    else
+		    {
 		    FirstKey--;
-		}
+		    }
+	        }
+                else
+		    itemOn--;
+	        if(currentMenu == &CheatsDef && itemOn == 7 && isdemoversion)
+		    itemOn--;
+	        if(classicmode && currentMenu == &GameDef && itemOn == 12)
+		    itemOn = 6;
+            } while(currentMenu->menuitems[itemOn].status==-1);
+
+	    if(!classicmode && currentMenu == &ScreenDef && itemOn == 4)
+		itemOn = 1;
+
+            // [SVE]: play sound only once, and only if it actually moved
+            if(itemOn != oldItemOn)
+                S_StartSound(NULL, sfx_pstop);
+
+	    if(currentMenu->lastOn != itemOn)
+	    {
+	        S_StartSound(NULL, sfx_pstop);
+	        if(merchantOn)
+	           FE_MerchantSetState(S_MRGT_00);
 	    }
-            else
-		itemOn--;
-	    if(currentMenu == &CheatsDef && itemOn == 7 && isdemoversion)
-		itemOn--;
-            S_StartSound(NULL, sfx_pstop);
-        } while(currentMenu->menuitems[itemOn].status==-1);
 
-        return true;
-    }
-    else if (ch == key_menu_left)
-    {
-        // Slide slider left
-
-        if (currentMenu->menuitems[itemOn].routine &&
-            currentMenu->menuitems[itemOn].status == 2)
-        {
-            S_StartSound(NULL, sfx_stnmov);
-            currentMenu->menuitems[itemOn].routine(0);
+            return true;
         }
-        return true;
-    }
-    else if (ch == key_menu_right)
-    {
-        // Slide slider right
-
-        if (currentMenu->menuitems[itemOn].routine &&
-            currentMenu->menuitems[itemOn].status == 2)
+        else if (ch == key_menu_left)
         {
-            S_StartSound(NULL, sfx_stnmov);
-            currentMenu->menuitems[itemOn].routine(1);
-        }
-        return true;
-    }
-    else if (ch == key_menu_forward)
-    {
-        // Activate menu item
+            // Slide slider left
 
-        if (currentMenu->menuitems[itemOn].routine &&
-            currentMenu->menuitems[itemOn].status)
-        {
-            currentMenu->lastOn = itemOn;
-            if (currentMenu->menuitems[itemOn].status == 2)
+            if (currentMenu->menuitems[itemOn].routine &&
+                currentMenu->menuitems[itemOn].status == 2)
             {
-                currentMenu->menuitems[itemOn].routine(1);      // right arrow
                 S_StartSound(NULL, sfx_stnmov);
+                currentMenu->menuitems[itemOn].routine(0);
             }
-            else
-            {
-                currentMenu->menuitems[itemOn].routine(itemOn);
-                //S_StartSound(NULL, sfx_swish); [STRIFE] No sound is played here.
-            }
+            return true;
         }
-        return true;
-    }
-    else if (ch == key_menu_activate)
-    {
-        // Deactivate menu
-        if(gameversion == exe_strife_1_31) // [STRIFE]: 1.31 saving
-            namingCharacter = false;
-
-        if(menuindialog) // [STRIFE] - Get out of dialog engine semi-gracefully
-            P_DialogDoChoice(-1);
-
-        currentMenu->lastOn = itemOn;
-        M_ClearMenus (0);
-        S_StartSound(NULL, sfx_mtalht); // villsa [STRIFE]: sounds
-
-        return true;
-    }
-    else if (ch == key_menu_back)
-    {
-        // Go back to previous menu
-
-        currentMenu->lastOn = itemOn;
-        if (currentMenu->prevMenu)
+        else if (ch == key_menu_right)
         {
-            currentMenu = currentMenu->prevMenu;
-            itemOn = currentMenu->lastOn;
-            S_StartSound(NULL, sfx_swtchn);
+            // Slide slider right
+
+            if (currentMenu->menuitems[itemOn].routine &&
+                currentMenu->menuitems[itemOn].status == 2)
+            {
+                S_StartSound(NULL, sfx_stnmov);
+                currentMenu->menuitems[itemOn].routine(1);
+            }
+            return true;
         }
-        return true;
-    }
+        else if (ch == key_menu_forward)
+        {
+            // Activate menu item
 
-    // Keyboard shortcut?
-    // Vanilla Strife has a weird behavior where it jumps to the scroll bars
-    // when certain keys are pressed, so emulate this.
+	    if     (currentMenu != &ScreenDef && currentMenu != &ControlsDef && currentMenu != &SoundDef &&
+		    currentMenu != &SystemDef && currentMenu != &GameDef && currentMenu != &DebugDef &&
+		    currentMenu != &CheatsDef && currentMenu != &KeyBindingsDef)
+	    {
+                frontend_wipe       = true;
+	    }
 
-    else if (ch != 0/* || IsNullKey(key)*/)
-    {
+            if (currentMenu->menuitems[itemOn].routine &&
+                currentMenu->menuitems[itemOn].status)
+            {
+                currentMenu->lastOn = itemOn;
+                if (currentMenu->menuitems[itemOn].status == 2)
+                {
+                    currentMenu->menuitems[itemOn].routine(1);      // right arrow
+                    S_StartSound(NULL, sfx_stnmov);
+                }
+                else
+                {
+                    currentMenu->menuitems[itemOn].routine(itemOn);
+                    //S_StartSound(NULL, sfx_swish); [STRIFE] No sound is played here.
+                }
+            }
+            return true;
+        }
+        else if (ch == key_menu_activate)
+        {
+            // Deactivate menu
+            if(gameversion == exe_strife_1_31) // [STRIFE]: 1.31 saving
+                namingCharacter = false;
+
+            if(menuindialog) // [STRIFE] - Get out of dialog engine semi-gracefully
+                P_DialogDoChoice(-1);
+
+            currentMenu->lastOn = itemOn;
+            M_ClearMenus (0);
+            S_StartSound(NULL, sfx_mtalht); // villsa [STRIFE]: sounds
+
+            return true;
+        }
+        else if (ch == key_menu_back)
+        {
+            // Go back to previous menu
+
+	    if(currentMenu != &MainDef)
+	    {
+		frontend_wipe       = true;
+	    }
+
+            currentMenu->lastOn = itemOn;
+            if (currentMenu->prevMenu)
+            {
+                currentMenu = currentMenu->prevMenu;
+                itemOn = currentMenu->lastOn;
+                S_StartSound(NULL, sfx_swtchn);
+		text_flag_boomstix = false;
+		text_flag_donnytrump = false;
+		text_flag_stonecold = false;
+		text_flag_pumpup = false;
+		text_flag_warping = false;
+		text_flag_end = false;
+            }
+            return true;
+        }
+
         // Keyboard shortcut?
+        // Vanilla Strife has a weird behavior where it jumps to the scroll bars
+        // when certain keys are pressed, so emulate this.
 
-        for (i = itemOn+1;i < currentMenu->numitems;i++)
+        else if (ch != 0/* || IsNullKey(key)*/)
         {
-            if (currentMenu->menuitems[i].alphaKey == ch)
+            // Keyboard shortcut?
+
+            for (i = itemOn+1;i < currentMenu->numitems;i++)
             {
-                itemOn = i;
-                S_StartSound(NULL, sfx_pstop);
-                return true;
+                if (currentMenu->menuitems[i].alphaKey == ch)
+                {
+                    itemOn = i;
+                    S_StartSound(NULL, sfx_pstop);
+                    return true;
+                }
             }
-        }
 
-        for (i = 0;i <= itemOn;i++)
-        {
-            if (currentMenu->menuitems[i].alphaKey == ch)
+            for (i = 0;i <= itemOn;i++)
             {
-                itemOn = i;
-                S_StartSound(NULL, sfx_pstop);
-                return true;
+                if (currentMenu->menuitems[i].alphaKey == ch)
+                {
+                    // [SVE]: sound only if actually moves
+                    if(i != itemOn)
+                        S_StartSound(NULL, sfx_pstop);
+                    itemOn = i;
+                    return true;
+                }
             }
         }
     }
-
     return false;
 }
 
@@ -4614,6 +5282,16 @@ void M_StartControlPanel (void)
     menupause = true;
     currentMenu = &MainDef;         // JDC
     itemOn = currentMenu->lastOn;   // JDC
+
+    if(!menuindialog)
+	frontend_wipe       = true;
+
+    text_flag_boomstix = false;
+    text_flag_donnytrump = false;
+    text_flag_stonecold = false;
+    text_flag_pumpup = false;
+    text_flag_warping = false;
+    text_flag_end = false;
 }
 
 #include "st_stuff.h"
@@ -4665,6 +5343,292 @@ void M_Drawer (void)
     char		string[80];
     char               *name;
     int			start;
+
+    if(menuactive && !classicmode && !menuindialog)
+    {
+	if(!cast_running)
+	{
+	    // draw background
+	    if (currentMenu == &OptionsDef || currentMenu == &ControlsDef || currentMenu == &SoundDef ||
+		    currentMenu == &SystemDef || currentMenu == &GameDef || currentMenu == &ScreenDef ||
+		    currentMenu == &KeyBindingsDef)
+		FE_DrawBackground(currentMenu->background + 1);
+	    else if(currentMenu == &FilesDef || currentMenu == &LoadDef || currentMenu == &SaveDef ||
+		    currentMenu == &CheatsDef)
+		FE_DrawBackground(currentMenu->background + 2);
+	    else
+	    {
+		if(!inhelpscreens)
+		    FE_DrawBackground(currentMenu->background);
+		else
+		{
+		    frontend_wipe = false;
+		    wipe = false;
+
+		    if(isdemoversion)
+			V_DrawPatch(0, 0, W_CacheLumpName(DEH_String("HELP0"), PU_CACHE));
+		    else
+			V_DrawPatch(0, 0, W_CacheLumpName(DEH_String("PANEL0"), PU_CACHE));
+		}
+	    }
+	}
+
+	if(frontend_wipe)
+	{
+            frontend_wipe = false;
+            wipe = true;
+	}
+
+	if((currentMenu != &CheatsDef || (currentMenu == &CheatsDef && itemOn != 13)) && !classicmode && gamestate == GS_LEVEL)
+	    S_ChangeMusic(mus_panthr, 1);	// [SVE]
+
+	if (currentMenu == &MainDef && !text_flag_end)
+	    HUlib_drawYellowText(100, 50,	"VETERAN EDITION *LITE*");
+
+	if ((currentMenu != &OptionsDef && currentMenu != &MainDef && currentMenu != &KeyBindingsDef &&
+	     currentMenu != &LoadDef && currentMenu != &SaveDef && currentMenu != &NewDef &&
+	     currentMenu != &EpiDef && currentMenu != &FilesDef && currentMenu != &NameCharDef) ||
+	    (currentMenu == &EpiDef && itemOn == 1))
+	{
+            FE_DrawBox(0, 160, SCREENWIDTH >> hires, 40);	// ADDED HIRES SUPPORT
+            FE_DrawMerchant(FE_MERCHANT_X, FE_MERCHANT_Y);
+
+	    if(currentMenu == &EpiDef && itemOn == 1)
+	    {
+		HUlib_drawYellowText(4, 164,	"THIS MODE TRIES TO EMULATE THE BEHAVIOR OF");
+		HUlib_drawYellowText(4, 177,	"THE STRIFE TEASER DEMO AS CLOSE TO THE");
+		HUlib_drawYellowText(4, 190,	"ORIGINAL AS POSSIBLE.");
+	    }
+
+	    if(currentMenu == &CheatsDef && itemOn == 0)
+	    {
+		HUlib_drawYellowText(4, 164,	"Makes all map areas visible whether they");
+		HUlib_drawYellowText(4, 177,	"have been visited before or not.");
+	    }
+	    else if(currentMenu == &CheatsDef && itemOn == 1)
+	    {
+		HUlib_drawYellowText(4, 164,	"This cheat will turn on / off invincibility");
+		HUlib_drawYellowText(4, 177,	"(GOD MODE).");
+	    }
+	    else if(currentMenu == &CheatsDef && itemOn == 2)
+	    {
+		HUlib_drawYellowText(4, 164,	"No clipping for walls: you are able to walk");
+		HUlib_drawYellowText(4, 177,	"right through them.");
+	    }
+	    else if(currentMenu == &CheatsDef && itemOn == 3)
+	    {
+		HUlib_drawYellowText(4, 164,	"Maximum fire power will be given to you.");
+	    }
+	    else if(currentMenu == &CheatsDef && itemOn == 4)
+	    {
+		HUlib_drawYellowText(4, 164,	"Grab all keys that are available in the");
+		HUlib_drawYellowText(4, 177,	"whole game (you need to trigger this");
+		HUlib_drawYellowText(4, 190,	"multiple times).");
+	    }
+	    else if(currentMenu == &CheatsDef && itemOn == 5)
+	    {
+		HUlib_drawYellowText(4, 164,	"You will gain lots of gold using this cheat.");
+	    }
+	    else if(currentMenu == &CheatsDef && itemOn == 6)
+	    {
+		HUlib_drawYellowText(4, 164,	"DEATH TO ALL OF THEM (excluding NPC'S like");
+		HUlib_drawYellowText(4, 177,	"barkeepers and figures that effect gameplay).");
+	    }
+	    else if(currentMenu == &CheatsDef && itemOn == 7)
+	    {
+		HUlib_drawYellowText(4, 164,	"Here you can choose the type of sigil that");
+		HUlib_drawYellowText(4, 177,	"you wanna use.");
+	    }
+	    else if(currentMenu == &CheatsDef && itemOn == 8)
+	    {
+		HUlib_drawYellowText(4, 164,	"This will give all items to your inventory.");
+	    }
+	    else if(currentMenu == &CheatsDef && itemOn == 9)
+	    {
+		HUlib_drawYellowText(4, 164,	"Show / hide items and enemies on the");
+		HUlib_drawYellowText(4, 177,	"automap or draw walls only.");
+	    }
+	    else if(currentMenu == &CheatsDef && itemOn == 10)
+	    {
+		HUlib_drawYellowText(4, 164,	"Choose any map you like...");
+	    }
+	    else if(currentMenu == &CheatsDef && itemOn == 12)
+	    {
+		HUlib_drawYellowText(4, 164,	"...and do warp to it.");
+	    }
+	    else if(currentMenu == &CheatsDef && itemOn == 13)
+	    {
+		HUlib_drawYellowText(4, 164,	"Plays a different music than the actual one.");
+	    }
+
+	    if(currentMenu == &ControlsDef && itemOn == 0)
+	    {
+		HUlib_drawYellowText(4, 164,	"Walking speed is being changed to your");
+		HUlib_drawYellowText(4, 177,	"needs using this slider.");
+	    }
+	    else if(currentMenu == &ControlsDef && itemOn == 2)
+	    {
+		HUlib_drawYellowText(4, 164,	"Need faster turning? Adjust it right here");
+		HUlib_drawYellowText(4, 177,	"with this slider.");
+	    }
+	    else if(currentMenu == &ControlsDef && itemOn == 4)
+	    {
+		HUlib_drawYellowText(4, 164,	"This slider will take care of the speed that");
+		HUlib_drawYellowText(4, 177,	"your player uses for strafing.");
+	    }
+	    else if(currentMenu == &ControlsDef && itemOn == 6)
+	    {
+		HUlib_drawYellowText(4, 164,	"Change the type of how freelook is assigned:");
+		HUlib_drawYellowText(4, 177,	"Normal, inversed or even no freelook (off).");
+	    }
+	    else if(currentMenu == &ControlsDef && itemOn == 7)
+	    {
+		HUlib_drawYellowText(4, 164,	"With this setting you will be able to adjust");
+		HUlib_drawYellowText(4, 177,	"the speed of the freelook feature.");
+	    }
+	    else if(currentMenu == &ControlsDef && itemOn == 9)
+	    {
+		HUlib_drawYellowText(4, 164,	"Here you can define your personal key");
+		HUlib_drawYellowText(4, 177,	"bindings to your likes for the best gaming");
+		HUlib_drawYellowText(4, 190,	"experience.");
+	    }
+
+	    if(currentMenu == &DebugDef && itemOn == 0)
+	    {
+		HUlib_drawYellowText(4, 164,	"This function draws the player coordinates");
+		HUlib_drawYellowText(4, 177,	"static to the screen while playing any map.");
+	    }
+	    else if(currentMenu == &DebugDef && itemOn == 1)
+	    {
+		HUlib_drawYellowText(4, 164,	"This function will draw the version of the");
+		HUlib_drawYellowText(4, 177,	"actual game binary you are playing.");
+	    }
+
+	    if(currentMenu == &ScreenDef && itemOn == 0)
+	    {
+		HUlib_drawYellowText(4, 164,	"This function enlightens the screen more,");
+		HUlib_drawYellowText(4, 177,	"depending on how much brightness you need.");
+	    }
+	    else if(currentMenu == &ScreenDef && itemOn == 2)
+	    {
+		HUlib_drawYellowText(4, 164,	"This function will draw a screen border the");
+		HUlib_drawYellowText(4, 177,	"more you reduce the size.");
+	    }
+
+	    if(currentMenu == &SystemDef && itemOn == 0)
+	    {
+		HUlib_drawYellowText(4, 164,	"This function draws a static frames per");
+		HUlib_drawYellowText(4, 177,	"second counter to the screen output.");
+	    }
+	    else if(currentMenu == &SystemDef && itemOn == 1)
+	    {
+		HUlib_drawYellowText(4, 164,	"This function draws the display ticker to");
+		HUlib_drawYellowText(4, 177,	"the lower right of the screen, showing the");
+		HUlib_drawYellowText(4, 190,	"actual CPU performance of the game.");
+	    }
+
+	    if(currentMenu == &SoundDef && itemOn == 0)
+	    {
+		HUlib_drawYellowText(4, 164,	"Volume of digital sound effects, excluding");
+		HUlib_drawYellowText(4, 177,	"voice acting.");
+	    }
+	    else if(currentMenu == &SoundDef && itemOn == 2)
+	    {
+		HUlib_drawYellowText(4, 164,	"Volume of music.");
+	    }
+	    else if(currentMenu == &SoundDef && itemOn == 4)
+	    {
+		HUlib_drawYellowText(4, 164,	"Turn all kind of voices on or off.");
+	    }
+	    else if(currentMenu == &SoundDef && itemOn == 5)
+	    {
+		HUlib_drawYellowText(4, 164,	"Volume of voices.");
+	    }
+
+	    if(currentMenu == &GameDef && itemOn == 0)
+	    {
+		HUlib_drawYellowText(4, 164,	"The good old automap grid will be enabled");
+		HUlib_drawYellowText(4, 177,	"with this setting.");
+	    }
+	    else if(currentMenu == &GameDef && itemOn == 1)
+	    {
+		HUlib_drawYellowText(4, 164,	"For those who like it more special, the");
+		HUlib_drawYellowText(4, 177,	"automap will be rotating around the player");
+		HUlib_drawYellowText(4, 190,	"while turning.");
+	    }
+	    else if(currentMenu == &GameDef && itemOn == 2)
+	    {
+		HUlib_drawYellowText(4, 164,	"This setting - if disabled - allows the");
+		HUlib_drawYellowText(4, 177,	"player to explore the complete automap");
+		HUlib_drawYellowText(4, 190,	"using the left controller joystick.");
+	    }
+	    else if(currentMenu == &GameDef && itemOn == 3)
+	    {
+		HUlib_drawYellowText(4, 164,	"Status messages like item pickups can be");
+		HUlib_drawYellowText(4, 177,	"enabled or disabled using this setting.");
+	    }
+	    else if(currentMenu == &GameDef && itemOn == 4)
+	    {
+		HUlib_drawYellowText(4, 164,	"This option handles the behavior of whether");
+		HUlib_drawYellowText(4, 177,	"showing the text while a dialog is up and");
+		HUlib_drawYellowText(4, 190,	"running or not.");
+	    }
+	    else if(currentMenu == &GameDef && itemOn == 5)
+	    {
+		HUlib_drawYellowText(4, 164,	"If enabled, an aiming help will be drawn");
+		HUlib_drawYellowText(4, 177,	"directly to the screen.");
+	    }
+	    else if(currentMenu == &GameDef && itemOn == 6)
+	    {
+		HUlib_drawYellowText(4, 164,	"Toggle drawing of the fullscreen heads-up");
+		HUlib_drawYellowText(4, 177,	"display.");
+	    }
+	    else if(currentMenu == &GameDef && itemOn == 7)
+	    {
+		HUlib_drawYellowText(4, 164,	"More blood, more gibs, more awesome. For");
+		HUlib_drawYellowText(4, 177,	"those who like it \"brutal\"...");
+	    }
+	    else if(currentMenu == &GameDef && itemOn == 8)
+	    {
+		HUlib_drawYellowText(4, 164,	"The game will behave as much as possible");
+		HUlib_drawYellowText(4, 177,	"like the original \"Strife: Quest for the");
+		HUlib_drawYellowText(4, 190,	"Sigil\", even including some bugs.");
+	    }
+	    else if(currentMenu == &GameDef && itemOn == 9)
+	    {
+		HUlib_drawYellowText(4, 164,	"If enabled, your view will kick back in");
+		HUlib_drawYellowText(4, 177,	"response to heavy arms fire.");
+	    }
+	    else if(currentMenu == &GameDef && itemOn == 10)
+	    {
+		HUlib_drawYellowText(4, 164,	"Toggle automatic aim assistance on or off.");
+		HUlib_drawYellowText(4, 177,	"If off, you'll need to be exactly on the");
+		HUlib_drawYellowText(4, 190,	"mark to hit enemies above or below.");
+	    }
+	    else if(currentMenu == &GameDef && itemOn == 11)
+	    {
+		HUlib_drawYellowText(4, 164,	"For this game only, robots and mechanical");
+		HUlib_drawYellowText(4, 177,	"enemies will respawn after 16 seconds. Be");
+		HUlib_drawYellowText(4, 190,	"quick, or die in shame and dishonor!");
+	    }
+	    else if(currentMenu == &GameDef && itemOn == 12)
+	    {
+		HUlib_drawYellowText(4, 164,	"For this game only, enemies attack with");
+		HUlib_drawYellowText(4, 177,	"extreme aggression! Not for the assassin");
+		HUlib_drawYellowText(4, 190,	"with a faint heart.");
+	    }
+	}
+    }
+
+    if(classicmode && currentMenu == &EpiDef && itemOn == 1)
+    {
+	M_WriteText(49, 120, DEH_String("THIS MODE TRIES TO EMULATE THE"));
+	M_WriteText(49, 130, DEH_String("BEHAVIOR OF THE ORIGINAL STRIFE"));
+	M_WriteText(49, 140, DEH_String("TEASER DEMO AS CLOSE TO THE ORIGINAL"));
+	M_WriteText(49, 150, DEH_String("AS POSSIBLE, INCLUDING: SOUND,"));
+	M_WriteText(49, 160, DEH_String("MUSIC, MENU, SLIDESHOWS, THE FINALE,"));
+	M_WriteText(49, 170, DEH_String("PLAYER MESSAGES & DIALOGUES."));
+    }
 
     inhelpscreens = false;
 
@@ -4781,6 +5745,9 @@ void M_Drawer (void)
     if (currentMenu->menuitems[itemOn].status == 5)		// FOR PSP (if too menu items) ;-)
 	max += FirstKey;
 
+    if(!devparm && currentMenu == &SoundDef)
+	currentMenu->numitems = 7;
+
     if(!devparm && currentMenu == &OptionsDef)
 	currentMenu->numitems = 5;
 #ifdef SHAREWARE
@@ -4789,7 +5756,6 @@ void M_Drawer (void)
 #endif
     for (i=0;i<max;i++)
     {
-        // haleyjd 20141004: [SVE] mouse in menus support
         // haleyjd 20141014: [SVE] allow item->name to be a big font string
 //        name = DEH_String(currentMenu->menuitems[i].name);
         menuitem_t *item = &(currentMenu->menuitems[i]);
@@ -4801,7 +5767,11 @@ void M_Drawer (void)
 //            V_DrawPatch (x, y, W_CacheLumpName(name, PU_CACHE));
             int lumpnum = W_CheckNumForName(name);
 
-            if(lumpnum >= 0)
+            if ((lumpnum >= 0 && classicmode) || (!classicmode && (currentMenu == &MainDef	||
+								   currentMenu == &OptionsDef	||
+								   currentMenu == &NewDef	||
+								   currentMenu == &EpiDef	||
+								   currentMenu == &FilesDef)))
             {
                 patch_t *p = W_CacheLumpName(name, PU_CACHE);
                 item->x = x - SHORT(p->leftoffset);
@@ -4810,6 +5780,7 @@ void M_Drawer (void)
                 item->h = SHORT(p->height);
                 V_DrawPatchDirect(x, y, p);
             }
+/*
             else
             {
                 item->x = x;
@@ -4818,8 +5789,17 @@ void M_Drawer (void)
                 item->h = V_BigFontStringHeight(item->name);
                 V_WriteBigText(item->name, x, y+4);
             }
+*/
         }
-	if(currentMenu == &CheatsDef || currentMenu == &KeyBindingsDef)
+
+	if((!classicmode && (currentMenu != &MainDef	&& currentMenu != &OptionsDef		&&
+			     currentMenu != &NewDef	&& currentMenu != &EpiDef		&&
+			     currentMenu != &FilesDef	&& currentMenu != &ControlsDef		&&
+			     currentMenu != &SoundDef	&& currentMenu != &DebugDef		&&
+			     currentMenu != &SystemDef	&& currentMenu != &ScreenDef		&&
+			     currentMenu != &LoadDef	&& currentMenu != &SaveDef		&&
+			     !menuindialog		&& !inhelpscreens))			||
+	    (classicmode && (currentMenu == &CheatsDef	|| currentMenu == &KeyBindingsDef)))
 	{
             y += LINEHEIGHT_SMALL;
 	    // haleyjd 08/27/10: [STRIFE] Adjust to draw spinning Sigil
@@ -4828,7 +5808,76 @@ void M_Drawer (void)
 		              W_CacheLumpName(DEH_String(cursorNameSmall[whichCursor]),
 		                              PU_CACHE));
 	}
-        else if(currentMenu)
+	else if(classicmode && currentMenu == &GameDef)
+	{
+            y += LINEHEIGHT_SMALL;
+	    // haleyjd 08/27/10: [STRIFE] Adjust to draw spinning Sigil
+	    // DRAW SIGIL
+	    V_DrawPatch(x + CURSORXOFF_SMALL, currentMenu->y + 25 + itemOn*LINEHEIGHT_SMALL,
+		              W_CacheLumpName(DEH_String(cursorNameSmall[whichCursor]),
+		                              PU_CACHE));
+	}
+	else if(!classicmode && currentMenu == &ControlsDef)
+	{
+            y += LINEHEIGHT_SMALL;
+	    // haleyjd 08/27/10: [STRIFE] Adjust to draw spinning Sigil
+	    // DRAW SIGIL
+	    V_DrawPatch(x - 30 + CURSORXOFF_SMALL, currentMenu->y + 50 + itemOn*LINEHEIGHT_SMALL,
+		              W_CacheLumpName(DEH_String(cursorNameSmall[whichCursor]),
+		                              PU_CACHE));
+	}
+	else if(!classicmode && currentMenu == &SoundDef)
+	{
+            y += LINEHEIGHT_SMALL;
+	    // haleyjd 08/27/10: [STRIFE] Adjust to draw spinning Sigil
+	    // DRAW SIGIL
+	    V_DrawPatch(x - 45 + CURSORXOFF_SMALL, currentMenu->y + 40 + itemOn*LINEHEIGHT_SMALL,
+		              W_CacheLumpName(DEH_String(cursorNameSmall[whichCursor]),
+		                              PU_CACHE));
+	}
+	else if(!classicmode && currentMenu == &DebugDef)
+	{
+            y += LINEHEIGHT_SMALL;
+	    // haleyjd 08/27/10: [STRIFE] Adjust to draw spinning Sigil
+	    // DRAW SIGIL
+	    V_DrawPatch(x + 35 + CURSORXOFF_SMALL, currentMenu->y + 10 + itemOn*LINEHEIGHT_SMALL,
+		              W_CacheLumpName(DEH_String(cursorNameSmall[whichCursor]),
+		                              PU_CACHE));
+	}
+	else if(!classicmode && currentMenu == &ScreenDef)
+	{
+            y += LINEHEIGHT_SMALL;
+	    // haleyjd 08/27/10: [STRIFE] Adjust to draw spinning Sigil
+	    // DRAW SIGIL
+	    V_DrawPatch(x + CURSORXOFF_SMALL, currentMenu->y + 14 + itemOn*LINEHEIGHT_SMALL,
+		              W_CacheLumpName(DEH_String(cursorNameSmall[whichCursor]),
+		                              PU_CACHE));
+	}
+	else if(!classicmode && currentMenu == &SystemDef)
+	{
+            y += LINEHEIGHT_SMALL;
+	    // haleyjd 08/27/10: [STRIFE] Adjust to draw spinning Sigil
+	    // DRAW SIGIL
+	    V_DrawPatch(x + 45 + CURSORXOFF_SMALL, currentMenu->y + itemOn*LINEHEIGHT_SMALL,
+		              W_CacheLumpName(DEH_String(cursorNameSmall[whichCursor]),
+		                              PU_CACHE));
+	}
+	else if(classicmode && currentMenu == &ControlsDef)
+	{
+	    y += LINEHEIGHT;
+	    // haleyjd 08/27/10: [STRIFE] Adjust to draw spinning Sigil
+	    // DRAW SIGIL
+	    V_DrawPatch(x + CURSORXOFF, currentMenu->y + 5 + itemOn*LINEHEIGHT,
+		              W_CacheLumpName(DEH_String(cursorName[whichCursor]),
+		                              PU_CACHE));
+	}
+        else if ((classicmode && (currentMenu != &KeyBindingsDef&& currentMenu != &GameDef	&&
+				  currentMenu != &CheatsDef))	||
+		(!classicmode && (currentMenu == &MainDef	|| currentMenu == &OptionsDef	||
+				  currentMenu == &NewDef	|| currentMenu == &EpiDef	||
+				  currentMenu == &FilesDef	|| currentMenu == &LoadDef	||
+				  currentMenu == &SaveDef	|| menuindialog			||
+				  inhelpscreens)))
 	{
 	    y += LINEHEIGHT;
 	    // haleyjd 08/27/10: [STRIFE] Adjust to draw spinning Sigil
@@ -4836,15 +5885,6 @@ void M_Drawer (void)
 	    V_DrawPatch(x + CURSORXOFF, currentMenu->y - 5 + itemOn*LINEHEIGHT,
 		              W_CacheLumpName(DEH_String(cursorName[whichCursor]),
 		                              PU_CACHE));
-	}
-	if(currentMenu == &EpiDef && itemOn > 0)
-	{
-	    M_WriteText(49, 120, DEH_String("THIS MODE TRIES TO EMULATE THE"));
-	    M_WriteText(49, 130, DEH_String("BEHAVIOR OF THE ORIGINAL STRIFE"));
-	    M_WriteText(49, 140, DEH_String("TEASER DEMO AS CLOSE TO THE"));
-	    M_WriteText(49, 150, DEH_String("ORIGINAL AS POSSIBLE, INCLUDING:"));
-	    M_WriteText(49, 160, DEH_String("SOUND, MUSIC, MENU, SLIDESHOWS,"));
-	    M_WriteText(49, 170, DEH_String("THE FINALE & PLAYER MESSAGES."));
 	}
     }
 }
@@ -4858,9 +5898,54 @@ void M_Drawer (void)
 //
 void M_ClearMenus (int choice)
 {
+//    extern int slideshow_state;
+
     choice = 0;     // haleyjd: for no warning; not from decompilation.
     menuactive = 0;
     menupause = 0;
+
+//    if(!classicmode && !menuindialog)
+    {
+	if(!music_cheat_used)
+	{
+/*
+	    if(gamestate == GS_FINALE)
+	    {
+		if(slideshow_state == SLIDE_EXITHACK || slideshow_state == SLIDE_PROGRAMMER1 || slideshow_state == SLIDE_SIGIL1)
+		    S_ChangeMusic(mus_dark, 1);			// ADDED FOR DEMO
+		else if(slideshow_state == SLIDE_BLAHEND1 || slideshow_state == SLIDE_BLAHEND2 || slideshow_state == SLIDE_BLAHEND3)
+		    S_ChangeMusic(mus_end, 1);			// ADDED FOR DEMO
+		else if(slideshow_state == SLIDE_BADEND1 || slideshow_state == SLIDE_BADEND2 || slideshow_state == SLIDE_BADEND3)
+		    S_ChangeMusic(mus_sad, 1);			// ADDED FOR DEMO
+		else if(slideshow_state == SLIDE_GOODEND1 || slideshow_state == SLIDE_GOODEND2 || slideshow_state == SLIDE_GOODEND3 || slideshow_state == SLIDE_GOODEND4)
+		    S_ChangeMusic(mus_happy, 1);		// ADDED FOR DEMO
+		else if(slideshow_state == SLIDE_DEMOEND1)
+		    S_ChangeMusic(mus_drone, 1);		// ADDED FOR DEMO
+		else if(slideshow_state == SLIDE_DEMOEND2 || slideshow_state == SLIDE_EXIT || slideshow_state == SLIDE_CHOCO)
+		    S_ChangeMusic(mus_fast, 1);			// ADDED FOR DEMO
+	    }
+	    else*/ if(gamestate == GS_LEVEL)
+	    {
+		if(!isdemoversion)
+		    S_ChangeMusic(gamemap + 1, 1);		// [SVE]
+		else
+		{
+		    if(gamemap == 32)
+			S_ChangeMusic(mus_map1, 1);		// [SVE]
+		    else if(gamemap == 33)
+			S_ChangeMusic(mus_tavern, 1);		// [SVE]
+		    else if(gamemap == 34)
+			S_ChangeMusic(mus_map3, 1);		// [SVE]
+		    else if(gamemap == 35)
+			S_ChangeMusic(mus_fight2, 1);		// [SVE]
+		    else if(gamemap == 36)
+			S_ChangeMusic(mus_fmstl, 1);		// [SVE]
+		}
+	    }
+	}
+	else
+	    S_ChangeMusic(musnum, 1);		// [SVE]
+    }
 }
 
 
@@ -4888,6 +5973,9 @@ void M_Ticker (void)
         whichCursor = (whichCursor + 1) % 8;
         cursorAnimCounter = 5;
     }
+
+    // animate merchant
+    FE_MerchantTick();
 }
 
 
@@ -4915,5 +6003,7 @@ void M_Init (void)
 
     // Here we could catch other version dependencies,
     //  like HELP1/2, and four episodes.
+
+    FE_InitMerchant();			// [SVE]
 }
 

@@ -24,6 +24,7 @@
 #include "r_data.h"
 
 
+#define FIXED2FLOAT(x)  (((float)(x))/FRACUNIT)
 
 
 //
@@ -96,6 +97,8 @@ extern void		(*fuzzcolfunc) (void);
 // No shadow effects on floors.
 extern void		(*spanfunc) (void);
 
+extern void		(*colfunc)(void);
+extern void		(*bloodsplatcolfunc)(void);
 
 //
 // Utility functions.
@@ -156,5 +159,7 @@ void R_Init (void);
 
 // Called by M_Responder.
 void R_SetViewSize (int blocks, int detail);
+
+fixed_t R_LerpCoord(fixed_t lerp, fixed_t oldpos, fixed_t newpos); // [SVE]
 
 #endif

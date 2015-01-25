@@ -11,7 +11,7 @@
 #include "pngu.h"
 
 #include "video.h"
-#include "d2x-cios-installer.h"
+#include "mainmenu.h"
 #include "libgeometry.h"
 #include "gui.h"
 enum CONSOLE_FONT_COLORS CURRENT_FONT_BGCOLOR=DEFAULT_FONT_BGCOLOR,PREVIOUS_FONT_BGCOLOR=DEFAULT_FONT_BGCOLOR,CURRENT_FONT_FGCOLOR=DEFAULT_FONT_FGCOLOR,PREVIOUS_FONT_FGCOLOR=DEFAULT_FONT_FGCOLOR;

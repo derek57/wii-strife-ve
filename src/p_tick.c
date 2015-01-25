@@ -65,9 +65,29 @@ void P_AddThinker (thinker_t* thinker)
     thinker->next = &thinkercap;
     thinker->prev = thinkercap.prev;
     thinkercap.prev = thinker;
+
+    thinker->references = 0; // haleyjd: [SVE]
 }
 
 
+
+// haleyjd 20140926: currentthinker external pointer
+static thinker_t *currentthinker;
+
+//
+// P_RemoveThinkerDelayed
+//
+// haleyjd 20140926: [SVE] Need deferred freeing of thinkers
+//
+void P_RemoveThinkerDelayed(thinker_t *thinker)
+{
+    if(!thinker->references)
+    {
+        thinker_t *next = thinker->next;
+        (next->prev = currentthinker = thinker->prev)->next = next;
+        Z_Free(thinker, "P_RemoveThinkerDelayed");
+    }
+}
 
 //
 // P_RemoveThinker
@@ -78,45 +98,37 @@ void P_AddThinker (thinker_t* thinker)
 //
 void P_RemoveThinker (thinker_t* thinker)
 {
-  // FIXME: NOP.
-  thinker->function.acv = (actionf_v)(-1);
+    // [SVE] set to deferred removal state
+    thinker->function.acp1 = (actionf_p1)P_RemoveThinkerDelayed;
 }
 
-
-
 //
-// P_AllocateThinker
-// Allocates memory and adds a new thinker at the end of the list.
+// P_SetTarget
 //
-void P_AllocateThinker (thinker_t*	thinker)
+// haleyjd 20140926: [SVE] Needed to maintain referential integrity.
+//
+void P_SetTarget(mobj_t **mop, mobj_t *target)
 {
+    if(*mop)
+        (*mop)->thinker.references--;
+    if((*mop = target))
+        target->thinker.references++;
 }
 
 //
 // P_RunThinkers
 //
 // [STRIFE] Verified unmodified
+// [SVE]: Modifications for maintaince of referential integrity.
 //
 void P_RunThinkers (void)
 {
-    thinker_t*  currentthinker;
-
-    currentthinker = thinkercap.next;
-    while (currentthinker != &thinkercap)
+    for(currentthinker = thinkercap.next;
+        currentthinker != &thinkercap;
+        currentthinker = currentthinker->next)
     {
-        if ( currentthinker->function.acv == (actionf_v)(-1) )
-        {
-            // time to remove it
-            currentthinker->next->prev = currentthinker->prev;
-            currentthinker->prev->next = currentthinker->next;
-            Z_Free (currentthinker);
-        }
-        else
-        {
-            if (currentthinker->function.acp1)
-                currentthinker->function.acp1 (currentthinker);
-        }
-        currentthinker = currentthinker->next;
+        if(currentthinker->function.acp1)
+            currentthinker->function.acp1(currentthinker);
     }
 }
 
@@ -155,3 +167,4 @@ void P_Ticker (void)
     // for par times
     leveltime++;
 }
+

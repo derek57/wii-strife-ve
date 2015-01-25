@@ -242,7 +242,8 @@ void P_StartButton(line_t* line, bwhere_e w, int texture, int time)
 	}
     }
     
-    I_Error("P_StartButton: no button slots left!");
+    // haleyjd 20140816: [SVE] stability
+    //I_Error("P_StartButton: no button slots left!");
 }
 
 
@@ -586,10 +587,14 @@ boolean P_UseSpecialLine(mobj_t* thing, line_t* line, int side)
 
     case 11:
         // Exit level - [STRIFE] Modified to take tag, etc.
-        P_ChangeSwitchTexture(line, 1);
         if(levelTimer && levelTimeCount)
             break;
-        G_ExitLevel(line->tag);
+        // haleyjd 20140816: [SVE] no zombie exits
+        if(classicmode || (thing->player && thing->player->health >= 0))
+        {
+            P_ChangeSwitchTexture(line, 1);
+            G_ExitLevel(line->tag);
+        }
         break;
 
     case 14:
@@ -1104,6 +1109,9 @@ boolean P_UseSpecialLine(mobj_t* thing, line_t* line, int side)
             DEH_snprintf(usemessage, sizeof(usemessage), 
                          "That doesn't seem to work!");
             thing->player->message = usemessage;
+            // haleyjd 20140817: [SVE] fix this problem
+            if(!classicmode)
+                S_StartSound(thing, sfx_oof);
         }
         else if(EV_DoDoor(line, normal))
             P_ChangeSwitchTexture(line, 1);

@@ -60,7 +60,7 @@ wipe_shittyColMajorXform
     int		y;
     short*	dest;
 
-    dest = (short*) Z_Malloc(width*height*2, PU_STATIC, 0);
+    dest = (short*) Z_Malloc(width*height*2, PU_STATIC, 0, "wipe_shittyColMajorXform");
 
     for(y=0;y<height;y++)
 	for(x=0;x<width;x++)
@@ -68,7 +68,7 @@ wipe_shittyColMajorXform
 
     memcpy(array, dest, width*height*2);
 
-    Z_Free(dest);
+    Z_Free(dest, "wipe_shittyColMajorXform");
 
 }
 
@@ -147,7 +147,7 @@ wipe_initMelt
     
     // setup initial column positions
     // (y<0 => not ready to scroll yet)
-    y = (int *) Z_Malloc(width*sizeof(int), PU_STATIC, 0);
+    y = (int *) Z_Malloc(width*sizeof(int), PU_STATIC, 0, "wipe_initMelt");
     y[0] = -(M_Random()%16);
     for (i=1;i<width;i++)
     {
@@ -187,7 +187,8 @@ wipe_doMelt
 	    }
 	    else if (y[i] < height)
 	    {
-		dy = (y[i] < 16) ? y[i]+1 : 8;
+//		dy = (y[i] < 16) ? y[i]+1 : 8;				// CHANGED FOR HIRES
+		dy = (y[i] < 16) ? y[i]+1 : (8 << hires);		// CHANGED FOR HIRES
 		if (y[i]+dy >= height) dy = height - y[i];
 		s = &((short *)wipe_scr_end)[i*height+y[i]];
 		d = &((short *)wipe_scr)[y[i]*width+i];
@@ -221,9 +222,9 @@ wipe_exitMelt
   int	height,
   int	ticks )
 {
-    Z_Free(y);
-    Z_Free(wipe_scr_start);
-    Z_Free(wipe_scr_end);
+    Z_Free(y, "wipe_exitMelt -> y");
+    Z_Free(wipe_scr_start, "wipe_exitMelt -> wipe_scr_start");
+    Z_Free(wipe_scr_end, "wipe_exitMelt -> wipe_scr_end");
     return 0;
 }
 
@@ -235,7 +236,7 @@ wipe_StartScreen
   int	width,
   int	height )
 {
-    wipe_scr_start = Z_Malloc(SCREENWIDTH * SCREENHEIGHT, PU_STATIC, NULL);
+    wipe_scr_start = Z_Malloc(SCREENWIDTH * SCREENHEIGHT, PU_STATIC, NULL, "wipe_StartScreen");
     I_ReadScreen(wipe_scr_start);
     return 0;
 }
@@ -248,7 +249,7 @@ wipe_EndScreen
   int	width,
   int	height )
 {
-    wipe_scr_end = Z_Malloc(SCREENWIDTH * SCREENHEIGHT, PU_STATIC, NULL);
+    wipe_scr_end = Z_Malloc(SCREENWIDTH * SCREENHEIGHT, PU_STATIC, NULL, "wipe_EndScreen");
     I_ReadScreen(wipe_scr_end);
     V_DrawBlock(x, y, width, height, wipe_scr_start); // restore start scr.
     return 0;
@@ -271,15 +272,18 @@ wipe_ScreenWipe
 	wipe_initMelt, wipe_doMelt, wipe_exitMelt
     };
 
-    ticks <<= hires;				// ADDED FOR HIRES
+//    ticks <<= hires;								// ADDED FOR HIRES ???
 
     // initial stuff
     if (!go)
     {
 	go = 1;
         // haleyjd 20110629 [STRIFE]: We *must* use a temp buffer here.
-	wipe_scr = (byte *) Z_Malloc(width*height, PU_STATIC, 0); // DEBUG
-	//wipe_scr = I_VideoBuffer;
+
+	// DEBUG
+//	wipe_scr = (byte *) Z_Malloc(width*height, PU_STATIC, 0, "wipe_ScreenWipe");	// HIRES ???
+
+	wipe_scr = I_VideoBuffer;						// HIRES ???
 	(*wipes[wipeno*3])(width, height, ticks);
     }
 
@@ -288,7 +292,7 @@ wipe_ScreenWipe
     rc = (*wipes[wipeno*3+1])(width, height, ticks);
 
     // haleyjd 20110629 [STRIFE]: Copy temp buffer to the real screen.
-    V_DrawBlock(x, y, width, height, wipe_scr);
+//    V_DrawBlock(x, y, width, height, wipe_scr);				// HIRES ???
 
     // final stuff
     if (rc)

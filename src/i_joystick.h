@@ -31,6 +31,11 @@
  *
  *-----------------------------------------------------------------------------*/
 
+// Number of "virtual" joystick buttons defined in configuration files.
+// This needs to be at least as large as the number of different key
+// bindings supported by the higher-level game code (joyb* variables).
+#define NUM_VIRTUAL_BUTTONS 15
+
 extern int joybfire;
 extern int joybstrafe;
 extern int joybuse;

@@ -34,6 +34,12 @@
 #include "m_fixed.h"
 
 
+int ABS(int a)
+{
+    int b = a >> 31;
+
+    return ((a ^ b) - b);
+}
 
 
 // Fixme. __USE_C_FIXED__ or something.

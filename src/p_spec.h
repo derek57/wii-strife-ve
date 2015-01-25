@@ -191,6 +191,7 @@ void    P_SpawnFireFlicker (sector_t* sector);
 void    T_LightFlash (lightflash_t* flash);
 void    P_SpawnLightFlash (sector_t* sector);
 void    T_StrobeFlash (strobe_t* flash);
+void    T_FireFlicker (fireflicker_t* flick); // [SVE]
 
 void
 P_SpawnStrobeFlash
@@ -586,8 +587,10 @@ typedef enum
     raiseFloor512,
 
     // [STRIFE] New floor type - used for the coolant reactor pit
-    raiseFloor512AndChange
+    raiseFloor512AndChange,
     
+    // [SVE] Unique type for initializing stair building thinkers
+    buildStair
 } floor_e;
 
 

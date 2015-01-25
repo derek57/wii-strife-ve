@@ -101,6 +101,7 @@ extern fixed_t		viewz;
 extern angle_t		viewangle;
 extern player_t*	viewplayer;
 
+extern fixed_t		viewlerp; // haleyjd [SVE]
 
 // ?
 extern angle_t		clipangle;

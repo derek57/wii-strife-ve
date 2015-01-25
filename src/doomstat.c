@@ -30,6 +30,37 @@ char *gamedescription;
 // Set if homebrew PWAD stuff has been added.
 //boolean	modifiedgame;
 
+// [SVE] haleyjd: HUD toggle
+boolean fullscreenhud = true;
 
+// [SVE] for those Brutal Doom fans...			// FIXME: FOR WII NOT YET FULLY INCLUDED
+boolean d_maxgore = true;				// (WALLSPLATS & FLOORSPLATS MISSING -
+							// MAYBE TAKE THE CODE FROM DOOM LEGACY???)
+// haleyjd 20140816: [SVE] Classic mode toggle
+// * true  == behave like vanilla Strife as much as is practical
+// * false == fix non-critical bugs and enable new gameplay elements
+boolean classicmode = false;
 
+// [SVE] svillarreal - Skip intro movies?
+boolean d_skipmovies = false;				// FIXME: FOR WII NOT YET INCLUDED (SMPEG BUG)
+
+// [SVE] svillarreal - player recoil bobbing
+boolean d_recoil = true;				// FIXME: PARTIAL (CUSTOM / NON-SVE) SUPPORT
+
+// [SVE] autoaim toggle
+int	autoaim = false;
+
+boolean	respawnparm = false;    		// checkparm of -respawn
+boolean	fastparm = false;       		// checkparm of -fast
+
+// [SVE] damage indicator
+boolean d_dmgindictor = false;				// FIXME: FOR WII NOT YET WORKING
+
+boolean cast_running = false;
+boolean release_keys = false;
+
+boolean	wipe_drawer = false;
+boolean	frontend_wipe = false;         // wipe wanted
+
+boolean	game_loaded = false;
 

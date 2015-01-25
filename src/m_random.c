@@ -17,6 +17,7 @@
 //
 
 
+#include <stdlib.h>
 #include <time.h>
 
 #include "m_random.h"
@@ -58,10 +59,24 @@ int P_Random (void)
     return rndtable[prndindex];
 }
 
+// lot of code used P_Random()-P_Random() since C don't define 
+// evaluation order it is compiler depenent so this allow network play 
+// between different compilers
+int P_SignedRandom ()
+{
+    int r = P_Random();
+    return r-P_Random();
+}
+
 int M_Random (void)
 {
     rndindex = (rndindex+1)&0xff;
     return rndtable[rndindex];
+}
+
+int M_RandomInt(int lower, int upper)
+{
+    return (rand() % (upper - lower + 1) + lower);
 }
 
 //

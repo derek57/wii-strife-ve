@@ -209,6 +209,7 @@ typedef struct line_s
 
     // thinker_t for reversable actions
     void*	specialdata;		
+
 } line_t;
 
 
@@ -370,6 +371,7 @@ typedef struct vissprite_s
    
     int			mobjflags;
     
+    fixed_t             blood;
 } vissprite_t;
 
 
