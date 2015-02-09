@@ -39,6 +39,8 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
+#include "c_io.h"
+
 // when to clip out sounds
 // Does not fit the large outdoor areas.
 
@@ -124,13 +126,13 @@ static boolean mus_paused;
 static musicinfo_t *mus_playing = NULL;
 
 // [SVE]: remember track number too, for convenience
-
+/*
 static int mus_tracknum;
 
 // [SVE]: remember if music is looping or not
 
 static int mus_looping;
-
+*/
 // Number of channels to use
 
 int snd_channels = 8;
@@ -846,6 +848,16 @@ void S_StartMusic(int m_id)
     S_ChangeMusic(m_id, false);
 }
 
+//
+// haleyjd 20141116: [SVE] Query currently playing music info.
+//
+/*
+void S_GetCurrentMusic(int *track, int *looping)
+{
+    *track   = mus_tracknum;
+    *looping = mus_looping;
+}
+*/
 void S_ChangeMusic(int musicnum, int looping)
 {
     musicinfo_t *music = NULL;
@@ -876,13 +888,16 @@ void S_ChangeMusic(int musicnum, int looping)
 #endif
         music = &S_music[musicnum];
     }
-
+/*
     mus_tracknum = musicnum; // [SVE]
+
+    S_GetCurrentMusic(&musicnum, &looping);
 
     // [SVE]: do start the track if the looping is different; this fixes 
     // loading a save on the Prison while the intro is playing.
-//    if (mus_playing == music)
     if (mus_playing == music && mus_looping == looping)
+*/
+    if (mus_playing == music)
     {
         return;
     }
@@ -897,7 +912,7 @@ void S_ChangeMusic(int musicnum, int looping)
         music->lumpnum = W_GetNumForName(namebuf);
     }
 
-//    printf("%s\n",music->name);	// FOR DEBUGGING
+    C_Printf("MUSIC PLAYING: %s\n",music->name);	// FOR DEBUGGING
 
     music->data = W_CacheLumpNum(music->lumpnum, PU_STATIC);
 
@@ -906,7 +921,7 @@ void S_ChangeMusic(int musicnum, int looping)
     I_PlaySong(handle, looping);
 
     mus_playing = music;
-    mus_looping = looping; // [SVE]: remember looping status
+//    mus_looping = looping; // [SVE]: remember looping status
 }
 
 boolean S_MusicPlaying(void)
@@ -929,14 +944,5 @@ void S_StopMusic(void)
         mus_playing->data = NULL;
         mus_playing = NULL;
     }
-}
-
-//
-// haleyjd 20141116: [SVE] Query currently playing music info.
-//
-void S_GetCurrentMusic(int *track, int *looping)
-{
-    *track   = mus_tracknum;
-    *looping = mus_looping;
 }
 

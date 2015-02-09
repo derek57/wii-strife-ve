@@ -46,6 +46,8 @@
 
 #include "p_tick.h" // [SVE]
 
+extern boolean isdemoversion;
+
 // Forward Declarations:
 void A_RandomWalk(mobj_t *);
 void A_ProgrammerAttack(mobj_t* actor);
@@ -335,6 +337,7 @@ boolean P_CheckMissileRange(mobj_t* actor)
         break;
     case MT_SHADOWGUARD:
     case MT_CRUSADER:
+    case MT_CRUSADER_2:
     case MT_SENTINEL:
         dist >>= 1;
         break;
@@ -347,8 +350,16 @@ boolean P_CheckMissileRange(mobj_t* actor)
         dist = 150;
 
     // haleyjd 20100910: Hex-Rays was leaving this out completely:
-    if (actor->type == MT_CRUSADER && dist > 120)
-        dist = 120;
+    if(!isdemoversion)
+    {
+	if (actor->type == MT_CRUSADER && dist > 120)
+            dist = 120;
+    }
+    else
+    {
+	if (actor->type == MT_CRUSADER_2 && dist > 120)
+            dist = 120;
+    }
 
     // haleyjd 20110224 [STRIFE]: reversed predicate
     return (dist < P_Random());
@@ -1427,17 +1438,35 @@ void A_SentinelAttack(mobj_t* actor)
     if(!actor->target)
         return;
 
-    mo = P_SpawnFacingMissile(actor, actor->target, MT_L_LASER);
+    if(!isdemoversion)
+	mo = P_SpawnFacingMissile(actor, actor->target, MT_L_LASER);
+    else
+	mo = P_SpawnFacingMissile(actor, actor->target, MT_L_LASER_2);
+
     an = actor->angle >> ANGLETOFINESHIFT;
 
     if(mo->momy | mo->momx) // villsa - fixed typo (yes, they actually used '|' instead of'||')
     {
         for(i = 8; i > 1; i--)
         {
-            x = mo->x + FixedMul(mobjinfo[MT_L_LASER].radius * i, finecosine[an]);
-            y = mo->y + FixedMul(mobjinfo[MT_L_LASER].radius * i, finesine[an]);
+	    if(!isdemoversion)
+	    {
+                x = mo->x + FixedMul(mobjinfo[MT_L_LASER].radius * i, finecosine[an]);
+                y = mo->y + FixedMul(mobjinfo[MT_L_LASER].radius * i, finesine[an]);
+	    }
+	    else
+	    {
+                x = mo->x + FixedMul(mobjinfo[MT_L_LASER_2].radius * i, finecosine[an]);
+                y = mo->y + FixedMul(mobjinfo[MT_L_LASER_2].radius * i, finesine[an]);
+	    }
+
             z = mo->z + i * (mo->momz >> 2);
-            mo2 = P_SpawnMobj(x, y, z, MT_R_LASER);
+
+	    if(!isdemoversion)
+                mo2 = P_SpawnMobj(x, y, z, MT_R_LASER);
+	    else
+                mo2 = P_SpawnMobj(x, y, z, MT_R_LASER_2);
+
             P_SetTarget(&mo2->target, actor);
             mo2->momx = mo->momx;
             mo2->momy = mo->momy;
@@ -1643,6 +1672,7 @@ void A_CrusaderAttack(mobj_t* actor)
     {
         A_FaceTarget(actor);
         actor->angle -= (ANG90 / 8);
+
         P_SpawnFacingMissile(actor, actor->target, MT_C_FLAME);
     }
     else if(P_CheckMissileRange(actor))
@@ -1677,7 +1707,9 @@ void A_CrusaderLeft(mobj_t* actor)
     mobj_t* mo;
 
     actor->angle += (ANG90 / 16);
+
     mo = P_SpawnFacingMissile(actor, actor->target, MT_C_FLAME);
+
     mo->momz = FRACUNIT;
     mo->z += (16*FRACUNIT);
 
@@ -1693,7 +1725,9 @@ void A_CrusaderRight(mobj_t* actor)
     mobj_t* mo;
 
     actor->angle -= (ANG90 / 16);
+
     mo = P_SpawnFacingMissile(actor, actor->target, MT_C_FLAME);
+
     mo->momz = FRACUNIT;
     mo->z += (16*FRACUNIT);
 }
@@ -2241,7 +2275,12 @@ void A_SpawnSparkPuff(mobj_t* actor)
     y = (10*FRACUNIT) * ((r & 3) - (P_Random() & 3)) + actor->y;
 
     mo = P_SpawnMobj(x, y, actor->z, MT_SPARKPUFF);
-    P_SetMobjState(mo, S_BNG4_01); // 199
+
+    if(!isdemoversion)
+        P_SetMobjState(mo, S_BNG4_01); // 199
+    else
+        P_SetMobjState(mo, S_BNGD_01); // 199
+
     mo->momz = FRACUNIT;
 }
 
@@ -3144,6 +3183,7 @@ void A_BossDeath (mobj_t* actor)
     switch(actor->type)
     {
     case MT_CRUSADER:
+    case MT_CRUSADER_2:
     case MT_SPECTRE_A:
     case MT_SPECTRE_B:
     case MT_SPECTRE_C:
@@ -3181,6 +3221,7 @@ void A_BossDeath (mobj_t* actor)
     switch(actor->type)
     {
     case MT_CRUSADER:
+    case MT_CRUSADER_2:
         junk.tag = 667;
         EV_DoFloor(&junk, lowerFloorToLowest);
         break;
@@ -3605,6 +3646,7 @@ void A_DropBurnFlesh(mobj_t* actor)
     mo->momz = -FRACUNIT;
 
     actor->type = MT_SFIREBALL;
+
     P_RadiusAttack(actor, actor, 64);
     actor->type = type;
 }

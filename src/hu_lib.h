@@ -114,6 +114,8 @@ void	HUlib_eraseTextLine(hu_textline_t *l);
 // villsa [STRIFE]
 void HUlib_drawYellowText(int x, int y, char *text);
 
+// [SVE]
+int HUlib_yellowTextWidth(const char *text);
 
 //
 // Scrolling Text window widget routines
@@ -185,4 +187,10 @@ void HUlib_drawIText(hu_itext_t* it);
 // erases all itext lines
 void HUlib_eraseIText(hu_itext_t* it); 
 */
+// [SVE]: make a pretty player name for display
+char *HUlib_makePrettyPlayerName(int playerNum);
+
+// [SVE]: frags chart
+void HUlib_drawFrags(void);
+
 #endif

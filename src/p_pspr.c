@@ -37,11 +37,15 @@
 
 #include "p_tick.h" // [SVE]
 
+#include "c_io.h"
+
 #define LOWERSPEED		FRACUNIT*6
 #define RAISESPEED		FRACUNIT*6
 
 #define WEAPONBOTTOM	128*FRACUNIT
 #define WEAPONTOP		32*FRACUNIT
+
+extern boolean isdemoversion;
 
 int use_vanilla_weapon_change = 1;
 
@@ -509,6 +513,7 @@ void A_FireFlameThrower(player_t* player, pspdef_t* psp)
     player->mo->angle += (t - P_Random()) << 18;
 
     mo = P_SpawnPlayerMissile(player->mo, MT_SFIREBALL);
+
     mo->momz += (5*FRACUNIT);
 }
 
@@ -594,19 +599,39 @@ void A_FireGrenade(player_t* player, pspdef_t* pspr)
     fixed_t radius;
     fixed_t x, y;
 
-    // decide on what type of grenade to spawn
-    if(player->readyweapon == wp_hegrenade)
+    if(!isdemoversion)
     {
-        type = MT_HEGRENADE;
-    }
-    else if(player->readyweapon == wp_wpgrenade)
-    {
-        type = MT_PGRENADE;
+        // decide on what type of grenade to spawn
+        if(player->readyweapon == wp_hegrenade)
+        {
+            type = MT_HEGRENADE;
+        }
+        else if(player->readyweapon == wp_wpgrenade)
+        {
+            type = MT_PGRENADE;
+        }
+        else
+        {
+            type = MT_HEGRENADE;
+            C_Printf("Warning: A_FireGrenade used on wrong weapon!\n");
+        }
     }
     else
     {
-        type = MT_HEGRENADE;
-        fprintf(stderr, "Warning: A_FireGrenade used on wrong weapon!\n");
+        // decide on what type of grenade to spawn
+        if(player->readyweapon == wp_hegrenade)
+        {
+            type = MT_HEGRENADE_2;
+        }
+        else if(player->readyweapon == wp_wpgrenade)
+        {
+            type = MT_PGRENADE;
+        }
+        else
+        {
+            type = MT_HEGRENADE_2;
+            C_Printf("Warning: A_FireGrenade used on wrong weapon!\n");
+        }
     }
 
     player->ammo[weaponinfo[player->readyweapon].ammo]--;

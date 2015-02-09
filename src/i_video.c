@@ -53,6 +53,7 @@
 #include <wiilight.h>
 
 #include "r_local.h"
+#include "c_io.h"
 
 #define WII_LIGHT_OFF                0
 #define WII_LIGHT_ON                 1
@@ -186,7 +187,7 @@ static boolean palette_to_set;
 
 // display has been set up?
 
-static boolean initialized = false;
+/*static*/ boolean initialized = false;
 
 // disable mouse?
 /*
@@ -325,6 +326,8 @@ int mouse_threshold = 10;
 // Gamma correction level to use
 
 int usegamma = 0;
+
+extern  gamestate_t  gamestate;
 
 static void ApplyWindowResize(unsigned int w, unsigned int h);
 /*
@@ -1467,7 +1470,7 @@ static boolean AutoAdjustFullscreen(void)
 
     for (i=0; modes[i] != NULL; ++i)
     {
-        //printf("%ix%i?\n", modes[i]->w, modes[i]->h);
+        C_Printf("%ix%i?\n", modes[i]->w, modes[i]->h);
 
         // What screen_mode_t would be used for this video mode?
 
@@ -1478,7 +1481,7 @@ static boolean AutoAdjustFullscreen(void)
 
         if (screen_mode == NULL || screen_mode->poor_quality)
         {
-        //    printf("\tUnsupported / poor quality\n");
+            C_Printf("\tUnsupported / poor quality\n");
             continue;
         }
 
@@ -1487,7 +1490,7 @@ static boolean AutoAdjustFullscreen(void)
 
         if (screen_width == modes[i]->w && screen_height == modes[i]->h)
         {
-        //    printf("\tExact mode!\n");
+            C_Printf("\tExact mode!\n");
             return true;
         }
 
@@ -1498,7 +1501,7 @@ static boolean AutoAdjustFullscreen(void)
 
         if (diff < best_diff)
         {
-        //    printf("\tA valid mode\n");
+            C_Printf("\tA valid mode\n");
             best_mode = modes[i];
             best_diff = diff;
         }
@@ -1510,10 +1513,10 @@ static boolean AutoAdjustFullscreen(void)
 
         return false;
     }
-/*
-    printf("I_InitGraphics: %ix%i mode not supported on this machine.\n",
+
+    C_Printf("I_InitGraphics: %ix%i mode not supported on this machine.\n",
            screen_width, screen_height);
-*/
+
     screen_width = best_mode->w;
     screen_height = best_mode->h;
 
@@ -1542,10 +1545,9 @@ static void AutoAdjustWindowed(void)
 
     if (best_mode->width != screen_width || best_mode->height != screen_height)
     {
-/*
-        printf("I_InitGraphics: Cannot run at specified mode: %ix%i\n",
+        C_Printf("I_InitGraphics: Cannot run at specified mode: %ix%i\n",
                screen_width, screen_height);
-*/
+
         screen_width = best_mode->width;
         screen_height = best_mode->height;
     }
@@ -1593,10 +1595,9 @@ static void AutoAdjustColorDepth(void)
 
     if (modes == NULL)
     {
-/*
-        printf("I_InitGraphics: %ibpp color depth not supported.\n",
+        C_Printf("I_InitGraphics: %ibpp color depth not supported.\n",
                screen_bpp);
-*/
+
         info = SDL_GetVideoInfo();
 
         if (info != NULL && info->vfmt != NULL)
@@ -1611,13 +1612,12 @@ static void AutoAdjustColorDepth(void)
 
 static void I_AutoAdjustSettings(void)
 {
-/*
     int old_screen_w, old_screen_h, old_screen_bpp;
 
     old_screen_w = screen_width;
     old_screen_h = screen_height;
     old_screen_bpp = screen_bpp;
-*/
+
     // Possibly adjust color depth.
 
     AutoAdjustColorDepth();
@@ -1638,19 +1638,18 @@ static void I_AutoAdjustSettings(void)
     }
 
     // Have the settings changed?  Show a message.
-/*
+
     if (screen_width != old_screen_w || screen_height != old_screen_h
      || screen_bpp != old_screen_bpp)
     {
-        printf("I_InitGraphics: Auto-adjusted to %ix%ix%ibpp.\n",
+        C_Printf("I_InitGraphics: Auto-adjusted to %ix%ix%ibpp.\n",
                screen_width, screen_height, screen_bpp);
 
-        printf("NOTE: Your video settings have been adjusted.  "
+        C_Printf("NOTE: Your video settings have been adjusted.  "
                "To disable this behavior,\n"
                "set autoadjust_video_settings to 0 in your "
                "configuration file.\n");
     }
-*/
 }
 
 // Set video size to a particular scale factor (1x, 2x, 3x, etc.)
@@ -1950,7 +1949,7 @@ static void SetWindowPositionVars(void)
         putenv(buf);
     }
 }
-
+*/
 static char *WindowBoxType(screen_mode_t *mode, int w, int h)
 {
     if (mode->width != w && mode->height != h) 
@@ -1970,7 +1969,7 @@ static char *WindowBoxType(screen_mode_t *mode, int w, int h)
         return "...";
     }
 }
-*/
+
 static void SetVideoMode(screen_mode_t *mode, int w, int h)
 {
     byte *doompal;
@@ -2044,11 +2043,9 @@ static void SetVideoMode(screen_mode_t *mode, int w, int h)
 
         if (!I_GL_InitScale(screen->w, screen->h))
         {
-/*
-            fprintf(stderr,
-                    "Failed to initialize in OpenGL mode. "
+            C_Printf("Failed to initialize in OpenGL mode.\n"
                     "Falling back to software mode instead.\n");
-*/
+
             using_opengl = false;
 
             // TODO: This leaves us in window with borders around it.
@@ -2125,7 +2122,7 @@ static void ApplyWindowResize(unsigned int w, unsigned int h)
 
     // Reset mode to resize window.
 
-//    printf("Resize to %ix%i\n", mode->width, mode->height);
+    C_Printf("Resize to %ix%i\n", mode->width, mode->height);
     SetVideoMode(mode, mode->width, mode->height);
 
     // Save settings.
@@ -2222,14 +2219,14 @@ void I_InitGraphics(void)
             I_Error("I_InitGraphics: Unable to find a screen mode small "
                     "enough for %ix%i", w, h);
         }
-/*
+
         if (w != screen_mode->width || h != screen_mode->height)
         {
-            printf("I_InitGraphics: %s (%ix%i within %ix%i)\n",
+            C_Printf("I_InitGraphics: %s (%ix%i within %ix%i)\n",
                    WindowBoxType(screen_mode, w, h),
                    screen_mode->width, screen_mode->height, w, h);
         }
-*/
+
         SetVideoMode(screen_mode, w, h);
     }
 

@@ -1166,6 +1166,9 @@ void ST_doRefresh(void)
             ST_drawNumFontY(20, 191, plyr->armorpoints);
         }
 
+	if(plyr->armorpoints == 0 && isdemoversion)
+            ST_drawNumFontY(20, 191, 0);
+
         // haleyjd 20100920: Draw life bars.
         {
             int barlength;
@@ -1583,52 +1586,64 @@ boolean ST_DrawExternal(void)
 
         ST_drawNumFontY2(261, 132, keys);
 
-         if(plyr->weaponowned[wp_elecbow])
-         {
-             V_DrawPatchDirect(38, 86, 
-                 W_CacheLumpName(DEH_String("CBOWA0"), PU_CACHE));
-         }
-         if(plyr->weaponowned[wp_rifle])
-         {
-             V_DrawPatchDirect(40, 107, 
-                 W_CacheLumpName(DEH_String("RIFLA0"), PU_CACHE));
-         }
-         if(plyr->weaponowned[wp_missile])
-         {
-             V_DrawPatchDirect(39, 131, 
-                 W_CacheLumpName(DEH_String("MMSLA0"), PU_CACHE));
-         }
-         if(plyr->weaponowned[wp_hegrenade])
-         {
-             V_DrawPatchDirect(78, 87, 
-                 W_CacheLumpName(DEH_String("GRNDA0"), PU_CACHE));
-         }
-         if(plyr->weaponowned[wp_flame])
-         {
-             V_DrawPatchDirect(80, 117, 
-                 W_CacheLumpName(DEH_String("FLAMA0"), PU_CACHE));
-         }
-         if(plyr->weaponowned[wp_mauler])
-         {
-             V_DrawPatchDirect(75, 142, 
-                 W_CacheLumpName(DEH_String("TRPDA0"), PU_CACHE));
-         }
+        if(plyr->weaponowned[wp_elecbow])
+        {
+	    if(!isdemoversion)
+		V_DrawPatchDirect(38, 86, 
+			W_CacheLumpName(DEH_String("CBOWA0"), PU_CACHE));
+	    else
+		V_DrawPatchDirect(38, 86, 
+			W_CacheLumpName(DEH_String("CBODA0"), PU_CACHE));
+        }
+        if(plyr->weaponowned[wp_rifle])
+        {
+	    if(!isdemoversion)
+		V_DrawPatchDirect(40, 107, 
+			W_CacheLumpName(DEH_String("RIFLA0"), PU_CACHE));
+	    else
+		V_DrawPatchDirect(40, 107, 
+			W_CacheLumpName(DEH_String("RIFDA0"), PU_CACHE));
+        }
+        if(plyr->weaponowned[wp_missile])
+        {
+            V_DrawPatchDirect(39, 131, 
+                W_CacheLumpName(DEH_String("MMSLA0"), PU_CACHE));
+        }
+        if(plyr->weaponowned[wp_hegrenade])
+        {
+            V_DrawPatchDirect(78, 87, 
+                W_CacheLumpName(DEH_String("GRNDA0"), PU_CACHE));
+        }
+        if(plyr->weaponowned[wp_flame])
+        {
+	    if(!isdemoversion)
+		V_DrawPatchDirect(80, 117, 
+			W_CacheLumpName(DEH_String("FLAMA0"), PU_CACHE));
+	    else
+		V_DrawPatchDirect(80, 117, 
+			W_CacheLumpName(DEH_String("FLADA0"), PU_CACHE));
+        }
+        if(plyr->weaponowned[wp_mauler])
+        {
+            V_DrawPatchDirect(75, 142, 
+                W_CacheLumpName(DEH_String("TRPDA0"), PU_CACHE));
+        }
          
-         // haleyjd 20110213: draw ammo
-         for(i = 0; i < NUMAMMO; i++)
-         {
-             STlib_drawNumPositive(&w_ammo[i]);
-             STlib_drawNumPositive(&w_maxammo[i]);
-         }
+        // haleyjd 20110213: draw ammo
+        for(i = 0; i < NUMAMMO; i++)
+        {
+            STlib_drawNumPositive(&w_ammo[i]);
+            STlib_drawNumPositive(&w_maxammo[i]);
+        }
 
-         ST_drawNumFontY2(261, 84,  plyr->accuracy);
-         ST_drawNumFontY2(261, 108, plyr->stamina);
+        ST_drawNumFontY2(261, 84,  plyr->accuracy);
+        ST_drawNumFontY2(261, 108, plyr->stamina);
 
-         if(plyr->powers[pw_communicator])
-         {
-             V_DrawPatchDirect(280, 130, 
-                 W_CacheLumpName(DEH_String("I_COMM"), PU_CACHE));
-         }
+        if(plyr->powers[pw_communicator])
+        {
+            V_DrawPatchDirect(280, 130, 
+                W_CacheLumpName(DEH_String("I_COMM"), PU_CACHE));
+        }
     }
 
     return true;
@@ -1661,13 +1676,14 @@ static void ST_loadUnloadGraphics(load_callback_t callback)
     }
 
     // haleyjd 20100919: load Sigil patches
-    if(!isdemoversion)
+    for(i = 0; i < 5; i++)
     {
-        for(i = 0; i < 5; i++)
-        {
-            DEH_snprintf(namebuf, 9, "I_SGL%d", i+1);
-            callback(namebuf, &invsigil[i]);
-        }
+	if(!isdemoversion)
+	    DEH_snprintf(namebuf, 9, "I_SGL%d", i+1);
+	else
+	    DEH_snprintf(namebuf, 9, "I_SGD%d", i+1);
+
+        callback(namebuf, &invsigil[i]);
     }
 
     // load ammo patches
@@ -1690,11 +1706,20 @@ static void ST_loadUnloadGraphics(load_callback_t callback)
 
     // haleyjd 20100901: [STRIFE]: stbar -> invback, added new patches
     // status bar background bits
-    callback(DEH_String("INVBACK"),  &invback);
+    if(!isdemoversion)
+	callback(DEH_String("INVBACK"),  &invback);
+    else
+	callback(DEH_String("INVBACK2"),  &invback);
+
     callback(DEH_String("INVTOP"),   &invtop);
     callback(DEH_String("INVPOP"),   &invpop);
     callback(DEH_String("INVPOP2"),  &invpop2);
-    callback(DEH_String("INVPBAK"),  &invpbak);
+
+    if(!isdemoversion)
+	callback(DEH_String("INVPBAK"),  &invpbak);
+    else
+	callback(DEH_String("INVPBK22"), &invpbak);
+
     callback(DEH_String("INVPBAK2"), &invpbak2);
 #ifdef SHAREWARE
     if(!STRIFE_1_0_SHAREWARE)				// FOR PSP: (NOT AVAILABLE IN SHAREWARE v1.0)

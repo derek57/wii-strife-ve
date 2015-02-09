@@ -27,6 +27,8 @@
 
 #include "deh_mapping.h"
 
+#include "c_io.h"
+
 static deh_mapping_entry_t *GetMappingEntryByName(deh_context_t *context,
                                                   deh_mapping_t *mapping,
                                                   char *name)
@@ -98,8 +100,8 @@ boolean DEH_SetMapping(deh_context_t *context, deh_mapping_t *mapping,
 
     location = GetStructField(structptr, mapping, entry);
 
-    //       printf("Setting %p::%s to %i (%i bytes)\n",
-    //               structptr, name, value, entry->size);
+    C_Printf("Setting %p::%s to %i (%i bytes)\n",
+                   structptr, name, value, entry->size);
 
     // Set field content based on its type:
 

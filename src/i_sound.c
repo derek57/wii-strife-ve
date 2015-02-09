@@ -31,6 +31,7 @@
 #include "m_config.h"
 
 #include "sounds.h"
+#include "c_io.h"
 
 // Sound sample rate to use for digital output (Hz)
 
@@ -55,18 +56,16 @@ char *snd_musiccmd = "";
 static sound_module_t *sound_module;
 static music_module_t *music_module;
 
-int default_snd_musicdevice = SNDDEVICE_GENMIDI; // [SVE]
-int snd_musicdevice = SNDDEVICE_SB;
-int snd_sfxdevice = SNDDEVICE_SB;
+int snd_musicdevice = SNDDEVICE_GUS;	// SB OR GENMIDI FOR WII ??? GENMIDI = EXTERNAL FILES (OGG)
+int snd_sfxdevice = SNDDEVICE_SB;	// MIGHT ALSO USE PCSPEAKER HERE
 
 // Sound modules
 
-//extern void I_InitTimidityConfig(void);
+extern void I_InitTimidityConfig(void);
 extern sound_module_t sound_sdl_module;
-/*
 extern sound_module_t sound_pcsound_module;
+
 extern music_module_t music_sdl_module;
-*/
 extern music_module_t music_opl_module;
 
 // For OPL module:
@@ -92,7 +91,7 @@ static sound_module_t *sound_modules[] =
 {
 #ifdef FEATURE_SOUND
     &sound_sdl_module,
-//    &sound_pcsound_module,
+    &sound_pcsound_module,
 #endif
     NULL,
 };
@@ -102,7 +101,7 @@ static sound_module_t *sound_modules[] =
 static music_module_t *music_modules[] =
 {
 #ifdef FEATURE_SOUND
-//    &music_sdl_module,
+    &music_sdl_module,
     &music_opl_module,
 #endif
     NULL,
@@ -191,7 +190,6 @@ static void InitMusicModule(void)
 
 void I_InitSound(boolean use_sfx_prefix)
 {  
-
 //    boolean nosound, nosfx, nomusic;
 
     //!
@@ -225,14 +223,12 @@ void I_InitSound(boolean use_sfx_prefix)
         // This is kind of a hack. If native MIDI is enabled, set up
         // the TIMIDITY_CFG environment variable here before SDL_mixer
         // is opened.
-/*
-        if (!nomusic
-         && (snd_musicdevice == SNDDEVICE_GENMIDI
-          || snd_musicdevice == SNDDEVICE_GUS))
+
+        if (/*!nomusic && (snd_musicdevice == SNDDEVICE_GENMIDI ||*/ snd_musicdevice == SNDDEVICE_GUS)//)
         {
             I_InitTimidityConfig();
         }
-*/
+
 //        if (!nosfx)
         {
             InitSfxModule(use_sfx_prefix);
@@ -240,6 +236,7 @@ void I_InitSound(boolean use_sfx_prefix)
 
 //        if (!nomusic)
         {
+	    C_Printf("I_InitSound: sound module ready\n");
             InitMusicModule();
         }
     }
@@ -247,6 +244,8 @@ void I_InitSound(boolean use_sfx_prefix)
 
 void I_ShutdownSound(void)
 {
+    C_Printf("I_ShutdownSound:\n");
+
     if (sound_module != NULL)
     {
         sound_module->Shutdown();
@@ -379,7 +378,7 @@ void I_InitMusic(void)
 
 void I_ShutdownMusic(void)
 {
-
+    C_Printf("I_ShutdownMusic:\n");
 }
 
 void I_SetMusicVolume(int volume)

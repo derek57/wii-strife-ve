@@ -64,3 +64,11 @@ boolean	frontend_wipe = false;         // wipe wanted
 
 boolean	game_loaded = false;
 
+// [SVE] haleyjd: if true, a netgame played on the current map will be a
+// Capture the Chalice game. This is triggered by presence of the appropriate
+// starts on the map.
+boolean capturethechalice = false;
+int     ctcpointlimit     = 5;
+int     ctcbluescore;
+int     ctcredscore;
+

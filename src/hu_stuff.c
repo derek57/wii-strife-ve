@@ -43,6 +43,8 @@
 
 #include "v_video.h"
 #include "p_spec.h"
+#include "c_io.h"
+#include "v_misc.h"
 
 //
 // Locally used constants, shortcuts.
@@ -682,13 +684,13 @@ void HU_Ticker(void)
     }
 */
 }
-/*
+
 #define QUEUESIZE		128
 
-static char	chatchars[QUEUESIZE];
-static int	head = 0;
-static int	tail = 0;
-*/
+/*static*/ char	chatchars[QUEUESIZE];
+/*static*/ int	head = 0;
+/*static*/ int	tail = 0;
+
 //
 // HU_queueChatChar
 //
@@ -704,7 +706,7 @@ void HU_queueChatChar(char c)
         head = (head + 1) & (QUEUESIZE-1);
     }
 }
-
+*/
 //
 // HU_dequeueChatChar
 //
@@ -726,7 +728,7 @@ char HU_dequeueChatChar(void)
 
     return c;
 }
-*/
+
 //
 // HU_Responder
 //
@@ -905,5 +907,19 @@ boolean HU_Responder(event_t *ev)
     }
 */
     return eatkey;
+}
+
+// hu_newlevel called when we enter a new level
+// determine the level name and display it in
+// the console
+
+void HU_NewLevel()
+{
+    // print the new level name into the console
+    C_Printf("\n");
+    C_Seperator();
+    C_Printf("%s\n\n", HU_TITLE);
+    C_InstaPopup();       // put console away
+//    C_Update();
 }
 

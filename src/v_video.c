@@ -47,9 +47,13 @@
 // [SVE]: kerning data for big font
 #include "kerning.h"
 
+#include "v_misc.h"
+
 // TODO: There are separate RANGECHECK defines for different games, but this
 // is common code. Fix this.
 #define RANGECHECK
+
+static patch_t* v_font[V_FONTSIZE];
 
 // Blending table used for fuzzpatch, etc.
 // Only used in Heretic/Hexen
@@ -1091,3 +1095,42 @@ int V_BigFontStringHeight(const char *str)
 
     return height;
 }
+
+
+// isprint() function (win32 doesnt like it, seems)
+
+boolean V_IsPrint(char c)
+{
+    // new colour
+    if (c >= 128)
+    {
+/*
+	// translucent toggle
+	if(c == *(unsigned char *)FC_TRANS)
+	    return true;
+	else
+*/
+	{
+	    int colnum = c - 128;
+
+	    if(colnum < 0 || colnum >= 10)
+		return false;
+	    else
+		return true;
+	}
+    }
+
+    // hack to make spacebar work
+    if(c == ' ')
+	return true;
+  
+    c = toupper(c) - V_FONTSTART;
+
+    if (c >= V_FONTSIZE)
+    {
+        return false;
+    }
+  
+    return v_font[c] != NULL;
+}
+

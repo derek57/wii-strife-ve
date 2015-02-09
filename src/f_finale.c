@@ -188,10 +188,8 @@ void F_StartFinale (void)
     viewactive = false;
     automapactive = false;
 
-    if(!classicmode)
-	FE_ClearScreen();
-
-    wipegamestate = -1; // [STRIFE]
+    if(classicmode && !menuactive)
+        wipegamestate = -1;
 
     // [STRIFE] Setup the slide show
 //    slideshow_panel = DEH_String("PANEL0");				// MODIFIED FOR DEMO
@@ -402,7 +400,7 @@ void F_BunnyScroll (void)						// FUNCTION RE-ADDED FOR DEMO
     patch_t*	p1;
     patch_t*	p2;
 
-    p1 = W_CacheLumpName (DEH_String("vellogo"), PU_LEVEL);
+    p1 = W_CacheLumpName (DEH_String("vellogo2"), PU_LEVEL);
 
     if(isdemoversion)
 	p2 = W_CacheLumpName (DEH_String("credit2"),  PU_LEVEL);
@@ -565,10 +563,9 @@ static void F_DoSlideShow(void)
 //        slideshow_panel = DEH_String("PANEL7");			// MODIFIED FOR DEMO
         finalecount = 0;	
 
-	if(!classicmode)
-	    FE_ClearScreen();
-					// ADDED FOR DEMO
-        wipegamestate = -1;						// ADDED FOR DEMO
+	if(classicmode && !menuactive)
+            wipegamestate = -1;
+
         slideshow_tics = 430;						// MOD. FOR DEMO: INC. BY +255
 	S_ChangeMusic(mus_drone, 1);					// ADDED FOR DEMO
         slideshow_state = SLIDE_DEMOEND2;
@@ -576,10 +573,9 @@ static void F_DoSlideShow(void)
     case SLIDE_DEMOEND2: // state #26 - ditto
 //        slideshow_panel = DEH_String("VELLOGO");			// MODIFIED FOR DEMO
 
-	if(!classicmode)
-	    FE_ClearScreen();
+	if(classicmode && !menuactive)
+            wipegamestate = -1;
 
-        wipegamestate = -1;						// ADDED FOR DEMO
         S_StartMusic(mus_fast);						// ADDED FOR DEMO
         finalecount = 0;						// ADDED FOR DEMO
         finalestage = F_STAGE_ARTSCREEN;				// ADDED FOR DEMO
@@ -598,13 +594,8 @@ static void F_DoSlideShow(void)
         finalecount = 0;
         finalestage = F_STAGE_ARTSCREEN;
 
-	if(gamemap != 34)						// ADDED FOR DEMO
-	{
-	    if(!classicmode)
-		FE_ClearScreen();
-
-	    wipegamestate = -1;
-	}
+	if(gamemap != 34 && classicmode && !menuactive)			// ADDED FOR DEMO
+            wipegamestate = -1;
 	else								// ADDED FOR DEMO
 	    scroll_finished = true;					// ADDED FOR DEMO
 
@@ -853,7 +844,10 @@ void F_StartCast (void)
     casttics = caststate->tics;
     if(casttics > 50)
         casttics = 50;
-    wipegamestate = -1;             // force a screen wipe
+
+    if(classicmode && !menuactive)
+        wipegamestate = -1;
+
     castdeath = false;
     finalestage = F_STAGE_CAST;
     castframes = 0;
@@ -1301,7 +1295,7 @@ void F_Drawer (void)
 	else if(scroll_finished)					// ADDED FOR DEMO
 	{								// ADDED FOR DEMO
             patch_t *vellogo =						// ADDED FOR DEMO
-		    W_CacheLumpName(DEH_String("VELLOGO"), PU_CACHE);	// ADDED FOR DEMO
+		    W_CacheLumpName(DEH_String("VELLOGO2"), PU_CACHE);	// ADDED FOR DEMO
             V_DrawPatch(0, 0, vellogo);					// ADDED FOR DEMO
 	}								// ADDED FOR DEMO
         break;

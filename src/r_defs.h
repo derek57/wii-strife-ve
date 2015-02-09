@@ -38,6 +38,8 @@
 
 #include "v_patch.h"
 
+// [SVE] svillarreal
+#include "rb_decal.h"
 
 
 
@@ -70,6 +72,14 @@ typedef struct
     fixed_t	x;
     fixed_t	y;
     
+    // [SVE] svillarreal - new properties below
+    
+    float   fx;
+    float   fy;
+    
+    // info for occlusion
+    int     validcount;
+    angle_t clipspan;
 } vertex_t;
 
 
@@ -90,6 +100,51 @@ typedef struct
     fixed_t		z;
 
 } degenmobj_t;
+
+// sector interpolation values
+// haleyjd 20140904: [SVE]
+typedef struct sectorinterp_s
+{
+    boolean interpolated;      // if true, interpolated
+
+    fixed_t prevfloorheight;   // previous values, stored for interpolation
+    fixed_t prevceilingheight;
+
+    fixed_t backfloorheight;   // backup values, used as cache during rendering
+    fixed_t backceilingheight;
+} sectorinterp_t;
+
+enum rbshadeflags_e
+{
+    RBSF_BRIGHT      = 0x00000001, // bright
+    RBSF_CONTRAST    = 0x00000002, // increases contrast by fading to darker light level
+    RBSF_FLOOR       = 0x00000004, // applies to floors
+    RBSF_CEILING     = 0x00000008, // applies to ceilings
+    RBSF_THINGS      = 0x00000010, // applies to things in sector
+    RBSF_LOWCLAMP    = 0x00000020, // don't stretch RGB for lower sidedef
+    RBSF_SKY         = 0x00000040, // sky effect
+    RBSF_SEGLIGHTING = 0x00000080, // preserves per-seg lighting (ie, fake contrast)
+
+    // combos
+    RBSF_HOT      = (RBSF_BRIGHT|RBSF_CONTRAST)
+};
+
+// svillarreal: [SVE] Hardware renderer color shading information
+typedef struct rbShadeDef_s
+{
+    char flatname[9];
+    byte r;
+    byte g;
+    byte b;
+    unsigned int flags;
+    int flatnum;
+
+    int self;  // self-index in table
+    int first; // first on hash chain
+    int next;  // next on hash chain
+
+    int h, s, v; // cached HSV color
+} rbShadeDef_t;
 
 //
 // The SECTORS record, at runtime.
@@ -120,6 +175,9 @@ typedef	struct
     // if == validcount, already checked
     int		validcount;
 
+    // [SVE] svillarreal
+    int     validclip[2];
+
     // list of mobjs in sector
     mobj_t*	thinglist;
 
@@ -129,6 +187,19 @@ typedef	struct
     int			linecount;
     struct line_s**	lines;	// [linecount] size
     
+    // haleyjd 20140907: [SVE] hardware shading info
+    rbShadeDef_t *floorshade;
+    rbShadeDef_t *ceilingshade;
+
+    // [SVE] svillarreal - special light levels
+    int altlightlevel;
+
+    // [SVE] svillarreal - minimum bloom threshold
+    short bloomthreshold;
+
+    // [SVE] svillarreal - decal links
+    struct rbDecal_s *decallist;
+
 } sector_t;
 
 
@@ -183,6 +254,10 @@ typedef struct line_s
     fixed_t	dx;
     fixed_t	dy;
 
+    // [SVE] svillarreal - float verion of dx/dy
+    float   fdx;
+    float   fdy;
+
     // Animation related.
     short	flags;
     short	special;
@@ -210,9 +285,44 @@ typedef struct line_s
     // thinker_t for reversable actions
     void*	specialdata;		
 
+    // [SVE] svillarreal - normals
+    fixed_t	nx, ny;
+    float	fnx, fny;
+    
+    // [SVE] svillarreal
+    int     	validclip[2];
+
 } line_t;
 
 
+// [SVE] svillarreal - lightmap info struct
+typedef struct
+{
+    int         num;
+    float       *coords;
+} lightMapInfo_t;
+
+typedef enum
+{
+    LGT_NONE        = 0,    // does nothing
+    LGT_SUNSHADE,           // halves the rgb color
+    LGT_SUN,                // use sector light/color instead
+    NUMLIGHTGRIDTYPES
+} rbLightGridType_t;
+
+// [SVE] svillarreal - lightgrid info struct
+typedef struct
+{
+    int         count;
+    short       min[3];
+    short       max[3];
+    short       gridSize[3];
+    short       blockSize[3];
+    float       gridUnit[3];
+    byte        *bits;
+    byte        *types;
+    byte        *rgb;
+} lightGridInfo_t;
 
 
 //
@@ -228,6 +338,11 @@ typedef struct subsector_s
     short	numlines;
     short	firstline;
     
+    // [SVE] svillarreal
+    word            numleafs;
+    word            leaf;
+    lightMapInfo_t  lightMapInfo[2];
+
 } subsector_t;
 
 
@@ -253,8 +368,19 @@ typedef struct
     sector_t*	frontsector;
     sector_t*	backsector;
     
+    // [SVE] svillarreal
+    float           length;
+    lightMapInfo_t  lightMapInfo[3];
 } seg_t;
 
+
+//
+// [SVE] svillarreal - LEAFS structure
+//
+typedef struct {
+    vertex_t    *vertex;
+    seg_t       *seg;
+} leaf_t;
 
 
 //
@@ -425,6 +551,7 @@ typedef struct
 // 
 typedef struct
 {
+  struct visplane_s *next; // haleyjd [SVE]
   fixed_t		height;
   int			picnum;
   int			lightlevel;

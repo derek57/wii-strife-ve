@@ -46,6 +46,8 @@
 #include "m_saves.h"
 #include "p_dialog.h"
 
+#include "c_io.h"
+
 //
 // File Paths
 //
@@ -70,7 +72,7 @@ void ClearTmp(void)
     if(savepathtemp == NULL)
     {
 //        I_Error("you fucked up savedir man!");
-        printf("you fucked up savedir man!");
+        C_Printf("you fucked up savedir man!");
 	sleep(3);
 	I_QuitSerialFail();
     }
@@ -80,7 +82,7 @@ void ClearTmp(void)
     if(!(sp2dir = opendir(savepathtemp)))
     {
 //        I_Error("ClearTmp: Couldn't open dir %s", savepathtemp);
-        printf("ClearTmp: Couldn't open dir %s", savepathtemp);
+        C_Printf("ClearTmp: Couldn't open dir %s", savepathtemp);
 	sleep(3);
 	I_QuitSerialFail();
     }
@@ -451,7 +453,7 @@ char *M_SafeFilePath(const char *basepath, const char *newcomponent)
 /*
     if(devparm)
     {
-	printf("FROM M_SAVES.O: SAVE-DIR IS:\n");
+	C_Printf("FROM M_SAVES.O: SAVE-DIR IS:\n");
 	puts(newstr);
     }
 */

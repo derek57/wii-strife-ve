@@ -36,6 +36,9 @@
 // Needs precompiled tables/data structures.
 #include "info.h"
 
+// [SVE]: Capture the Chalice teams
+#define CTC_TEAM_BLUE 8
+#define CTC_TEAM_RED  9
 
 
 // haleyjd 20140902: [SVE]
@@ -241,6 +244,9 @@ typedef enum
 
 } mobjflag_t;
 
+// [SVE] svillarreal - macro for getting the translation index
+#define MOBJTRANSLATION(mo) (((mo->flags & MF_TRANSLATION) >> (MF_TRANSSHIFT - 8)) >> 8)
+
 // haleyjd 20140818: [SVE] flags2 enumeration
 // [SVE] svillarreal - updated 20141109
 typedef enum
@@ -252,21 +258,11 @@ typedef enum
     MF2_MARKDECAL           = 0x00000010,   // leave a decal in some way
     MF2_NOREBELATTACK       = 0x00000020,   // rebels shouldn't attack w/o provocation
     MF2_IGNORENOMONSTERS    = 0x00000040,   // will always spawn even if -nomonsters is set
-
-    // Mirrored horizontally
-    MF2_MIRRORED            = 0x00002000,
-
-    // Object's feet won't be clipped in liquid
-    MF2_NOFOOTCLIP          = 0x00040000,
-
-    // Object is blood
-    MF2_BLOOD               = 0x00400000,
-
-    // Object is drawn first
-    MF2_DRAWFIRST           = 0x00800000,
-
-    // Object's thing triangle is not displayed in automap
-    MF2_DONOTMAP            = 0x01000000
+    MF2_MIRRORED            = 0x00002000,   // Mirrored horizontally
+    MF2_NOFOOTCLIP          = 0x00040000,   // Object's feet won't be clipped in liquid
+    MF2_BLOOD               = 0x00400000,   // Object is blood
+    MF2_DRAWFIRST           = 0x00800000,   // Object is drawn first
+    MF2_DONOTMAP            = 0x01000000    // Object's thing triangle is not displayed in automap
 
 } mobjflag2_t;
 
@@ -379,7 +375,11 @@ typedef struct mobj_s
 // haleyjd [STRIFE] Exported
 void P_CheckMissileSpawn (mobj_t* th);
 
-void P_MobjBackupPosition(mobj_t *mo);	// [SVE]
+// [SVE] interpolation
+void P_MobjBackupPosition(mobj_t *mo);
+
+// [SVE] referential integrity
+void P_SetTarget(mobj_t **mop, mobj_t *target);
 
 #define FUZZYBLOOD              -1
 #define CORPSEBLOODSPLATS       512

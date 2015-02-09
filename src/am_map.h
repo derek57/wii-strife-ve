@@ -42,6 +42,9 @@
 #define GRAYSRANGE	1//16
 #define GRIDCOLORS	(GRAYS + GRAYSRANGE/2)
 
+// [SVE]
+boolean AM_MapInNonFollowMode(void);
+
 // Called by main loop.
 boolean AM_Responder (event_t* ev);
 

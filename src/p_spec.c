@@ -51,9 +51,12 @@
 #include "hu_stuff.h"
 #include "p_dialog.h"
 
+#include "c_io.h"
+
 extern boolean STRIFE_1_0_REGISTERED;
 extern boolean STRIFE_1_X_REGISTERED;
 extern boolean message_dontfuckwithme;
+extern boolean isdemoversion;
 
 //
 // Animating textures and planes
@@ -1367,9 +1370,18 @@ P_CrossSpecialLine
         break;
 
     case 198:
-        // haleyjd 09/21/10: [STRIFE] WR Raise Alarm if No Guard Uniform
-        if(P_PlayerHasItem(thing->player, MT_QUEST_GUARD_UNIFORM))
-            break;
+	if(!isdemoversion)
+	{
+            // haleyjd 09/21/10: [STRIFE] WR Raise Alarm if No Guard Uniform
+            if(P_PlayerHasItem(thing->player, MT_QUEST_GUARD_UNIFORM))
+                break;
+	}
+	else
+	{
+            // haleyjd 09/21/10: [STRIFE] WR Raise Alarm if No Guard Uniform
+            if(P_PlayerHasItem(thing->player, MT_QUEST_GUARD_UNIFORM_2))
+                break;
+	}
         // fall-through:
     case 150:
         // haleyjd 09/21/10: [STRIFE] WR Raise Alarm
@@ -1771,15 +1783,12 @@ static void DonutOverrun(fixed_t *s3_floorheight, short *s3_floorpic,
         }
 */
     }
-
-    /*
-    fprintf(stderr,
-            "Linedef: %d; Sector: %d; "
+/*
+    C_Printf("Linedef: %d; Sector: %d; "
             "New floor height: %d; New floor pic: %d\n",
             line->iLineID, pillar_sector->iSectorID,
             tmp_s3_floorheight >> 16, tmp_s3_floorpic);
-     */
-
+*/
     *s3_floorheight = (fixed_t) tmp_s3_floorheight;
     *s3_floorpic = (short) tmp_s3_floorpic;
 }
@@ -1824,8 +1833,7 @@ int EV_DoDonut(line_t*	line)
 
         if (s2 == NULL)
         {
-            fprintf(stderr,
-                    "EV_DoDonut: linedef had no second sidedef! "
+            C_Printf("EV_DoDonut: linedef had no second sidedef! "
                     "Unexpected behavior may occur in Vanilla Doom. \n");
 	    break;
         }
@@ -1845,8 +1853,7 @@ int EV_DoDonut(line_t*	line)
                 // s3->floorpic is a short at 0000:0008
                 // Trying to emulate
 
-                fprintf(stderr,
-                        "EV_DoDonut: WARNING: emulating buffer overrun due to "
+                C_Printf("EV_DoDonut: WARNING: emulating buffer overrun due to "
                         "NULL back sector. "
                         "Unexpected behavior may occur in Vanilla Doom.\n");
 

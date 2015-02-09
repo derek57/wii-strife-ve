@@ -28,6 +28,8 @@
 #include "m_argv.h"
 #include "z_zone.h"
 
+#include "c_io.h"
+
 #if defined(_MSC_VER) && !defined(__cplusplus)
 #define inline __inline
 #endif
@@ -380,10 +382,11 @@ static void I_InitStretchTables(byte *palette)
     // mix 80%  =  stretch_tables[0] used backwards
     // mix 100% =  just write line 2
 
-    printf("I_InitStretchTables: Generating lookup tables..");
+    C_Printf("I_InitStretchTables: Generating lookup tables..");
     fflush(stdout);
     stretch_tables[0] = GenerateStretchTable(palette, 20);
-    printf(".."); fflush(stdout);
+    C_Printf("..");
+    fflush(stdout);
     stretch_tables[1] = GenerateStretchTable(palette, 40);
     puts("");
 }
@@ -398,10 +401,10 @@ static void I_InitSquashTable(byte *palette)
     }
 
 //    printf("I_InitSquashTable: Generating lookup table..");			// CHANGED FOR HIRES
-    printf("I_InitSquashTable: Generating lookup tables..");			// CHANGED FOR HIRES
+    C_Printf("I_InitSquashTable: Generating lookup tables..");			// CHANGED FOR HIRES
     fflush(stdout);
     half_stretch_table = GenerateStretchTable(palette, 50);
-    printf("..");								// ADDED FOR HIRES
+    C_Printf("..");								// ADDED FOR HIRES
     fflush(stdout);								// ADDED FOR HIRES
 
     if (quarter_stretch_table != NULL)						// ADDED FOR HIRES
@@ -426,7 +429,7 @@ void I_ResetScaleTables(byte *palette)
         Z_Free(stretch_tables[0], "I_ResetScaleTables -> stretch_tables[0]");
         Z_Free(stretch_tables[1], "I_ResetScaleTables -> stretch_tables[1]");
 
-        printf("I_ResetScaleTables: Regenerating lookup tables..\n");
+        C_Printf("I_ResetScaleTables: Regenerating lookup tables..\n");
         stretch_tables[0] = GenerateStretchTable(palette, 20);
         stretch_tables[1] = GenerateStretchTable(palette, 40);
     }
@@ -435,7 +438,7 @@ void I_ResetScaleTables(byte *palette)
     {
         Z_Free(half_stretch_table, "I_ResetScaleTables -> half_stretch_table");
 
-        printf("I_ResetScaleTables: Regenerating lookup table..\n");
+        C_Printf("I_ResetScaleTables: Regenerating lookup table..\n");
 
         half_stretch_table = GenerateStretchTable(palette, 50);
     }
@@ -444,7 +447,7 @@ void I_ResetScaleTables(byte *palette)
     {										// ADDED FOR HIRES
         Z_Free(quarter_stretch_table,"I_ResetScaleTables -> quarter_stretch_table"); // ADDED FOR HIRES
 
-        printf("I_ResetScaleTables: Regenerating lookup table..\n");		// ADDED FOR HIRES
+        C_Printf("I_ResetScaleTables: Regenerating lookup table..\n");		// ADDED FOR HIRES
 
         quarter_stretch_table = GenerateStretchTable(palette, 25);		// ADDED FOR HIRES
     }										// ADDED FOR HIRES

@@ -37,6 +37,8 @@
 #include "p_dialog.h"
 #include "i_system.h"
 
+#include "c_io.h"
+
 
 //
 // VERTICAL DOORS
@@ -778,7 +780,7 @@ void EV_VerticalDoor(line_t* line, mobj_t* thing)
                 {
                     // This isn't a door OR a plat.  Now we're in trouble.
 
-                    fprintf(stderr, "EV_VerticalDoor: Tried to close "
+                    C_Printf("EV_VerticalDoor: Tried to close "
                         "something that wasn't a door.\n");
 
                     // Try closing it anyway. At least it will work on 32-bit

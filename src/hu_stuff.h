@@ -20,6 +20,7 @@
 
 #include "d_event.h"
 #include "v_patch.h"
+#include "d_player.h"
 
 //
 // Globally visible constants.
@@ -47,15 +48,18 @@
 
 void HU_Init(void);
 void HU_Start(void);
+void HU_Stop(void);  // [SVE] externalized
 
 boolean HU_Responder(event_t* ev);
 
 void HU_Ticker(void);
 void HU_Drawer(void);
-//char HU_dequeueChatChar(void);
+char HU_dequeueChatChar(void);
 void HU_Erase(void);
 
-void HU_SetNotification(char *message); // [SVE]
+// [SVE]
+void HU_SetNotification(char *message);
+void HU_NotifyCheating(player_t *pl);
 
 //extern char *chat_macros[10];
 extern char player_names[8][16];   // villsa [STRIFE]
@@ -68,6 +72,14 @@ extern char *mapnames[HU_NUMMAPNAMES];
 
 // [STRIFE]
 extern patch_t* yfont[HU_FONTSIZE];   // haleyjd 09/18/10: [STRIFE]
+extern patch_t* ffont[HU_FONTSIZE];   // haleyjd 20141204: [SVE]
+extern boolean  message_dontfuckwithme;
+
+// hu_newlevel called when we enter a new level
+// determine the level name and display it in
+// the console
+
+void HU_NewLevel();
 
 #endif
 

@@ -57,6 +57,7 @@
 #include "z_zone.h"
 
 #include "m_saves.h"
+#include "c_io.h"
 
 //
 // Create a directory
@@ -234,7 +235,7 @@ void M_ExtractFileBase(char *path, char *dest)
     {
         if (length >= 8)
         {
-            printf("Warning: Truncated '%s' lump name to '%.8s'.\n",
+            C_Printf("Warning: Truncated '%s' lump name to '%.8s'.\n",
                    filename, dest);
             break;
         }

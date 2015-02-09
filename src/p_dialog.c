@@ -917,7 +917,7 @@ static boolean P_MourelVeteranAction(player_t *player)
     player->prevpitch = player->pitch;
 
     // spawn some Acolytes
-    selections = deathmatch_p - deathmatchstarts;
+    selections = (int)deathmatchstarts;		// FIXME: IS THIS WORKING???
     for(i = 0; i < selections; i++)
     {
         mobj_t *mo;
@@ -999,7 +999,10 @@ boolean P_GiveItemToPlayer(player_t *player, int sprnum, mobjtype_t type)
 
         // [STRIFE] Bizarre...
         for(i = 0; i < 5 * player->accuracy + 300; i++)
-            P_GiveInventoryItem(player, SPR_COIN, MT_MONY_1);
+	    if(!isdemoversion)
+		P_GiveInventoryItem(player, SPR_COIN, MT_MONY_1);
+	    else
+		P_GiveInventoryItem(player, SPR_COND, MT_MONY_2);
         break;
 
     case SPR_ARM1: // Armor 1
@@ -1022,23 +1025,42 @@ boolean P_GiveItemToPlayer(player_t *player, int sprnum, mobjtype_t type)
         }
         break;
 
+    case SPR_COND: // 1 Gold
+	if(!isdemoversion)
+	    P_GiveInventoryItem(player, SPR_COIN, MT_MONY_1);
+	else
+	    P_GiveInventoryItem(player, SPR_COND, MT_MONY_2);
+        break;
+
     case SPR_COIN: // 1 Gold
-        P_GiveInventoryItem(player, SPR_COIN, MT_MONY_1);
+	if(!isdemoversion)
+	    P_GiveInventoryItem(player, SPR_COIN, MT_MONY_1);
+	else
+	    P_GiveInventoryItem(player, SPR_COND, MT_MONY_2);
         break;
 
     case SPR_CRED: // 10 Gold
         for(i = 0; i < 10; i++)
-            P_GiveInventoryItem(player, SPR_COIN, MT_MONY_1);
+	    if(!isdemoversion)
+		P_GiveInventoryItem(player, SPR_COIN, MT_MONY_1);
+	    else
+		P_GiveInventoryItem(player, SPR_COND, MT_MONY_2);
         break;
 
     case SPR_SACK: // 25 gold
         for(i = 0; i < 25; i++)
-            P_GiveInventoryItem(player, SPR_COIN, MT_MONY_1);
+	    if(!isdemoversion)
+		P_GiveInventoryItem(player, SPR_COIN, MT_MONY_1);
+	    else
+		P_GiveInventoryItem(player, SPR_COND, MT_MONY_2);
         break;
 
     case SPR_CHST: // 50 gold
         for(i = 0; i < 50; i++)
-            P_GiveInventoryItem(player, SPR_COIN, MT_MONY_1);
+	    if(!isdemoversion)
+		P_GiveInventoryItem(player, SPR_COIN, MT_MONY_1);
+	    else
+		P_GiveInventoryItem(player, SPR_COND, MT_MONY_2);
 	break; // haleyjd 20141215: missing break, caused Rowan to not take ring from you.
 
     case SPR_BBOX: // Box of Bullets
@@ -1063,9 +1085,30 @@ boolean P_GiveItemToPlayer(player_t *player, int sprnum, mobjtype_t type)
         sound = sfx_yeah; // bluh-doop!
         break;
 
+    case SPR_MSSD: // Mini-missile
+	if(!isdemoversion)
+	{
+            if(!P_GiveAmmo(player, am_missiles, 1))
+                return false;
+	}
+	else
+	{
+            if(!P_GiveAmmo(player, am_missiles, 1))
+                return false;
+	}
+        break;
+
     case SPR_MSSL: // Mini-missile
-        if(!P_GiveAmmo(player, am_missiles, 1))
-            return false;
+	if(!isdemoversion)
+	{
+            if(!P_GiveAmmo(player, am_missiles, 1))
+                return false;
+	}
+	else
+	{
+            if(!P_GiveAmmo(player, am_missiles, 1))
+                return false;
+	}
         break;
 
     case SPR_ROKT: // Crate of missiles
@@ -1174,7 +1217,10 @@ boolean P_GiveItemToPlayer(player_t *player, int sprnum, mobjtype_t type)
 
         case MT_MONY_300: // 300 Gold (this is the only way to get it, in fact)
             for(i = 0; i < 300; i++)
-                P_GiveInventoryItem(player, SPR_COIN, MT_MONY_1);
+		if(!isdemoversion)
+		    P_GiveInventoryItem(player, SPR_COIN, MT_MONY_1);
+		else
+		    P_GiveInventoryItem(player, SPR_COND, MT_MONY_2);
             break;
 
         case MT_TOKEN_AMMO: // Ammo token - you get this from the Weapons Trainer

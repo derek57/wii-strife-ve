@@ -18,6 +18,7 @@
 //	parse command line parameters, configure game parameters (turbo),
 //	and call the startup functions.
 //
+
 /*
 #include <pspkernel.h>
 #include <pspthreadman.h>
@@ -73,10 +74,11 @@
 #include "hu_stuff.h"
 #include "st_stuff.h"
 #include "am_map.h"
-//#include "net_client.h"
-//#include "net_dedicated.h"
-//#include "net_query.h"
-
+/*
+#include "net_client.h"
+#include "net_dedicated.h"
+#include "net_query.h"
+*/
 #include "p_setup.h"
 #include "r_local.h"
 
@@ -91,11 +93,14 @@
 #include "p_local.h"
 
 #include "w_merge.h"
+#include "fe_funcs.h"
+#include "wi_stuff.h"
+#include "c_io.h"
 
 extern	patch_t *hu_font[HU_FONTSIZE];
 
-
-//#define printf pspDebugScreenPrintf
+/*
+#define printf pspDebugScreenPrintf
 
 // REGARDING PSP RAM:
 //
@@ -103,7 +108,7 @@ extern	patch_t *hu_font[HU_FONTSIZE];
 // ...PSP-KERNEL RESERVES UP TO 8 MB FOR PLUGINS AND SYS-COMPONENTS (MAKES A TOTAL RAM OF 32 MB)...
 // ...SO FOR THE REST OF THE 24 MB, WE ALLOCATE 16 MB FOR HEAP, WHILE (AND THAT'S THE LAST POINT)...
 // THIS GAME STILL REQUIRES 8 MB OF DEFAULT RAM (SEE FILE 'I_SYSTEM.C' ("#define DEFAULT_RAM")
-/*
+
 PSP_MODULE_INFO("Strife", 0, 0, 5);		// MODULE INFO (NAME, MODE, MAJOR VERS., MINOR VERS.)
 PSP_MAIN_THREAD_ATTR(0);			// MODULE ATTRIBUTES
 PSP_MAIN_THREAD_STACK_SIZE_KB(1024);		// STACK SIZE		(1024 KB)
@@ -122,6 +127,10 @@ void D_DoomLoop (void);
 
 static boolean D_AddFile(char *filename);
 
+// If true, startup has completed and the main game loop has started.
+
+static boolean	main_loop_started = false;
+
 // Location where savegames are stored
 
 char *          savegamedir;
@@ -130,17 +139,19 @@ char *          savegamedir;
 
 char *          iwadfile;
 
+char		wadfile[1024];          // primary wad file
+char		mapdir[1024];           // directory of development maps
 
-//boolean	devparm_print_dir = false;	// not available
+boolean		autostart;			// CHANGED FOR PSP: MOVED UP HERE FOR DEVPARM MODE
+
 boolean		devparm_opl_music = false;
 boolean		devparm_opl_write = false;
 boolean		devparm_opl_read = false;
 boolean		devparm_wipe = false;
-//boolean	devparm_sdl_sound = false;	// not available
-
-boolean		autostart;			// CHANGED FOR PSP: MOVED UP HERE FOR DEVPARM MODE
-
 /*
+boolean		devparm_print_dir = false;	// not available
+boolean		devparm_sdl_sound = false;	// not available
+
 boolean         nomonsters;     		// checkparm of -nomonsters
 boolean         respawnparm;    		// checkparm of -respawn
 boolean         fastparm;       		// checkparm of -fast
@@ -150,16 +161,7 @@ boolean         start_fastparm;
 boolean         start_respawnparm;
 
 boolean         flipparm;       		// [STRIFE] haleyjd 20110629: checkparm of -flip
-//boolean	randomparm;     		// [STRIFE] haleyjd 20130915: checkparm of -random
-
 boolean         showintro = true;   		// [STRIFE] checkparm of -nograph, disables intro
-
-/*
-extern int	soundVolume;
-extern int	sfxVolume;
-extern int	musicVolume;
-*/
-//extern int	mus_engine;
 
 boolean		STRIFE_1_0_SHAREWARE;
 boolean		STRIFE_1_1_SHAREWARE;
@@ -167,10 +169,37 @@ boolean		STRIFE_1_0_REGISTERED;
 boolean		STRIFE_1_X_REGISTERED;
 
 boolean		VOICES_1_X_REGISTERED;
+boolean         redrawsbar;      // sf: globaled
+
+boolean		advancedemo;
+
+// villsa [STRIFE] workparm variable (similar to devparm?)
+boolean         workparm = false;
+
+// villsa [STRIFE] stonecold cheat variable
+boolean         stonecold = false;
+
+// haleyjd 09/11/10: [STRIFE] Game type variables
+boolean         isregistered;
+boolean         isdemoversion;
+
+// Store demo, do not accept any inputs
+// haleyjd [STRIFE] Unused.
+/*
+boolean       	storedemo;
+boolean		randomparm;     		// [STRIFE] haleyjd 20130915: checkparm of -random
+
+extern int	soundVolume;
+extern int	sfxVolume;
+extern int	musicVolume;
+*/
+extern int	mus_engine;
 
 extern boolean	inhelpscreens;
+extern boolean	initialized;
 
 skill_t		startskill;
+
 int             startepisode;
 int		startmap;
 int             startloadgame;
@@ -185,30 +214,10 @@ int		fsizev = 0;
 int		voices_wad_exists = 0;
 int		load_voices = 0;
 
-boolean		advancedemo;
-
-// villsa [STRIFE] workparm variable (similar to devparm?)
-boolean         workparm = false;
-
-// villsa [STRIFE] stonecold cheat variable
-boolean         stonecold = false;
-
-// haleyjd 09/11/10: [STRIFE] Game type variables
-boolean         isregistered;
-boolean         isdemoversion;
-
 int		dots_enabled = 0;
 
 int		fps_enabled = 0;
 int		display_fps = 0;
-
-// Store demo, do not accept any inputs
-// haleyjd [STRIFE] Unused.
-//boolean       storedemo;
-
-
-char		wadfile[1024];          // primary wad file
-char		mapdir[1024];           // directory of development maps
 
 int             show_endoom = 0;
 int             graphical_startup = 1;
@@ -218,22 +227,20 @@ int		warning_message_has_been_shown = 0;
 
 int		wad_missing = 0;
 
-// If true, startup has completed and the main game loop has started.
-
-static boolean	main_loop_started = false;
 /*
 static SceCtrlData pad;
 static SceCtrlData lastpad;
-*/
+
 // fraggle 06/03/11 [STRIFE]: Unused config variable, preserved
 // for compatibility:
 
-//static int	comport = 0;
+static int	comport = 0;
 
 // fraggle 06/03/11 [STRIFE]: Multiplayer nickname?
-//char		*nickname = NULL;
+char		*nickname = NULL;
 
-//void D_ConnectNetGame(void);
+void D_ConnectNetGame(void);
+*/
 void D_CheckNetGame(void);
 
 
@@ -261,9 +268,10 @@ void D_ProcessEvents (void)
 
     while ((ev = D_PopEvent()) != NULL)
     {
-        if (M_Responder (ev) || AM_Responder (ev))		// FOR PSP: MOVED HERE BECAUSE OF...
-            continue;		// menu or map ate the event	// ...AUTOMAP ZOOM LOOPING EVEN IF...
-        G_Responder (ev);					// ...THE KEY HAS ALMOST BEEN RELEASED
+        if (M_Responder (ev) || AM_Responder (ev) ||		// FOR PSP: MOVED HERE BECAUSE OF...
+		C_Responder (ev))				// ...AUTOMAP ZOOM LOOPING EVEN IF...
+	    continue;						// ...THE KEY HAS ALMOST BEEN RELEASED
+        G_Responder (ev);					// menu or map ate the event
     }
 }
 
@@ -321,7 +329,7 @@ void D_Display (void)
     }
 
     // save the current screen if about to wipe
-    if (gamestate != wipegamestate)
+    if (gamestate != wipegamestate && gamestate != GS_CONSOLE && wipegamestate != GS_CONSOLE)
     {
 	if(dots_enabled == 1)			// ADDED FOR PSP TO PREVENT CRASH...
     	    display_ticker = false;		// ...UPON WIPING SCREEN WITH ENABLED DISPLAY TICKER
@@ -350,28 +358,33 @@ void D_Display (void)
     case GS_LEVEL:
         if (!gametic)
             break;
+
         if (automapactive)
             AM_Drawer ();
-//        if (wipe || (viewheight != 200 && fullscreen) )		// CHANGED FOR HIRES
-	if (wipe || (viewheight != (200 <<hires) && fullscreen) )	// CHANGED FOR HIRES
+
+//        if (wipe || (viewheight != 200 && fullscreen) )			// CHANGED FOR HIRES
+	if (wipe || (viewheight != (200 <<hires) && fullscreen))		// CHANGED FOR HIRES
             redrawsbar = true;
+
         // haleyjd 08/29/10: [STRIFE] Always redraw sbar if menu is/was active
         if (menuactivestate || (inhelpscreensstate && !inhelpscreens))
             redrawsbar = true;              // just put away the help screen
+
+	if(c_moving)
+            redrawsbar = true;
 /*
-        ST_Drawer (viewheight == 200, redrawsbar );			// CHANGED FOR HIRES
-        fullscreen = viewheight == 200;					// CHANGED FOR HIRES
+        ST_Drawer (viewheight == 200, redrawsbar );				// CHANGED FOR HIRES
+        fullscreen = viewheight == 200;						// CHANGED FOR HIRES
 */
-	ST_Drawer (viewheight == (200 << hires), redrawsbar );		// CHANGED FOR HIRES
-	fullscreen = viewheight == (200 << hires);			// CHANGED FOR HIRES
+	ST_Drawer (viewheight == (200 << hires), redrawsbar );			// CHANGED FOR HIRES
+	fullscreen = viewheight == (200 << hires);				// CHANGED FOR HIRES
         break;
       
-     // haleyjd 08/23/2010: [STRIFE] No intermission
-     /*
-     case GS_INTERMISSION:
-         WI_Drawer ();
-         break;
-     */
+    // haleyjd 08/23/2010: [STRIFE] No intermission
+    // haleyjd 20140921: [SVE] For Capture the Chalice
+    case GS_INTERMISSION:
+        WI_Drawer();
+        break;
 
     case GS_FINALE:
         F_Drawer ();
@@ -380,7 +393,10 @@ void D_Display (void)
     case GS_DEMOSCREEN:
         D_PageDrawer ();
         break;
-    
+
+    case GS_CONSOLE:
+        break;
+
     default:
         break;
     }
@@ -411,12 +427,12 @@ void D_Display (void)
             borderdrawcount = 3;
             popupactivestate = false;
         }
+
         if (borderdrawcount)
         {
             R_DrawViewBorder ();    // erase old menu stuff
             borderdrawcount--;
         }
-
     }
 /*
     if (testcontrols)
@@ -461,9 +477,10 @@ void D_Display (void)
 			W_CacheLumpName (DEH_String("M_PAUSE"), PU_CACHE));	// CHANGED FOR HIRES
     }
 
+    C_Drawer();
 
     // menus go directly to the screen
-    M_Drawer ();          // menu is drawn even on top of everything
+    M_Drawer ();          // menu is drawn on top of everything
     NetUpdate ();         // send out any new accumulation
 
     // normal update
@@ -475,7 +492,7 @@ void D_Display (void)
     }
 
     if(!classicmode)
-	M_Drawer ();                            // menu is drawn even on top of wipes
+	M_Drawer ();                            // menu is even drawn on top of wipes
 
     // wipe update
     wipe_EndScreen(0, 0, SCREENWIDTH, SCREENHEIGHT);
@@ -514,23 +531,23 @@ void D_Display (void)
 
 void D_BindVariables(void)
 {
-//    int i;
+/*
+    int i;
 
-//    M_ApplyPlatformDefaults();
+    M_ApplyPlatformDefaults();
 
-//    I_BindVideoVariables();
-//    I_BindJoystickVariables();
-//    I_BindSoundVariables();
+    I_BindVideoVariables();
+    I_BindJoystickVariables();
+    I_BindSoundVariables();
 
-    M_BindBaseControls();
-//    M_BindWeaponControls();
-//    M_BindMapControls();
-//    M_BindMenuControls();
-//    M_BindStrifeControls(); // haleyjd 09/01/10: [STRIFE]
-//    M_BindChatControls(MAXPLAYERS);
+    M_BindWeaponControls();
+    M_BindMapControls();
+    M_BindMenuControls();
+    M_BindStrifeControls(); // haleyjd 09/01/10: [STRIFE]
+    M_BindChatControls(MAXPLAYERS);
 
     // haleyjd 20130915: Strife chat keys
-/*
+
     key_multi_msgplayer[0] = '1';
     key_multi_msgplayer[1] = '2';
     key_multi_msgplayer[2] = '3';
@@ -539,12 +556,10 @@ void D_BindVariables(void)
     key_multi_msgplayer[5] = '6';
     key_multi_msgplayer[6] = '7';
     key_multi_msgplayer[7] = '8';
-*/
-/*
+
 #ifdef FEATURE_MULTIPLAYER
     NET_BindVariables();
 #endif
-*/
 
     // haleyjd 08/29/10: [STRIFE]
     // * Added voice volume
@@ -555,7 +570,7 @@ void D_BindVariables(void)
     // * Removed detailLevel
     // * screenblocks -> screensize
     // * Added nickname, comport
-/*
+
     M_BindVariable("sfx_volume",             &sfxVolume);
     M_BindVariable("music_volume",           &musicVolume);
     M_BindVariable("show_talk",              &dialogshowtext);
@@ -582,6 +597,7 @@ void D_BindVariables(void)
         M_BindVariable(buf, &chat_macros[i]);
     }
 */
+    M_BindBaseControls();
 }
 
 //
@@ -638,7 +654,6 @@ void D_DoomLoop (void)
     if (demorecording)
         G_BeginRecording ();
 
-//    if(devparm)
     if(usb)
 	debugfile = fopen("usb:/apps/wiistrife/debug.txt","w");
     else if(sd)
@@ -672,17 +687,17 @@ void D_DoomLoop (void)
     while (1)
     {
 /*
-//	printf("Free RAM: %d Bytes\n",sceKernelTotalFreeMemSize());	// FOR PSP (RAM DEBUG INFO)
-//	sceKernelDelayThreadCB(100000);
+	printf("Free RAM: %d Bytes\n",sceKernelTotalFreeMemSize());	// FOR PSP (RAM DEBUG INFO)
+	sceKernelDelayThreadCB(100000);
 
-//	int mainram = 0;
-//	printf("main  = %d\n", (int) mainram);
-//	printf("Stack = %d\n", (int) &pad);
+	int mainram = 0;
+	printf("main  = %d\n", (int) mainram);
+	printf("Stack = %d\n", (int) &pad);
 
-//	int maxFreeMemSize = sceKernelMaxFreeMemSize();
-//	printf("Maximum Free RAM   = %d\n", maxFreeMemSize);
-//	int totalFreeMemSize = sceKernelTotalFreeMemSize();
-//	printf("sceKernelTotalFreeMemSize = %d\n", totalFreeMemSize);
+	int maxFreeMemSize = sceKernelMaxFreeMemSize();
+	printf("Maximum Free RAM   = %d\n", maxFreeMemSize);
+	int totalFreeMemSize = sceKernelTotalFreeMemSize();
+	printf("sceKernelTotalFreeMemSize = %d\n", totalFreeMemSize);
 */
         D_updateTics();
 
@@ -799,31 +814,40 @@ void D_TextWrite (void)							// REACTIVATED FOR DEMO
     ch = storytext;
 
     count = ((signed int) storycount - 10) / TEXTSPEED;
+
     if (count < 0)
 	count = 0;
+
     for ( ; count ; count-- )
     {
 	c = *ch++;
+
 	if (!c)
 	    break;
+
 	if (c == '\n')
 	{
 	    cx = 10;
 	    cy += 11;
+
 	    continue;
 	}
 
 	c = toupper(c) - HU_FONTSTART;
+
 	if (c < 0 || c> HU_FONTSIZE)
 	{
 	    cx += 4;
+
 	    continue;
 	}
 
 	w = SHORT (hu_font[c]->width);
+
 //	if (cx+w > SCREENWIDTH)					// (ORIGINAL)
 	if (cx+w > ORIGWIDTH)					// CHANGED FOR HIRES
 	    break;
+
 	V_DrawPatch(cx, cy, hu_font[c]);
 	cx+=w;
     }
@@ -896,7 +920,12 @@ void D_DoAdvanceDemo (void)
     case -3: // show Velocity logo for demo version
         pagetic = 6*TICRATE;
         gamestate = GS_DEMOSCREEN;
-        pagename = DEH_String("vellogo");
+
+	if(!isdemoversion)
+	    pagename = DEH_String("vellogo");
+	else
+	    pagename = DEH_String("vellogo2");
+
         demosequence = -5; // exit
         return;
     case -2: // title screen
@@ -904,14 +933,12 @@ void D_DoAdvanceDemo (void)
         gamestate = GS_DEMOSCREEN;
 
 	if(!isdemoversion)
-	{
 	    pagename = DEH_String("TITLEPIC");
-
-	    if(!menuactive && classicmode)
-		S_StartMusic(mus_logo);
-	}
 	else if(isdemoversion)
     	    pagename = DEH_String("TITLEPI2");
+
+	if(!menuactive)
+	    S_StartMusic(mus_logo);
 
         demosequence = -1; // start intro cinematic
         return;
@@ -924,11 +951,11 @@ void D_DoAdvanceDemo (void)
 	else if(isdemoversion)
     	    pagename = DEH_String("HELP0");
 
-	if(!menuactive && !usergame && !classicmode)
-	{
+	if(classicmode || (!classicmode && !menuactive))
 	    S_StartSound(NULL, sfx_rb2act);
+
+	if(classicmode && !menuactive)
 	    wipegamestate = -1;
-	}
         break;
     case 0: // Rogue logo
         pagetic = 4*TICRATE;
@@ -939,7 +966,8 @@ void D_DoAdvanceDemo (void)
 	else if(isdemoversion)
     	    pagename = DEH_String("RGELOGO2");
 
-        wipegamestate = -1;
+	if(classicmode && !menuactive)
+            wipegamestate = -1;
         break;
     case 1:
 
@@ -1007,7 +1035,9 @@ void D_DoAdvanceDemo (void)
         pagetic = 9*TICRATE;
         gamestate = GS_DEMOSCREEN;
         pagename = DEH_String("TITLEPI2");
-        wipegamestate = -1;
+
+	if(classicmode && !menuactive)
+            wipegamestate = -1;
         break;
     case 8: // demo
 
@@ -1016,10 +1046,15 @@ void D_DoAdvanceDemo (void)
 
         // [SVE]
         storycount = 0;
-        S_ChangeMusic(mus_dark, 1);
+
+	if((!menuactive && !usergame && !classicmode) || classicmode)
+	    S_ChangeMusic(mus_dark, 1);
+
         pagename = "BACKPIC";
         pagetic = 58*TICRATE;
-        wipegamestate = -1;
+
+	if(classicmode && !menuactive)
+            wipegamestate = -1;
         /*
         ClearTmp();
         pagetic = 9*TICRATE;
@@ -1030,8 +1065,14 @@ void D_DoAdvanceDemo (void)
 	    // nitr8 [2014/12/30] ...until now.
         pagetic = 6*TICRATE;
         gamestate = GS_DEMOSCREEN;
-        pagename = DEH_String("vellogo");
-        wipegamestate = -1;
+
+	if(!isdemoversion)
+	    pagename = DEH_String("vellogo");
+	else
+	    pagename = DEH_String("vellogo2");
+
+	if(classicmode && !menuactive)
+            wipegamestate = -1;
         break;
     case 10: // credits
         gamestate = GS_DEMOSCREEN;
@@ -1042,7 +1083,8 @@ void D_DoAdvanceDemo (void)
 	else
 	    pagename = DEH_String("CREDIT");
 
-        wipegamestate = -1;
+	if(classicmode && !menuactive)
+            wipegamestate = -1;
         break;
     default:
         break;
@@ -1063,6 +1105,8 @@ void D_DoAdvanceDemo (void)
 
     if((demosequence == 7 || demosequence == 9) && !isdemoversion)
         ++demosequence;
+
+    C_InstaPopup();       // make console go away
 }
 
 
@@ -1079,6 +1123,7 @@ void D_StartTitle (void)
     gameaction = ga_nothing;
     demosequence = -2;
     D_AdvanceDemo ();
+    C_InstaPopup();       // pop up the console straight away
 }
 
 //
@@ -1231,8 +1276,7 @@ void D_IdentifyVersion(void)
 		D_AddFile(name);
     }
 }
-*/
-#if 0
+
 //
 // DoTimeBomb
 //
@@ -1263,8 +1307,7 @@ void DoTimeBomb(void)
        date.month < serial_month)
        I_Error("Bad wadfile");
 }
-#endif
-
+*/
 // Set the gamedescription string
 
 void D_SetGameDescription(void)
@@ -1272,14 +1315,8 @@ void D_SetGameDescription(void)
     gamedescription = GetGameName("Strife: Quest for the Sigil");
 }
 
-//      print title for every printed line
-char            title[128];
-#define MAXWADFILES 20
-char*		wadfiles[MAXWADFILES];
-
 static boolean D_AddFile(char *filename)
 {
-
     wad_file_t *handle;
 
     if(devparm)
@@ -1310,9 +1347,9 @@ static char *copyright_banners[] =
     "                                Shareware!\n"
     "===========================================================================\n"
 };
-*/
+
 // Prints a message only if it has been modified by dehacked.
-/*
+
 void PrintDehackedBanners(void)
 {
     size_t i;
@@ -1538,8 +1575,10 @@ static void D_InitIntroSequence(void)
     {
         // In vanilla Strife, Mode 13h was initialized directly in D_DoomMain.
         // We have to be a little more courteous of the low-level code here.
-//        I_SetWindowTitle(gamedescription);
-//        I_SetGrabMouseCallback(D_StartupGrabCallback);
+/*
+        I_SetWindowTitle(gamedescription);
+        I_SetGrabMouseCallback(D_StartupGrabCallback);
+*/
         I_InitGraphics();
 
         V_RestoreBuffer(); // make the V_ routines work
@@ -1631,7 +1670,7 @@ static void D_DrawIntroSequence(void)
 //
 void D_IntroTick(void)
 {
-    static boolean didsound = false; // haleyjd 20120209
+//    static boolean didsound = false; // haleyjd 20120209
     
     if(devparm)
         return;
@@ -1646,11 +1685,13 @@ void D_IntroTick(void)
         // whatever reason, under DMX, playing the same sound multiple times
         // doesn't add up violently like it does under SDL_mixer. This means
         // that without this one-time limitation, the sound is far too loud.
-        if(!didsound)
+/*
+        if(!didsound)			// FIXME: CRASHES THE WII RIGHT HERE (MOVED UP TO D_DOOMLOOP)
         {
             S_StartSound(NULL, sfx_psdtha);
             didsound = true;
         }
+*/
     }
     else
         D_DrawIntroSequence();
@@ -1664,14 +1705,8 @@ void D_IntroTick(void)
 #include <wiiuse/wpad.h>
 
 u32 WaitButtons(void);
+
 int MD5_Check(char *final);
-/*
-static char *voices[2] =
-{
-	"usb:/apps/wiistrife/voices/voices.wad",
-	NULL	// the last entry MUST be NULL
-};
-*/
 
 // haleyjd [SVE]: cheat state tracking in D_DoomMain
 enum
@@ -1701,6 +1736,8 @@ void D_DoomMain (void)
 
     W_CheckSize(0);
 */
+    boolean didsound = false;
+
     int setcheating = CHEAT_NONE; // haleyjd [SVE] 20140914
 
     FILE *fprw;
@@ -1874,13 +1911,15 @@ void D_DoomMain (void)
     if(devparm)
     {
 	printf(" ");
-//	pspDebugScreenSetTextColor(0x000000);	// black
-//	pspDebugScreenSetBackColor(0x009E00);	// green
-
+/*
+	pspDebugScreenSetTextColor(0x000000);	// black
+	pspDebugScreenSetBackColor(0x009E00);	// green
+*/
         printf("                   STRIFE:  Quest for the Sigil                   ");
-
-//	pspDebugScreenSetTextColor(0xD0D0D0);	// grey
-//	pspDebugScreenSetBackColor(0x000000);	// black
+/*
+	pspDebugScreenSetTextColor(0xD0D0D0);	// grey
+	pspDebugScreenSetBackColor(0x000000);	// black
+*/
     }
     if( (strife1_wad_exists == 1 && fsize != 28372168
 				 && fsize != 28377364) ||
@@ -1931,7 +1970,7 @@ void D_DoomMain (void)
         testcontrols = true;
         showintro = false;
     }
-*/
+
     // haleyjd 20110206: Moved up -devparm for max visibility
 
     //!
@@ -1940,15 +1979,17 @@ void D_DoomMain (void)
     // Developer mode. Implies -nograph.
     //
 
-//    devparm = M_CheckParm ("-devparm");
+    devparm = M_CheckParm ("-devparm");
 
     // print banner
 
-//    if(devparm)
-//    	I_PrintBanner("Chocolate Doom 2.0.0"/*PACKAGE_STRING*/);
-
+    if(devparm)
+    	I_PrintBanner("Chocolate Doom 2.0.0" PACKAGE_STRING);
+*/
     //DEH_printf("Z_Init: Init zone memory allocation daemon. \n"); [STRIFE] removed
     Z_Init ();
+
+    C_Init();
 /*
 #ifdef FEATURE_MULTIPLAYER
     //!
@@ -2193,15 +2234,20 @@ void D_DoomMain (void)
 
     fastparm = false;
     respawnparm = false;
-/*
-    if(devparm)
+
+//    if(devparm)
     {
+	if(mus_engine > 1)
+	    mus_engine = 2;
+	else if(mus_engine < 2)
+	    mus_engine = 1;
+
 	if(mus_engine == 1)
 	    snd_musicdevice = SNDDEVICE_SB;
 	else
 	    snd_musicdevice = SNDDEVICE_GENMIDI;
     }
-*/
+
     if (!graphical_startup)
     {
         showintro = false;
@@ -2220,13 +2266,14 @@ void D_DoomMain (void)
                 "specifying one with the '-iwad' command line parameter.\n");
     }
 
-//    modifiedgame = false;
+    modifiedgame = false;
 
     if(devparm) // [STRIFE] Devparm only
         DEH_printf(" W_Init: Init WADfiles.\n");
     D_IdentifyVersion();
+
+    while(1)
 */
-//    while(1)
     {
 //	if (strife1_wad_exists == 1)
 	{
@@ -2265,10 +2312,10 @@ void D_DoomMain (void)
 	    }
 	    printf(" ");
 /*
-//	    pspDebugScreenSetTextColor(0x000000);	// black
-//	    pspDebugScreenSetBackColor(0x009E00);	// green
+	    pspDebugScreenSetTextColor(0x000000);	// black
+	    pspDebugScreenSetBackColor(0x009E00);	// green
 
-//	    if(devparm)
+	    if(devparm)
 	    {
 	        if(devparm && STRIFE_1_0_REGISTERED)
 	    	    printf("                 STRIFE: Quest for the Sigil v1.0                 ");
@@ -2276,8 +2323,8 @@ void D_DoomMain (void)
 	    	    printf("                STRIFE:  Quest for the Sigil v1.31                ");
 	    }
 
-//	    pspDebugScreenSetTextColor(0xD0D0D0);	// grey
-//	    pspDebugScreenSetBackColor(0x000000);	// black
+	    pspDebugScreenSetTextColor(0xD0D0D0);	// grey
+	    pspDebugScreenSetBackColor(0x000000);	// black
 
     	    if(devparm)
     	        DEH_printf(D_DEVSTR);
@@ -2358,24 +2405,37 @@ void D_DoomMain (void)
 			printf("  adding %s\n", extra_wad_3);
 		}
 	    }
-
 //	    break;
 	}
     }
     W_MergeFile("usb:/apps/wiistrife/pspstrife.wad");
 
-//    D_AddFile(iwadfile);
+    HU_Init ();
+
+    C_Printf("\n");
+    C_Printf("C_Init: Init console.\n\n");
+    C_Printf("STRIFE: QUEST FOR THE SIGIL\n\n");
+    C_Printf("Reading config from: strife.cfg\n");
+    C_Printf("DPMI-MEM: 32.282624, 8.0M allocated\n");
+    C_Printf("Play Voices = %d\n", disable_voices == 0);
+    C_Printf("W_Init: Init WADfiles.\n");
+    C_Printf("        adding STRIFE1.WAD\n");
+    C_Printf("        adding VOICES.WAD\n");
+    C_Printf("        adding PSPSTRIFE.WAD\n");
 /*
+    D_AddFile(iwadfile);
+
     if(usb)
 	D_AddFile("usb:/apps/wiistrife/pspstrife.wad");			// REQUIRED FOR SPECIAL PSP STUFF
     else if(sd)
 	D_AddFile("sd:/apps/wiistrife/pspstrife.wad");			// REQUIRED FOR SPECIAL PSP STUFF
-*/
-//    W_CheckCorrectIWAD(strife);		// DISABLED FOR PSP - sorry :-( I'LL TRY TO FIND A FIX
-//    modifiedgame = W_ParseCommandLine();
+
+    W_CheckCorrectIWAD(strife);		// DISABLED FOR PSP - sorry :-( I'LL TRY TO FIND A FIX
+    modifiedgame = W_ParseCommandLine();
 
     // [STRIFE] serial number check and output	// ADDED SERIAL CHECK FOR PSP SOURCE PORT
-//    if(devparm)
+    if(devparm)
+*/
     {
 //        char msgbuf[80];
         char *serial  = W_CacheLumpName("SERIAL", PU_CACHE);
@@ -2427,11 +2487,34 @@ void D_DoomMain (void)
 		printf("                 This version is NOT SHAREWARE, do not distribute!              ");
 		printf("             Please report software piracy to the SPA: 1-800-388-PIR8           ");
 		printf(" ===============================================================================");
+		C_Printf("Wad Serial #: %d: retail version.\n", serialnum);
+		C_Printf("==========================================================\n");
+		C_Printf("This version is NOT SHAREWARE,\n");
+		C_Printf("do not distribute!\n\n");
+		C_Printf("Please report software piracy\n");
+		C_Printf("to the SPA: 1-800-388-PIR8\n");
+		C_Printf("==========================================================\n");
 	    }
 	    else if(devparm || STRIFE_1_0_SHAREWARE || STRIFE_1_1_SHAREWARE)
 	    {
 //    	    	DEH_snprintf(msgbuf, sizeof(msgbuf),
 		printf(" Wad Serial Number: %d:          demo version.\n", serialnum);
+		C_Printf("Wad Serial #: %d: demo version.\n", serialnum);
+	    }
+	    else if(!devparm && (STRIFE_1_0_REGISTERED || STRIFE_1_X_REGISTERED))
+	    {
+		C_Printf("Wad Serial #: %d: retail version.\n", serialnum);
+		C_Printf("==========================================================\n");
+		C_Printf("This version is NOT SHAREWARE,\n");
+		C_Printf("do not distribute!\n\n");
+		C_Printf("Please report software piracy\n");
+		C_Printf("to the SPA: 1-800-388-PIR8\n");
+		C_Printf("==========================================================\n");
+	    }
+	    else if(!devparm || STRIFE_1_0_SHAREWARE || STRIFE_1_1_SHAREWARE)
+	    {
+//    	    	DEH_snprintf(msgbuf, sizeof(msgbuf),
+		C_Printf("Wad Serial #: %d: demo version.\n", serialnum);
 	    }
 //	    printf("%s\n", msgbuf);
 	}
@@ -2451,7 +2534,7 @@ void D_DoomMain (void)
     {
 	W_PrintDirectory();
     }
-*/
+
     //!
     // @arg <demo>
     // @category demo
@@ -2459,7 +2542,7 @@ void D_DoomMain (void)
     //
     // Play back the demo named demo.lmp.
     //
-/*
+
     p = M_CheckParmWithArgs ("-playdemo", 1);
 
     if (!p)
@@ -2527,8 +2610,7 @@ void D_DoomMain (void)
     I_InitTimer();
     I_InitSound(true);
     I_InitMusic();
-*/
-/*
+
 #ifdef FEATURE_MULTIPLAYER
     if(devparm) // [STRIFE]
         printf ("NET_Init: Init network subsystem.\n");
@@ -2555,9 +2637,9 @@ void D_DoomMain (void)
         DEH_printf(" S_Init: Setting up sound.\n");
     S_Init (sfxVolume * 8, musicVolume * 8, voiceVolume * 8); // [STRIFE]: voice
     D_IntroTick(); // [STRIFE]
-*/
+
     // Check for -file in shareware
-/*
+
     if (modifiedgame)
     {
         // These are the lumps that will be checked in IWAD,
@@ -2611,17 +2693,17 @@ void D_DoomMain (void)
         startskill = myargv[p+1][0]-'1';
         autostart = true;
     }
-*/
+
     // [STRIFE] no such thing in Strife
     //
-    // // @arg <n>
-    // // @vanilla
-    // //
-    // // Start playing on episode n (1-4)
-    // //
+    // @arg <n>
+    // @vanilla
+    // 
+    // Start playing on episode n (1-4)
+    // 
 
-    // p = M_CheckParmWithArgs("-episode", 1);
-
+    p = M_CheckParmWithArgs("-episode", 1);
+*/
     // if (p)
     // {
     //     startepisode = myargv[p+1][0]-'0';
@@ -2646,28 +2728,28 @@ void D_DoomMain (void)
         timelimit = atoi(myargv[p+1]);
         printf("timer: %i\n", timelimit);
     }
-*/
+
     //!
     // @category net
     // @vanilla
     //
     // Austin Virtual Gaming: end levels after 20 minutes.
     //
-/*
+
     p = M_CheckParm ("-avg");
 
     if (p)
     {
         timelimit = 20;
     }
-*/
+
     //!
     // @arg x
     // @vanilla
     //
     // Start a game immediately, warping to level x.
     //
-/*
+
     p = M_CheckParmWithArgs("-warp", 1);
 
     if (p)
@@ -2696,7 +2778,7 @@ void D_DoomMain (void)
         startmap = 3;
         autostart = true;
     }
-*/
+
     // Check for load game parameter
     // We do this here and save the slot number, so that the network code
     // can override it or send the load slot to other players.
@@ -2707,7 +2789,7 @@ void D_DoomMain (void)
     //
     // Load the game in slot s.
     //
-/*
+
     p = M_CheckParmWithArgs("-loadgame", 1);
     
     if (p)
@@ -2750,17 +2832,20 @@ void D_DoomMain (void)
     // haleyjd 08/22/2010: [STRIFE] Modified string to match binary
     if(devparm || STRIFE_1_1_SHAREWARE) // [STRIFE]
        DEH_printf(" R_Init: Loading Graphics - ");
+    C_Printf("R_Init: Loading Graphics - [..............]");
 
     R_Init ();
     D_IntroTick(); // [STRIFE]
 
     if(devparm || STRIFE_1_1_SHAREWARE) // [STRIFE]
         DEH_printf("\n P_Init: Init Playloop state.\n");
+    C_Printf("\n P_Init: Init Playloop state.\n");
     P_Init ();
     D_IntroTick(); // [STRIFE]
 
     if(devparm || STRIFE_1_1_SHAREWARE) // [STRIFE]
         DEH_printf(" I_Init: Setting up machine state.\n");
+    C_Printf("I_Init: Setting up machine state.\n");
 //    I_CheckIsScreensaver();
     D_IntroTick(); // [STRIFE]
 
@@ -2773,6 +2858,13 @@ void D_DoomMain (void)
         DEH_printf(" Joystick: detected\n");
         DEH_printf(" I_StartupKeyboard\n");
         DEH_printf(" Keyboard: detected\n");
+        C_Printf("I_StartupDPMI\n");
+        C_Printf("I_StartupMouse\n");
+        C_Printf("Mouse: not detected\n");
+        C_Printf("I_StartupJoystick\n");
+        C_Printf("Joystick: detected\n");
+        C_Printf("I_StartupKeyboard\n");
+        C_Printf("Keyboard: detected\n");
     }
 //    I_InitJoystick();
     D_IntroTick(); // [STRIFE]
@@ -2782,11 +2874,13 @@ void D_DoomMain (void)
 
     if(devparm || STRIFE_1_1_SHAREWARE) // [STRIFE]
         DEH_printf(" I_StartupSound\n");
+    C_Printf("I_StartupSound\n");
     I_InitSound(true);
     I_InitMusic();
 
     if(devparm || STRIFE_1_1_SHAREWARE) // [STRIFE]
         DEH_printf(" I_StartupTimer()\n");
+    C_Printf("I_StartupTimer()\n");
     I_InitTimer();
 /*
     if(devparm)
@@ -2794,16 +2888,19 @@ void D_DoomMain (void)
 */
     if(devparm || STRIFE_1_1_SHAREWARE) // [STRIFE]
         DEH_printf(" D_CheckNetGame: Checking network game status.\n");
+    C_Printf("D_CheckNetGame: Checking net state\n");
     D_CheckNetGame ();
 
     if(devparm || STRIFE_1_1_SHAREWARE) // [STRIFE]
         DEH_printf(" M_Init: Init Menu.\n");
+    C_Printf("M_Init: Init Menu.\n");
     M_Init ();
     D_IntroTick(); // [STRIFE]
 
     // haleyjd 20110924: moved S_Init up to here
     if(devparm || STRIFE_1_1_SHAREWARE) // [STRIFE]
         DEH_printf(" S_Init: Setting up sound.\n");
+    C_Printf("S_Init: Setting up sound.\n");
     S_Init (sfxVolume * 8, musicVolume * 8, voiceVolume * 8); // [STRIFE]: voice
     D_IntroTick(); // [STRIFE]
 
@@ -2840,12 +2937,16 @@ void D_DoomMain (void)
 */
     if(devparm || STRIFE_1_1_SHAREWARE)
         DEH_printf(" HU_Init: Setting up heads up display.\n");
-    HU_Init ();
+    C_Printf("HU_Init: Setting up heads up display.\n");
+//    HU_Init ();
     D_IntroTick(); // [STRIFE]
 
     if(devparm || STRIFE_1_1_SHAREWARE)
+    {
         DEH_printf(" ST_Init: Init status bar.\n");
-    ST_Init ();
+        C_Printf("ST_Init: Init status bar.\n\n");
+        ST_Init ();					// FOR WII: MOVED TO M_MENU.C (M_DoNameChar)...
+    }							// ...FOR DEMO / RETAIL STATUS BAR INIT.
     D_IntroTick(); // [STRIFE]
 
     // haleyjd [STRIFE] -statcopy used to be here...
@@ -2855,10 +2956,9 @@ void D_DoomMain (void)
     // Moved this here so that MAP01 isn't constantly looked up
     // in the main loop.
     // haleyjd 08/23/2010: [STRIFE] There is no storedemo version of Strife
-    /*
+/*
     if (gamemode == commercial && W_CheckNumForName("map01") < 0)
         storedemo = true;
-    */
 
     //!
     // @arg <x>
@@ -2867,7 +2967,7 @@ void D_DoomMain (void)
     //
     // Record a demo named x.lmp.
     //
-/*
+
     p = M_CheckParmWithArgs("-record", 1);
 
     if (p)
@@ -2917,6 +3017,12 @@ void D_DoomMain (void)
 	}
         else
             D_StartTitle ();                	// start up intro loop
+    }
+
+    if(!didsound && !devparm)			// WOULD ALSO PLAY THE SOUND WHEN BOOTING THE GAME...
+    {						// ...DIRECTLY INTO A MAP IN DEVELOPMENT MODE
+        S_StartSound(NULL, sfx_psdtha);
+        didsound = true;
     }
 
     D_DoomLoop ();  // never returns

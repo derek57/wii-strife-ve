@@ -773,24 +773,48 @@ void P_DropInventoryItem(player_t* player, int sprite)
         fixed_t z;
         int r;
 
-        if(item->type == MT_MONY_1)
-        {
-            if(item->amount >= 50)
+	if(!isdemoversion)
+	{
+            if(item->type == MT_MONY_1)
             {
-                type = MT_MONY_50;
-                amount = 50;
+                if(item->amount >= 50)
+                {
+                    type = MT_MONY_50;
+                    amount = 50;
+                }
+                else if(item->amount >= 25)
+                {
+                    type = MT_MONY_25;
+                    amount = 25;
+                }
+                else if(item->amount >= 10)
+                {
+                    type = MT_MONY_10;
+                    amount = 10;
+                }
             }
-            else if(item->amount >= 25)
+	}
+	else
+	{
+            if(item->type == MT_MONY_2)
             {
-                type = MT_MONY_25;
-                amount = 25;
+                if(item->amount >= 50)
+                {
+                    type = MT_MONY_50;
+                    amount = 50;
+                }
+                else if(item->amount >= 25)
+                {
+                    type = MT_MONY_25;
+                    amount = 25;
+                }
+                else if(item->amount >= 10)
+                {
+                    type = MT_MONY_10;
+                    amount = 10;
+                }
             }
-            else if(item->amount >= 10)
-            {
-                type = MT_MONY_10;
-                amount = 10;
-            }
-        }
+	}
 
         if(type >= NUMMOBJTYPES)
             return;

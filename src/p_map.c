@@ -41,6 +41,8 @@
 
 #include "p_mobj.h"
 
+#include "c_io.h"
+
 // Spechit overrun magic value.
 //
 // This is the value used by PrBoom-plus.  I think the value below is 
@@ -1879,7 +1881,7 @@ static void SpechitOverrun(line_t *ld)
             crushchange = addr; 
             break;
         default:
-            fprintf(stderr, "SpechitOverrun: Warning: unable to emulate"
+            C_Printf("SpechitOverrun: Warning: unable to emulate"
                             "an overrun where numspechit=%i\n",
                             numspechit);
             break;

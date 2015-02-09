@@ -25,6 +25,8 @@
 #include "opl.h"
 #include "opl_internal.h"
 
+#include "c_io.h"
+
 //#define OPL_DEBUG_TRACE
 
 #ifdef HAVE_IOPERM
@@ -84,7 +86,7 @@ static int InitDriver(opl_driver_t *_driver, unsigned int port_base)
 
     if (!OPL_Detect() || !OPL_Detect())
     {
-        printf("OPL_Init: No OPL detected using '%s' driver.\n", _driver->name);
+        C_Printf("OPL_Init: No OPL detected using '%s' driver.\n", _driver->name);
         _driver->shutdown_func();
         driver = NULL;
         return 0;
@@ -96,7 +98,7 @@ static int InitDriver(opl_driver_t *_driver, unsigned int port_base)
 
     init_stage_reg_writes = 0;
 
-//    printf("OPL_Init: Using driver '%s'.\n", driver->name);
+    C_Printf("OPL_Init: Using driver '%s'.\n", driver->name);
 
     return 1;
 }
@@ -115,7 +117,7 @@ static int AutoSelectDriver(unsigned int port_base)
         }
     }
 
-    printf("OPL_Init: Failed to find a working driver.\n");
+    C_Printf("OPL_Init: Failed to find a working driver.\n");
 
     return 0;
 }
@@ -144,14 +146,14 @@ int OPL_Init(unsigned int port_base)
                 }
                 else
                 {
-                    printf("OPL_Init: Failed to initialize "
+                    C_Printf("OPL_Init: Failed to initialize "
                            "driver: '%s'.\n", driver_name);
                     return 0;
                 }
             }
         }
 
-        printf("OPL_Init: unknown driver: '%s'.\n", driver_name);
+        C_Printf("OPL_Init: unknown driver: '%s'.\n", driver_name);
 
         return 0;
     }
