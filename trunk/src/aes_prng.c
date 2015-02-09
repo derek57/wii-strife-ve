@@ -74,6 +74,8 @@
 #include "doomtype.h"
 #include "i_system.h"
 
+#include "c_io.h"
+
 #define MAXKC			(256/32)
 #define MAXROUNDS		14
 
@@ -1038,12 +1040,12 @@ int main(int argc, char *argv[])
 
     if (errormsg == NULL)
     {
-        printf("AES Self test passed.\n");
+        C_Printf("AES Self test passed.\n");
         return 0;
     }
     else
     {
-        fprintf(stderr, "AES self test failed: %s\n", errormsg);
+        C_Printf("AES self test failed: %s\n", errormsg);
         return 1;
     }
 }

@@ -36,6 +36,8 @@
 
 #include "p_tick.h"// [SVE]
 
+#include "c_io.h"
+
 #define SAVEGAME_EOF 0x1d
 
 // haleyjd 09/28/10: [STRIFE] VERSIONSIZE == 8
@@ -92,7 +94,7 @@ static byte saveg_read8(void)
     {
         if (!savegame_error)
         {
-            fprintf(stderr, "saveg_read8: Unexpected end of file while "
+            C_Printf("saveg_read8: Unexpected end of file while "
                             "reading save game\n");
 
             savegame_error = true;
@@ -108,7 +110,7 @@ static void saveg_write8(byte value)
     {
         if (!savegame_error)
         {
-            fprintf(stderr, "saveg_write8: Error while writing save game\n");
+            C_Printf("saveg_write8: Error while writing save game\n");
 
             savegame_error = true;
         }

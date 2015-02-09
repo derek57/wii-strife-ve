@@ -73,6 +73,10 @@
 #include "p_locations.h"
 #include "p_inter.h"
 #include "fe_funcs.h"
+#include "wi_stuff.h"
+#include "c_io.h"
+#include "hu_stuff.h"
+//#include "lprintf.h"
 
 #define SAVEGAMESIZE	0x2c000
 //#define SAVEGAMESIZE	0x58000		// DOUBLED FOR THE WII AS CAUSED BY BLOODSPLATS
@@ -174,6 +178,8 @@ int		low_health_turnspeed = 5;
 extern fixed_t	forwardmove;
 extern fixed_t	sidemove;
 extern int	turnspeed;
+extern int	pgup_down;
+extern int	pgdn_down;
 
 fixed_t		angleturn;
 
@@ -270,7 +276,7 @@ static int      joyirx;
 static int      joyiry;
 static int      joylookmove;
 static boolean  joyarray[MAX_JOY_BUTTONS + 1]; 
-static boolean *joybuttons = &joyarray[1];		// allow [-1] 
+/*static*/ boolean *joybuttons = &joyarray[1];		// allow [-1] 
 
 int joy_a = 1;		// 0
 int joy_r = 2;		// 1
@@ -308,6 +314,7 @@ int	joybjump = 12;
 int	joybinvkey = 13;
 int     joybdrop = 14;
 int	joybspeed = 15;
+int	joybconsole = 16;
 
 extern fixed_t 	mtof_zoommul; // how far the window zooms in each tic (map coords)
 extern fixed_t 	ftom_zoommul; // how far the window zooms in each tic (fb coords)
@@ -510,6 +517,7 @@ void ChangeWeaponLeft(void)
 // or reads it from the demo buffer. 
 // If recording a demo, write it out 
 // 
+
 void G_BuildTiccmd (ticcmd_t* cmd, int maketic) 
 { 
 //    int		i; 
@@ -519,6 +527,18 @@ void G_BuildTiccmd (ticcmd_t* cmd, int maketic)
 //    int		tspeed; 
     int		forward;
     int		side;
+
+    if(gamestate == GS_CONSOLE)
+    {                         
+        int i;
+      
+        // fill ticcmd with console chars
+        for(i = 0; i < sizeof(ticcmd_t); i++)
+        {
+            ((unsigned char*)cmd)[i] = HU_dequeueChatChar();
+        }
+        return;
+    }
 
     memset(cmd, 0, sizeof(ticcmd_t));
 
@@ -763,6 +783,18 @@ void G_BuildTiccmd (ticcmd_t* cmd, int maketic)
 
 	if(data->btns_d)
 	{
+	    if(joybuttons[joybconsole])
+	    {
+		if(!menuactive)
+		{
+		    if (!consoleactive)
+		    {
+			C_SetConsole();
+			S_StartSound(NULL, sfx_drsmto);
+		    }
+		}
+	    }
+
 	    if(joybuttons[joybmenu])
 	    {
 		if (!menuactive)
@@ -1229,18 +1261,15 @@ void G_DoLoadLevel (void)
     if(!classicmode)
         G_SetSkyTexture();
 
+    C_Printf("G_DoLoadLevel: sky done\n");
+
     // haleyjd 10/03/10: [STRIFE] This is not done here.
     //skyflatnum = R_FlatNumForName(DEH_String(SKYFLATNAME));
 
     levelstarttic = gametic;        // for time calculation
 
-    if (wipegamestate == GS_LEVEL)
-    {
-	if(!classicmode)
-	    FE_ClearScreen();
-
+    if (wipegamestate == GS_LEVEL && classicmode && !menuactive)
         wipegamestate = -1;             // force a wipe 
-    }
 
     gamestate = GS_LEVEL; 
 
@@ -1280,6 +1309,8 @@ void G_DoLoadLevel (void)
 #endif
 */
     P_DialogLoad(); // villsa [STRIFE]
+
+    C_InstaPopup();  // pop up the console
 } 
 /*
 static void SetJoyButtons(unsigned int buttons_mask)
@@ -1667,12 +1698,12 @@ void G_Ticker (void)
         HU_Ticker ();
         break; 
 
-        // haleyjd 08/23/10: [STRIFE] No intermission.
-        /*
+    // haleyjd 08/23/10: [STRIFE] No intermission.
+    // haleyjd 20140921: [SVE] For Capture the Chalice
     case GS_INTERMISSION: 
         WI_Ticker (); 
         break; 
-        */
+
     case GS_UNKNOWN: // STRIFE-TODO: What is this? is it ever used??
         F_WaitTicker();
         break;
@@ -1683,6 +1714,9 @@ void G_Ticker (void)
 
     case GS_DEMOSCREEN: 
         D_PageTicker (); 
+        break;
+
+    case GS_CONSOLE:
         break;
     }        
 } 
@@ -1888,7 +1922,14 @@ void G_DeathMatchSpawnPlayer (int playernum)
 
     selections = deathmatch_p - deathmatchstarts; 
     if (selections < 4) 
-        I_Error ("Only %i deathmatch spots, at least 4 required!", selections); 
+    {
+//        I_Error ("Only %i deathmatch spots, at least 4 required!", selections); 
+	C_Printf("\aOnly %i deathmatch spots, %d required\n", selections, MAXPLAYERS);
+
+	C_SetConsole();
+
+	return;
+    }
 
     for (j=0 ; j<20 ; j++) 
     { 
@@ -2198,36 +2239,15 @@ void G_DoCompleted (void)
 } 
 
 
-// haleyjd 20100824: [STRIFE] No secret exits.
-/*
 //
 // G_WorldDone 
 //
-void G_WorldDone (void) 
+// haleyjd 20140921: [SVE] Used for Capture the Chalice mode
+//
+void G_WorldDone(void) 
 { 
     gameaction = ga_worlddone; 
-
-    if (secretexit) 
-        players[consoleplayer].didsecret = true; 
-
-    if ( gamemode == commercial )
-    {
-	switch (gamemap)
-	{
-	  case 15:
-	  case 31:
-	    if (!secretexit)
-		break;
-	  case 6:
-	  case 11:
-	  case 20:
-	  case 30:
-	    F_StartFinale ();
-	    break;
-	}
-    }
 } 
-*/
 
 //
 // G_RiftPlayer
@@ -2492,7 +2512,12 @@ static void G_SpecialReborn(void)
     if(G_HasVisitedMap(6))
     {
         players[0].questflags |= QF_QUEST15;
-        G_GiveRebornItem(MT_QUEST_UNIFORM);
+
+	if(!isdemoversion)
+	    G_GiveRebornItem(MT_QUEST_UNIFORM);
+	else
+	    G_GiveRebornItem(MT_QUEST_UNIFORM_2);
+
         G_GiveRebornItem(MT_TOKEN_FLAME_THROWER_PARTS);
         P_GiveWeapon(&players[0], wp_hegrenade, false);
         players[0].accuracy += 10;
@@ -2536,7 +2561,11 @@ static void G_SpecialReborn(void)
         players[0].questflags |= QF_QUEST18;
         G_GiveRebornItem(MT_MILITARYID);
         G_GiveRebornItem(MT_KEY_ORDER);
-        G_GiveRebornItem(MT_QUEST_GUARD_UNIFORM);
+
+	if(!isdemoversion)
+            G_GiveRebornItem(MT_QUEST_GUARD_UNIFORM);
+	else
+            G_GiveRebornItem(MT_QUEST_GUARD_UNIFORM_2);
     }
 
     // Mines
@@ -2696,6 +2725,7 @@ void G_DoLoadGame (boolean userload)
 
     if (!P_ReadSaveGameHeader())
     {
+	C_Printf("G_DoLoadGame: Incompatible savegame\n");
         G_HandleLoadError(save_stream, userload);
         return;
     }
@@ -2993,9 +3023,18 @@ void G_AdjustMobjInfoForSkill(skill_t skill)
         for(i = S_TURT_02; i <= S_TURT_03; i++)
             states[i].tics *= 2;
 
-        // Crusaders attack and feel pain slower
-        for(i = S_ROB2_09; i <= S_ROB2_19; i++)
-            states[i].tics *= 2;
+	if(!isdemoversion)
+	{
+            // Crusaders attack and feel pain slower
+            for(i = S_ROB2_09; i <= S_ROB2_19; i++)
+                states[i].tics *= 2;
+	}
+	else
+	{
+            // Crusaders attack and feel pain slower
+            for(i = S_ROBD_09; i <= S_ROBD_19; i++)
+                states[i].tics *= 2;
+	}
 
         // Stalkers think, walk, and attack slower
         for(i = S_SPID_03; i <= S_SPID_10; i++)
@@ -3025,8 +3064,16 @@ void G_AdjustMobjInfoForSkill(skill_t skill)
             states[i].tics >>= 1;
 
         // Crusaders
-        for(i = S_ROB2_09; i <= S_ROB2_19; i++)
-            states[i].tics >>= 1;
+	if(!isdemoversion)
+	{
+            for(i = S_ROB2_09; i <= S_ROB2_19; i++)
+                states[i].tics >>= 1;
+	}
+	else
+	{
+            for(i = S_ROBD_09; i <= S_ROBD_19; i++)
+                states[i].tics >>= 1;
+	}
 
         // Stalkers
         for(i = S_SPID_03; i <= S_SPID_10; i++)
@@ -3225,6 +3272,8 @@ G_InitNew
 
     // haleyjd 20140816: [SVE] fix for Veteran Edition
     G_SetSkyTexture();
+
+    C_Printf("G_InitNew: sky done\n");
 
     // [STRIFE] HUBS
     G_LoadPath(gamemap);

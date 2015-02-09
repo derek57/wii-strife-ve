@@ -77,7 +77,6 @@ void S_StopMusic(void);
 void S_PauseSound(void);
 void S_ResumeSound(void);
 
-
 //
 // Updates music & sounds
 //
@@ -90,8 +89,6 @@ void S_SetVoiceVolume(int volume); // haleyjd 09/11/10: [STRIFE]
 extern int snd_channels;
 
 extern int disable_voices;
-
-void S_GetCurrentMusic(int *track, int *looping);
 
 #endif
 

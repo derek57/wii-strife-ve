@@ -33,7 +33,6 @@
 #include "r_sky.h"
 
 
-
 planefunction_t		floorfunc;
 planefunction_t		ceilingfunc;
 

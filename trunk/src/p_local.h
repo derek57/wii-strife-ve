@@ -114,6 +114,20 @@ void    P_Thrust (player_t* player, angle_t angle, fixed_t move);
 // villsa [STRIFE]
 char*   P_RemoveInventoryItem(player_t *player, int slot, int amount);
 
+// [SVE] svillarreal
+fixed_t P_PitchToFixedSlope(const int pitch);
+
+// Achievement flags
+enum
+{
+    ACH_ALLOW_SP = 0x01,
+    ACH_ALLOW_DM = 0x02,
+    
+    ACH_ALLOW_ANY = (ACH_ALLOW_SP | ACH_ALLOW_DM)
+};
+
+// [SVE]
+boolean P_CheckPlayersCheating(int flags);
 
 //
 // P_MOBJ
@@ -128,10 +142,6 @@ extern mapthing_t	itemrespawnque[ITEMQUESIZE];
 extern int		itemrespawntime[ITEMQUESIZE];
 extern int		iquehead;
 extern int		iquetail;
-
-extern mobj_t           *bloodSplatQueue[BLOODSPLATS_MAX];
-extern int              bloodSplatQueueSlot;
-extern int              bloodsplats;
 
 void P_RespawnSpecials (void);
 
@@ -168,8 +178,7 @@ void A_AlertSpectreC(mobj_t* actor);
 void A_FaceTarget (mobj_t* actor);
 void P_FreePrisoners(void);
 void P_DestroyConverter(void);
-
-fixed_t P_PitchToFixedSlope(const int pitch);
+boolean P_ClaxonsActive(void); // [SVE] svillarreal
 
 //
 // P_MAPUTL
@@ -284,12 +293,15 @@ P_RadiusAttack
   mobj_t*	source,
   int		damage );
 
+// haleyjd 20140904: [SVE]
+void P_SaveSectorPositions(void);
 
 
 //
 // P_SETUP
 //
 extern byte*		rejectmatrix;	// for fast sight rejection
+extern byte*	        pvsmatrix; // [SVE] svillarreal
 extern short*		blockmaplump;	// offsets in blockmap are from here
 extern short*		blockmap;
 extern int		bmapwidth;
@@ -310,13 +322,10 @@ P_TouchSpecialThing
 ( mobj_t*	special,
   mobj_t*	toucher );
 
-void
-P_DamageMobj
-( mobj_t*	target,
-  mobj_t*	inflictor,
-  mobj_t*	source,
-  int		damage );
+void P_DamageMobj(mobj_t* target, mobj_t* inflictor, mobj_t* source, int damage);
 
+// [SVE]
+void P_MessageAllPlayers(char *message, int sfx_id);
 
 //
 // P_SPEC

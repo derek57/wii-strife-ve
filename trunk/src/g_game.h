@@ -65,7 +65,7 @@ void G_ExitLevel (int dest);
 
 void G_StartFinale(void); // [STRIFE]
 
-//void G_WorldDone (void);
+void G_WorldDone (void);
 
 boolean G_RiftCheat(int riftSpotNum); // [STRIFE]
 

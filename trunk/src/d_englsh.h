@@ -66,6 +66,14 @@
 #define NETEND	"you can't end a netgame!\n\n"PRESSKEY
 #define ENDGAME	"are you sure you want\nto end the game?\n\n"PRESSYN
 
+// [SVE]
+#define NETNOSAVE   "You can't save a netgame.\n\n" PRESSKEY
+#define NETNOSAVEGP "You can't save a netgame.\n\n" PRESSGPB
+
+// [SVE]
+#define CASTPROMPT   "Want to see the cast?\n\n(Spoiler alert!)\n\n" PRESSYN
+#define CASTPROMPTGP "Want to see the cast?\n\n(Spoiler alert!)\n\n" PRESSGPCC
+
 // haleyjd 09/11/10: [STRIFE] No "to dos." on this
 #define DOSY		"(press y to quit)" 
 
@@ -187,6 +195,14 @@
 #define HUSTR_35        "MAP35: Development Map"
 #define HUSTR_36        "MAP36: Development Map"
 /*
+// [SVE]: Super secret level
+#define HUSTR_35        "AREA 35: Factory: Production"
+
+// [SVE]: Capture the Chalice maps
+#define HUSTR_36        "AREA 36: Castle Clash"
+#define HUSTR_37        "AREA 37: Killing Grounds"
+#define HUSTR_38        "AREA 38: Ordered Chaos"
+
 // haleyjd 20110219: [STRIFE] replaced all with Strife chat macros:
 #define HUSTR_CHATMACRO1        "Fucker!"
 #define HUSTR_CHATMACRO2        "--SPLAT-- Instant wall art."

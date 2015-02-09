@@ -30,6 +30,8 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
+#include "i_timer.h"
+
 typedef enum 
 { 
     SECTION_NORMAL, 
@@ -566,6 +568,7 @@ void W_PrintDirectory(void)
         for (n=0; n<8 && lumpinfo[i].name[n] != '\0'; ++n)
             putchar(lumpinfo[i].name[n]);
         putchar('\n');
+	I_Sleep(2);
     }
 }
 

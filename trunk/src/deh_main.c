@@ -29,6 +29,8 @@
 #include "deh_defs.h"
 #include "deh_io.h"
 
+#include "c_io.h"
+
 extern deh_section_t *deh_section_types[];
 extern char *deh_signatures[];
 
@@ -337,7 +339,7 @@ static void DEH_ParseContext(deh_context_t *context)
                     current_section->end(context, tag);
                 }
 
-                //printf("end %s tag\n", current_section->name);
+                C_Printf("end %s tag\n", current_section->name);
                 current_section = NULL;
             }
         }
@@ -360,11 +362,11 @@ static void DEH_ParseContext(deh_context_t *context)
                 if (current_section != NULL)
                 {
                     tag = current_section->start(context, line);
-                    //printf("started %s tag\n", section_name);
+                    C_Printf("started %s tag\n", section_name);
                 }
                 else
                 {
-                    //printf("unknown section name %s\n", section_name);
+                    C_Printf("unknown section name %s\n", section_name);
                 }
             }
         }
@@ -389,14 +391,14 @@ int DEH_LoadFile(char *filename)
     deh_allow_long_cheats = false;
     deh_allow_extended_strings = false;
 
-//    printf(" loading %s\n", filename);
+    C_Printf(" loading %s\n", filename);
     show_deh_loading_message = 1;
 
     context = DEH_OpenFile(filename);
 
     if (context == NULL)
     {
-        fprintf(stderr, "DEH_LoadFile: Unable to open %s\n", filename);
+        C_Printf("DEH_LoadFile: Unable to open %s\n", filename);
         return 0;
     }
 
@@ -433,7 +435,7 @@ int DEH_LoadLump(int lumpnum, boolean allow_long, boolean allow_error)
 
     if (context == NULL)
     {
-        fprintf(stderr, "DEH_LoadFile: Unable to open lump %i\n", lumpnum);
+        C_Printf("DEH_LoadFile: Unable to open lump %i\n", lumpnum);
         return 0;
     }
 
@@ -459,7 +461,7 @@ int DEH_LoadLumpByName(char *name, boolean allow_long, boolean allow_error)
 
     if (lumpnum == -1)
     {
-        fprintf(stderr, "DEH_LoadLumpByName: '%s' lump not found\n", name);
+        C_Printf("DEH_LoadLumpByName: '%s' lump not found\n", name);
         return 0;
     }
 

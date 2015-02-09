@@ -42,6 +42,8 @@
 
 #include "doomtype.h"
 
+#include "c_io.h"
+
 #define LOW_PASS_FILTER
 #define NUM_CHANNELS 16
 
@@ -258,7 +260,7 @@ static void LockAllocatedSound(allocated_sound_t *snd)
 
     ++snd->use_count;
 
-    //printf("++ %s: Use count=%i\n", snd->sfxinfo->name, snd->use_count);
+//    C_Printf("++ %s: Use count=%i\n", snd->sfxinfo->name, snd->use_count);
 
     // When we use a sound, re-link it into the list at the head, so
     // that the oldest sounds fall to the end of the list for freeing.
@@ -278,7 +280,7 @@ static void UnlockAllocatedSound(allocated_sound_t *snd)
 
     --snd->use_count;
 
-    //printf("-- %s: Use count=%i\n", snd->sfxinfo->name, snd->use_count);
+//    C_Printf("-- %s: Use count=%i\n", snd->sfxinfo->name, snd->use_count);
 }
 
 // When a sound stops, check if it is still playing.  If it is not, 
@@ -731,7 +733,7 @@ static void GetSfxLumpName(sfxinfo_t *sfx, char *buf, size_t buf_len)
         M_StringCopy(buf, DEH_String(sfx->name), buf_len);
     }
 }
-/*
+
 #ifdef HAVE_LIBSAMPLERATE
 
 // Preload all the sound effects - stops nasty ingame freezes
@@ -748,13 +750,13 @@ static void I_SDL_PrecacheSounds(sfxinfo_t *sounds, int num_sounds)
 	return;
     }
 
-    printf("I_SDL_PrecacheSounds: Precaching all sound effects..");
+    C_Printf("I_SDL_PrecacheSounds: Precaching all sound effects..");
 
     for (i=0; i<num_sounds; ++i)
     {
         if ((i % 6) == 0)
         {
-            printf(".");
+            C_Printf(".");
             fflush(stdout);
         }
 
@@ -768,17 +770,17 @@ static void I_SDL_PrecacheSounds(sfxinfo_t *sounds, int num_sounds)
         }
     }
 
-    printf("\n");
+    C_Printf("\n");
 }
 
 #else
-*/
+
 static void I_SDL_PrecacheSounds(sfxinfo_t *sounds, int num_sounds)
 {
     // no-op
 }
 
-//#endif
+#endif
 
 // Load a SFX chunk into memory and ensure that it is locked.
 
@@ -995,13 +997,13 @@ static boolean I_SDL_InitSound(boolean _use_sfx_prefix)
 
     if (SDL_Init(SDL_INIT_AUDIO) < 0)
     {
-        fprintf(stderr, "Unable to set up sound.\n");
+        C_Printf("Unable to set up sound.\n");
         return false;
     }
 
     if (Mix_OpenAudio(snd_samplerate, AUDIO_S16SYS, 2, GetSliceSize()) < 0)
     {
-        fprintf(stderr, "Error initialising SDL_mixer: %s\n", Mix_GetError());
+        C_Printf("Error initialising SDL_mixer: %s\n", Mix_GetError());
         return false;
     }
 
@@ -1024,7 +1026,7 @@ static boolean I_SDL_InitSound(boolean _use_sfx_prefix)
 */
     if (use_libsamplerate != 0)
     {
-        fprintf(stderr, "I_SDL_InitSound: use_libsamplerate=%i, but "
+        C_Printf("I_SDL_InitSound: use_libsamplerate=%i, but "
                         "libsamplerate support not compiled in.\n",
                         use_libsamplerate);
     }
@@ -1047,7 +1049,7 @@ static boolean I_SDL_InitSound(boolean _use_sfx_prefix)
         if (v <= SDL_VERSIONNUM(1, 2, 8))
         {
             setpanning_workaround = true;
-            fprintf(stderr, "\n"
+            C_Printf("\n"
               "ATTENTION: You are using an old version of SDL_mixer!\n"
               "           This version has a bug that may cause "
                           "your sound to stutter.\n"

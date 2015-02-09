@@ -37,8 +37,12 @@
 
 #include "w_wad.h"
 
+#include "c_io.h"
+
 extern int	fsizev;
 extern int	fsizerw;
+
+extern boolean isdemoversion;
 
 typedef struct
 {
@@ -89,7 +93,7 @@ unsigned int W_LumpNameHash(const char *s)
 
     return result;
 }
-
+/*
 // Increase the size of the lumpinfo[] array to the specified size.
 static void ExtendLumpInfo(int newnumlumps)
 {
@@ -129,7 +133,7 @@ static void ExtendLumpInfo(int newnumlumps)
     lumpinfo = newlumpinfo;
     numlumps = newnumlumps;
 }
-
+*/
 //
 // LUMP BASED ROUTINES.
 //
@@ -153,20 +157,19 @@ wad_file_t *W_AddFile (char *filename)
     int startlump;
     filelump_t *fileinfo;
     filelump_t *filerover;
-    int newnumlumps;
-
+    
     // open the file and add to directory
 
     wad_file = W_OpenFile(filename);
-
+		
     if (wad_file == NULL)
     {
-	printf (" couldn't open %s\n", filename);
+	C_Printf (" couldn't open %s\n", filename);
 	return NULL;
     }
 
-    newnumlumps = numlumps;
-
+    startlump = numlumps;
+	
     if (strcasecmp(filename+strlen(filename)-3 , "wad" ) )
     {
 	// single lump file
@@ -176,7 +179,7 @@ wad_file_t *W_AddFile (char *filename)
         // them back.  Effectively we're constructing a "fake WAD directory"
         // here, as it would appear on disk.
 
-	fileinfo = Z_Malloc(sizeof(filelump_t), PU_STATIC, 0, "W_AddFile -> fileinfo (1)");
+	fileinfo = Z_Malloc(sizeof(filelump_t), PU_STATIC, 0, "W_AddFile -> fileinfo");
 	fileinfo->filepos = LONG(0);
 	fileinfo->size = LONG(wad_file->length);
 
@@ -184,7 +187,7 @@ wad_file_t *W_AddFile (char *filename)
         // extension).
 
 	M_ExtractFileBase (filename, fileinfo->name);
-	newnumlumps++;
+	numlumps++;
     }
     else 
     {
@@ -209,15 +212,19 @@ wad_file_t *W_AddFile (char *filename)
 	fileinfo = Z_Malloc(length, PU_STATIC, 0, "W_AddFile -> fileinfo (2)");
 
         W_Read(wad_file, header.infotableofs, fileinfo, length);
-	newnumlumps += header.numlumps;
+	numlumps += header.numlumps;
     }
 
-    // Increase size of numlumps array to accomodate the new file.
-    startlump = numlumps;
-    ExtendLumpInfo(newnumlumps);
+    // Fill in lumpinfo
+    lumpinfo = realloc(lumpinfo, numlumps * sizeof(lumpinfo_t));
+
+    if (lumpinfo == NULL)
+    {
+	I_Error ("Couldn't realloc lumpinfo");
+    }
 
     lump_p = &lumpinfo[startlump];
-
+	
     filerover = fileinfo;
 
     for (i=startlump; i<numlumps; ++i)
@@ -231,7 +238,7 @@ wad_file_t *W_AddFile (char *filename)
         ++lump_p;
         ++filerover;
     }
-
+	
     Z_Free(fileinfo, "W_AddFile -> fileinfo");
 
     if (lumphash != NULL)
@@ -707,7 +714,7 @@ void W_CheckSize(int wad)		// FOR THE PSP SOURCE PORT (TAKEN FROM PSPHEXEN BUT H
 	    fseek(fprw, 0, 2);		// file pointer at the end of file
 	    fsizerw = ftell(fprw);	// take a position of file pointer un size variable
 
-	    if(fsizerw != 2897623)
+	    if(fsizerw != 3972211)
 		print_resource_pwad_error = true;
 
 	    fclose(fprw);

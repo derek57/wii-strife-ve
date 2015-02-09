@@ -63,7 +63,7 @@
 //
 qstring_t *QStrCreateSize(qstring_t *qstr, size_t size)
 {
-   qstr->buffer = Z_Realloc(qstr->buffer, size, PU_STATIC, NULL);
+   qstr->buffer = Z_Realloc(qstr->buffer, size, PU_STATIC, NULL, "QStrCreateSize");
    qstr->size   = size;
    qstr->index  = 0;
    memset(qstr->buffer, 0, size);
@@ -200,7 +200,7 @@ qstring_t *QStrGrow(qstring_t *qstr, size_t len)
 {   
    size_t newsize = qstr->size + len;
 
-   qstr->buffer = Z_Realloc(qstr->buffer, newsize, PU_STATIC, NULL);
+   qstr->buffer = Z_Realloc(qstr->buffer, newsize, PU_STATIC, NULL, "QStrGrow");
    memset(qstr->buffer + qstr->size, 0, len);
    qstr->size += len;
    

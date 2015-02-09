@@ -70,6 +70,6 @@ unsigned int Z_ZoneSize(void);
     Z_ChangeTag2((p), (t), __FILE__, __LINE__)
 
 void *Z_Calloc(int n1, int n2, int tag, void *user);
-void *Z_Realloc(void *ptr, int size, int tag, void *user);
+void *Z_Realloc(void *ptr, int size, int tag, void **user, char* func);
 
 #endif

@@ -67,6 +67,9 @@ void ST_Start (void);
 // Called by startup code.
 void ST_Init (void);
 
+// [SVE] externalized
+int ST_calcFrags(int pnum);
+
 // [SVE] svillarreal
 #include "p_mobj.h"
 
@@ -122,5 +125,8 @@ extern cheatseq_t cheat_dev;     // [STRIFE]: new cheat
 
 extern cheatseq_t cheat_powerup[];
 
+// [SVE]
+void ST_InvLeft(void);
+void ST_InvRight(void);
 
 #endif

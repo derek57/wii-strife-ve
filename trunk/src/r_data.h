@@ -26,6 +26,56 @@
 #include "p_spec.h"    // villsa [STRIFE]
 
 
+//
+// [SVE] svillarreal - moved texpatch_t and texture_t structs to header
+//
+
+// A single patch from a texture definition,
+//  basically a rectangular area within
+//  the texture rectangle.
+typedef struct
+{
+    // Block origin (allways UL),
+    // which has allready accounted
+    // for the internal origin of the patch.
+    short   originx;    
+    short   originy;
+    int     patch;
+} texpatch_t;
+
+
+// A maptexturedef_t describes a rectangular texture,
+//  which is composed of one or more mappatch_t structures
+//  that arrange graphic patches.
+
+typedef struct texture_s texture_t;
+
+struct texture_s
+{
+    // Keep name for switch changing, etc.
+    char    name[8];        
+    short   width;
+    short   height;
+
+    // Index in textures list
+
+    int         index;
+
+    // Next in hash table chain
+
+    texture_t  *next;
+    
+    // All the patches[patchcount]
+    //  are drawn back to front into the cached texture.
+    short   patchcount;
+    texpatch_t  patches[1];     
+};
+
+// [SVE] svillarreal - made extern
+extern int numtextures;
+extern texture_t **textures;
+extern int numflats;
+
 // Retrieve column data for span blitting.
 byte*
 R_GetColumn

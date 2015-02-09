@@ -37,6 +37,8 @@
 
 #include "p_local.h"
 
+#include "c_io.h"
+
 // Fineangles in the SCREENWIDTH wide window.
 #define FIELDOFVIEW		2048	
 
@@ -803,6 +805,7 @@ void R_ExecuteSetViewSize (void)
 
 void R_Init (void)
 {
+    C_Printf("\n R_InitData:\n");
     R_InitData ();
     if(devparm
 #ifdef SHAREWARE
@@ -813,6 +816,7 @@ void R_Init (void)
     else
         D_IntroTick(); // [STRIFE] tick intro
 
+    C_Printf("R_InitPointToAngle:\n");
     R_InitPointToAngle ();
     if(devparm
 #ifdef SHAREWARE
@@ -821,6 +825,7 @@ void R_Init (void)
 					)
         printf (".");
 
+    C_Printf("R_InitTables:\n");
     R_InitTables ();
     // viewwidth / viewheight / detailLevel are set by the defaults
     if(devparm
@@ -831,6 +836,7 @@ void R_Init (void)
         printf (".");
 
     R_SetViewSize (screenblocks, detailLevel);
+    C_Printf("R_InitPlanes:\n");
     R_InitPlanes ();
     if(devparm
 #ifdef SHAREWARE
@@ -839,6 +845,7 @@ void R_Init (void)
 					)
         printf (".");
     
+    C_Printf("R_InitLightTables:\n");
     R_InitLightTables ();
 
 //    if(devparm)
@@ -851,6 +858,7 @@ void R_Init (void)
 //    else
 	D_IntroTick();
 
+    C_Printf("R_InitSkyMap:\n");
     R_InitSkyMap ();
 
 //    if(devparm)
@@ -863,6 +871,7 @@ void R_Init (void)
 //    else
 	D_IntroTick();
 
+    C_Printf("R_InitTranslationTables:\n");
     R_InitTranslationTables ();
 
 //    if(devparm)
@@ -876,6 +885,7 @@ void R_Init (void)
 //    else
 	D_IntroTick();
 
+    C_Printf("R_DrawSolidBloodSplatColumn:\n");
     bloodsplatcolfunc = R_DrawSolidBloodSplatColumn;
 
     framecount = 0;

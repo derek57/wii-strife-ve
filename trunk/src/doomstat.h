@@ -49,6 +49,9 @@ extern  boolean	fastparm;	// checkparm of -fast
 extern  boolean randomparm;     // [STRIFE] checkparm of -random
 extern  boolean flipparm;       // [STRIFE] checkparm of -flip
 
+extern  boolean start_fastparm;
+extern  boolean start_respawnparm;
+
 extern  boolean	devparm;	// DEBUG: launched with -devparm
 
 
@@ -183,6 +186,8 @@ extern  boolean	usergame;
 //?
 extern  boolean	demoplayback;
 extern  boolean	demorecording;
+
+// haleyjd 20140817: [SVE] remove gross mouse hack
 //extern  int     mouse_fire_countdown;   // villsa [STRIFE]
 
 // Round angleturn in ticcmds to the nearest 256.  This is used when
@@ -234,38 +239,10 @@ extern boolean          riftSpotInit[MAXRIFTSPOTS];
 
 // Intermission stats.
 // Parameters for world map / intermission.
-extern  wbstartstruct_t		wminfo;	
+extern  wbstartstruct_t	wminfo;	
 
-// [SVE] hud toggle
-extern  boolean         fullscreenhud;
-
-// [SVE] for those Brutal Doom fans...
-extern  boolean		d_maxgore;
-
-// haleyjd 20140816: [SVE] Classic mode toggle
-// * true  == behave like vanilla Strife as much as is practical
-// * false == fix non-critical bugs and enable new gameplay elements
-extern  boolean		classicmode;
-
-// [SVE] svillarreal - Skip intro movies?
-extern  boolean		d_skipmovies;
-
-// [SVE] svillarreal - player recoil bobbing
-extern  boolean		d_recoil;
-
-// [SVE] haleyjd: track "cheating" state for achievements
-extern  boolean		d_cheating;
-
-// [SVE] autoaim toggle
-extern  int		autoaim;
-
-extern	boolean		mapwithspecialtags;
-
-extern  boolean		start_fastparm;
-extern  boolean		start_respawnparm;
-
-// [SVE] damage indicator
-extern  boolean         d_dmgindictor;
+// [SVE] svillarreal
+extern boolean      	mapwithspecialtags;
 
 extern	boolean		cast_running;
 extern	boolean		release_keys;
@@ -309,5 +286,55 @@ extern	int		rndindex;
 
 extern  ticcmd_t        *netcmds;
 
+// haleyjd: [SVE] New globals for Strife: Veteran Edition
+extern  boolean         classicmode;
+
+// [SVE] svillarreal
+extern  boolean         use3drenderer;
+extern  boolean         default_use3drenderer;
+extern  boolean         d_skipmovies;
+
+// [SVE] interpolation
+extern  boolean         d_interpolate;
+
+// [SVE] gore toggle
+extern  boolean         d_maxgore;
+
+// [SVE] recoil
+extern  boolean         d_recoil;
+
+// [SVE] damage indicator
+extern  boolean         d_dmgindictor;
+
+// [SVE] achievements disable
+extern  boolean         d_cheating;
+
+// [SVE] CTC mode
+extern  boolean         capturethechalice;
+extern  int             ctcpointlimit;
+extern  int             ctcbluescore;
+extern  int             ctcredscore;
+
+// [SVE] autorun
+extern  boolean         autorun;
+
+// [SVE] hud toggle
+extern  boolean         fullscreenhud;
+
+// [SVE] local user preferred CTC team
+enum
+{
+    PREF_TEAM_AUTO, // let game assign
+    PREF_TEAM_BLUE, // blue team
+    PREF_TEAM_RED,  // red team
+
+    PREF_TEAM_MAX
+};
+
+extern int ctcprefteam;
+extern int ctcprefteams[MAXPLAYERS];
+
+// [SVE]: autoaim toggle
+extern int autoaim;
 
 #endif

@@ -21,6 +21,22 @@ enum
     FE_NUM_BGS
 };
 
+// Characture structure (we're faking the in-game dialogue system here :P )
+typedef struct fecharacter_s
+{
+    char *name;
+    char *pic;
+    char *voice;
+    char *text;
+} fecharacter_t;
+
+extern fecharacter_t *curCharacter;
+
+//
+// Get the next character in the progression.
+//
+fecharacter_t *FE_GetCharacter(void);
+
 //
 // Transition the merchant into a specific state
 //
@@ -56,5 +72,10 @@ void FE_DrawBackground(int bgnum);
 // Clear the screen to black.
 //
 void FE_ClearScreen(void);
+
+//
+// Draw character quit prompt
+//
+void FE_DrawChar(void);
 
 #endif    

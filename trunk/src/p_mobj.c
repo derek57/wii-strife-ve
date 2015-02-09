@@ -688,7 +688,8 @@ void P_MobjThinker (mobj_t* mobj)
             return;
 
         // [SVE] svillarreal - special case for crusaders respawning
-        if(!classicmode && mapwithspecialtags && mobj->type == MT_CRUSADER)
+        if ((!classicmode && mapwithspecialtags && mobj->type == MT_CRUSADER && !isdemoversion) ||
+	    (!classicmode && mapwithspecialtags && mobj->type == MT_CRUSADER_2 && isdemoversion))
             return;
 
         P_NightmareRespawn (mobj);
@@ -1010,12 +1011,14 @@ void P_SpawnMapThing (mapthing_t* mthing)
 
     // count deathmatch start positions
     if (mthing->type == 11)
-    {
+    {							// FIXME: THIS CAUSES A CRASH ON THE WII
+/*
         if (deathmatch_p < &deathmatchstarts[10])
         {
             memcpy (deathmatch_p, mthing, sizeof(*mthing));
             deathmatch_p++;
         }
+*/
         return;
     }
 

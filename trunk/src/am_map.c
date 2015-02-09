@@ -50,6 +50,8 @@
 
 #include "p_locations.h"
 
+#include "c_io.h"
+
 // Automap colors
 #define BACKGROUND      240         // haleyjd [STRIFE]
 #define WALLCOLORS      5           // villsa [STRIFE]
@@ -97,6 +99,8 @@ extern boolean STRIFE_1_X_REGISTERED;
 extern boolean STRIFE_1_0_SHAREWARE;
 extern boolean STRIFE_1_1_SHAREWARE;
 #endif
+
+extern boolean isdemoversion;
 
 typedef struct
 {
@@ -492,14 +496,11 @@ void AM_loadPics(void)
   
     for (i=0;i<10;i++)
     {
-//        sprintf(namebuf, 9, "PLMNUM%d", i);	// CHANGE FOR PSP: throws compiler warning (is fixed)
-
-    	if(STRIFE_1_0_REGISTERED || STRIFE_1_X_REGISTERED)	// FOR PSP: (THESE ARE NOT IN SHAREWARE)
+    	if(!isdemoversion)
     	    sprintf(namebuf, "PLMNUM%d", i);
-#ifdef SHAREWARE
-    	else if(STRIFE_1_0_SHAREWARE || STRIFE_1_1_SHAREWARE)	// FOR PSP: (THESE ARE IN SHAREWARE)
-    	    sprintf(namebuf, "AMMNUM%d", i);
-#endif
+    	else
+    	    sprintf(namebuf, "AMMNUM%d2", i);
+
         marknums[i] = W_CacheLumpName(namebuf, PU_STATIC);
     }
 
@@ -1029,7 +1030,7 @@ AM_drawFline
 	   || fl->b.x < 0 || fl->b.x >= f_w
 	   || fl->b.y < 0 || fl->b.y >= f_h)
     {
-        DEH_fprintf(stderr, "fuck %d \r", fuck++);
+        C_Printf("fuck %d \r", fuck++);
 	return;
     }
 

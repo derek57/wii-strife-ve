@@ -49,6 +49,8 @@
 #include <wiiuse/wpad.h>
 #include <math.h>
 
+#include "c_io.h"
+
 #define PI 3.14159265
 
 int joyleft;
@@ -219,7 +221,7 @@ void I_UpdateJoystick(void)
   else//No stick Y movement
     axis_y = 0;
 
-  // doom_printf("\n\n\n  axis_x: %d\n  axis_y: %d", axis_x, axis_y);
+//  C_Printf("\n\n\n  axis_x: %d\n  axis_y: %d", axis_x, axis_y);
 
   // For some strange reason, the home button is detected as a keypress and mapped to the esc key.
   // I suspect it's SDL-Port at work here but since it's not a dealbreaker, I'm not terribly

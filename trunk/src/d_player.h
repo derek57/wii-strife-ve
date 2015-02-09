@@ -82,6 +82,7 @@ typedef enum
     CF_TORPEDO          = 64,
     // haleyjd [SVE] 20141011
     // player has found all three talismans
+    CF_TALISMANPOWER    = 128,
 
 } cheat_t;
 
@@ -179,9 +180,8 @@ typedef struct player_s
      // For intermission stats.
     short		killcount;    // [STRIFE] Changed to short
 
-    short		itemcount;    // [STRIFE] Eliminated these.	// ADDED FOR PSP-STATS
-
-    short		secretcount;
+    int			itemcount;    // [STRIFE] Eliminated these.
+    int			secretcount;  // [SVE] svillarreal
 
     // Hint messages.
     char*		message;	
@@ -217,6 +217,9 @@ typedef struct player_s
     //boolean		didsecret;   [STRIFE] Removed this.
 
 } player_t;
+
+// [SVE]: CTC team assignment
+void P_AssignPlayerToTeam(player_t *player);
 
 //
 // INTERMISSION

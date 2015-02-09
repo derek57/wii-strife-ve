@@ -48,6 +48,9 @@
 #include "net_sdl.h"
 #include "net_loop.h"
 */
+#include "c_io.h"
+
+
 extern boolean privateserverflag;
 extern boolean multiplayerflag;
 
@@ -188,7 +191,7 @@ static boolean BuildNewTic(void)
            return false;
     }
 
-    //printf ("mk:%i ",maketic);
+//    C_Printf ("mk:%i ",maketic);
     memset(&cmd, 0, sizeof(ticcmd_t));
     loop_interface->BuildTiccmd(&cmd, maketic);
 /*
@@ -276,7 +279,7 @@ static void D_Disconnected(void)
 */
     // disconnected from server
 
-    printf("Disconnected from server.\n");
+    C_Printf("Disconnected from server.\n");
 }
 
 //
@@ -437,7 +440,7 @@ void D_StartNetGame(net_gamesettings_t *settings,
 
     if (!new_sync)
     {
-	printf("Syncing netgames like Vanilla Doom.\n");
+	C_Printf("Syncing netgames like Vanilla Doom.\n");
     }
 }
 /*

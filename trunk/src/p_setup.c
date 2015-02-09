@@ -41,6 +41,11 @@
 #include "doomstat.h"
 
 #include "p_locations.h"
+#include "hu_stuff.h"
+
+#include "c_io.h"
+
+extern boolean isdemoversion;
 
 void	P_SpawnMapThing (mapthing_t*	mthing);
 
@@ -106,7 +111,6 @@ byte*		rejectmatrix;
 
 mapthing_t	deathmatchstarts[MAX_DEATHMATCH_STARTS];
 mapthing_t*	deathmatch_p;
-
 mapthing_t	playerstarts[MAXPLAYERS];
 
 // haleyjd 08/24/10: [STRIFE] rift spots for player spawning
@@ -705,8 +709,7 @@ static void PadRejectArray(byte *array, unsigned int len)
 
     if (len > sizeof(rejectpad))
     {
-        fprintf(stderr,
-                "PadRejectArray: REJECT lump too short to pad! (%i > %i)\n",
+        C_Printf("PadRejectArray: REJECT lump too short to pad! (%i > %i)\n",
                 len, (int) sizeof(rejectpad));
 
         // Pad remaining space with 0 (or 0xff, if specified on command line).
@@ -746,11 +749,52 @@ static void P_LoadReject(int lumpnum)
     }
     else
     {
-        rejectmatrix = Z_Malloc(minlength, PU_LEVEL, &rejectmatrix, "P_LoadReject");
+        rejectmatrix = Z_Malloc(minlength, PU_LEVEL, (void**)&rejectmatrix, "P_LoadReject");
         W_ReadLump(lumpnum, rejectmatrix);
 
         PadRejectArray(rejectmatrix + lumplen, minlength - lumplen);
     }
+}
+
+//
+// P_CheckLevel
+//
+// sf 11/9/99
+// we need to do this now because we no longer have to
+// conform to the MAPxy or ExMy standard previously
+// imposed
+//
+
+char *levellumps[] =
+{
+    "label",        // ML_LABEL,    A separator, name, ExMx or MAPxx
+    "THINGS",       // ML_THINGS,   Monsters, items..
+    "LINEDEFS",     // ML_LINEDEFS, LineDefs, from editing
+    "SIDEDEFS",     // ML_SIDEDEFS, SideDefs, from editing
+    "VERTEXES",     // ML_VERTEXES, Vertices, edited and BSP splits generated
+    "SEGS",         // ML_SEGS,     LineSegs, from LineDefs split by BSP
+    "SSECTORS",     // ML_SSECTORS, SubSectors, list of LineSegs
+    "NODES",        // ML_NODES,    BSP nodes
+    "SECTORS",      // ML_SECTORS,  Sectors, from editing
+    "REJECT",       // ML_REJECT,   LUT, sector-sector visibility
+    "BLOCKMAP"      // ML_BLOCKMAP  LUT, motion clipping, walls/grid element
+};
+
+boolean P_CheckLevel(int lumpnum)
+{
+    int i, ln;
+
+    for(i = ML_THINGS; i <= ML_BLOCKMAP; i++)
+    {
+        // haleyjd 03/28/03: walked 1 off the end of lumpinfo (> -> >=)
+        ln = lumpnum + i;
+
+	// past the last lump
+        if(ln >= numlumps || strncmp(lumpinfo[ln].name, levellumps[i], 8))
+	    return false;
+    }
+    // all right
+    return true;
 }
 
 //
@@ -775,6 +819,8 @@ P_SetupLevel
     // [SVE] svillarreal - be sure to set this to false on every level load
     mapwithspecialtags = false;
 
+    P_InitSwitchList();
+
     for (i=0 ; i<MAXPLAYERS ; i++)
     {
         // haleyjd 20100830: [STRIFE] Removed secretcount, itemcount
@@ -792,9 +838,12 @@ P_SetupLevel
     // will be set by player think.
     players[consoleplayer].viewz = 1; 
 
+    C_Printf("P_SetupLevel: Stop Sounds\n");
+
     // Make sure all sounds are stopped before Z_FreeTags.
     S_Start ();
 
+    C_Printf("P_SetupLevel: loaded level info\n");
     
 #if 0 // UNUSED
     if (debugfile)
@@ -817,6 +866,15 @@ P_SetupLevel
 
     lumpnum = W_GetNumForName (lumpname);
 
+    if((lumpnum = W_CheckNumForName(lumpname)) == -1 || !P_CheckLevel(lumpnum))
+    {
+        C_Printf("level not found: '%s'\n", lumpname);
+
+        C_SetConsole();
+
+        return;
+    }
+
     leveltime = 0;
 
     // note: most of this ordering is important	
@@ -837,7 +895,7 @@ P_SetupLevel
     memset(bloodSplatQueue, 0, sizeof(mobj_t *) * bloodsplats);
 
     //bodyqueslot = 0; [STRIFE] unused
-    deathmatch_p = deathmatchstarts;
+//    deathmatchstarts = 0; // haleyjd 20140819: [SVE] rem dmspots limit	// FIXME (WII ?)
     P_LoadThings (lumpnum+ML_THINGS);
     
     // if deathmatch, randomly spawn the active players
@@ -867,6 +925,10 @@ P_SetupLevel
         R_PrecacheLevel ();
 
     //printf ("free memory: 0x%x\n", Z_FreeMemory());
+
+    C_Printf("HU_NewLevel executed\n");
+
+    HU_NewLevel();
 }
 
 
@@ -876,7 +938,7 @@ P_SetupLevel
 //
 void P_Init (void)
 {
-    P_InitSwitchList();
+//    P_InitSwitchList();
     P_InitPicAnims();
     P_InitTerrainTypes();   // villsa [STRIFE]
     R_InitSprites(sprnames);

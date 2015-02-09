@@ -86,6 +86,8 @@ typedef enum
     GS_UNKNOWN,
     GS_FINALE,
     GS_DEMOSCREEN,
+    GS_INTERMISSION,	// haleyjd 20140921: [SVE] For Capture the Chalice
+    GS_CONSOLE		// fullscreen console
 } gamestate_t;
 
 typedef enum

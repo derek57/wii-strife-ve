@@ -82,6 +82,9 @@ typedef enum
 
 typedef uint8_t byte;
 
+// [SVE] svillarreal - word type
+typedef uint16_t word;
+
 #include <limits.h>
 /*
 #ifdef _WIN32

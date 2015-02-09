@@ -41,7 +41,6 @@
 
 #define CENTERY			(SCREENHEIGHT/2)
 
-
 extern int dirtybox[4];
 
 extern byte *tinttable;
@@ -126,6 +125,10 @@ void V_LoadBigFont(void);
 void V_WriteBigText(const char *str, int x, int y);
 int  V_BigFontStringWidth(const char *str);
 int  V_BigFontStringHeight(const char *str);
-
+/*
+// sf: write a text line to x, y
+void V_WriteText(char *s, int x, int y);
+int V_StringWidth(char *s);
+*/
 #endif
 

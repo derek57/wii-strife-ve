@@ -1,6 +1,7 @@
 //
 // Copyright(C) 1993-1996 Id Software, Inc.
 // Copyright(C) 2005-2014 Simon Howard
+// Copyright(C) 2014 Night Dive Studios, Inc.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -16,11 +17,11 @@
 //	System interface for music.
 //
 
+//#define USE_RWOPS
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 #include <SDL/SDL.h>
 #include <SDL/SDL_mixer.h>
 
@@ -30,16 +31,18 @@
 #include "mus2mid.h"
 
 #include "deh_str.h"
-//#include "gusconf.h"
+#include "gusconf.h"
 #include "i_sound.h"
 #include "i_system.h"
 #include "i_swap.h"
-//#include "m_argv.h"
+#include "m_argv.h"
 #include "m_config.h"
 #include "m_misc.h"
 #include "sha1.h"
 #include "w_wad.h"
 #include "z_zone.h"
+
+#include "c_io.h"
 
 #define MAXMIDLENGTH (96 * 1024)
 #define MID_HEADER_MAGIC "MThd"
@@ -109,11 +112,11 @@ static boolean sdl_was_initialized = false;
 
 static boolean musicpaused = false;
 static int current_music_volume;
-/*
+
 char *timidity_cfg_path = "";
 
 static char *temp_timidity_cfg = NULL;
-*/
+
 // If true, we are playing a substitute digital track rather than in-WAD
 // MIDI/MUS track, and file_metadata contains loop metadata.
 static boolean playing_substitute = false;
@@ -128,6 +131,16 @@ static Mix_Music *current_track_music = NULL;
 
 // If true, the currently playing track is being played on loop.
 static boolean current_track_loop;
+
+extern boolean usb;
+extern boolean sd;
+
+// [SVE]
+//#define SVE_USE_RWOPS_MUSIC	// FIXME: M_ReadFile CRASHES THE WII WHEN USING "CHANGE MUSIC" CHEAT
+#if defined(SVE_USE_RWOPS_MUSIC)
+static SDL_RWops *rw_music_cache;
+static void      *rw_music_data;
+#endif
 
 // Given a time string (for LOOP_START/LOOP_END), parse it and return
 // the time (in # samples since start of track) it represents.
@@ -367,6 +380,9 @@ static void ParseOggFile(file_metadata_t *metadata, FILE *fs)
     }
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+
 static void ReadLoopPoints(char *filename, file_metadata_t *metadata)
 {
     FILE *fs;
@@ -480,25 +496,25 @@ static char *GetFullPath(char *base_filename, char *path)
     // so just return it.
     if (path[0] == DIR_SEPARATOR)
     {
-        return strdup(path);
+        return M_Strdup(path);
     }
-/*
+
 #ifdef _WIN32
     // d:\path\...
     if (isalpha(path[0]) && path[1] == ':' && path[2] == DIR_SEPARATOR)
     {
-        return strdup(path);
+        return M_Strdup(path);
     }
 #endif
-*/
+
     // Paths in the substitute filenames can contain Unix-style /
     // path separators, but we should convert this to the separator
     // for the native platform.
-    path = M_StringReplace(path, "", DIR_SEPARATOR_S);
+    path = M_StringReplace(path, "/", DIR_SEPARATOR_S);
 
     // Copy config filename and cut off the filename to just get the
     // parent dir.
-    basedir = strdup(base_filename);
+    basedir = M_Strdup(base_filename);
     p = strrchr(basedir, DIR_SEPARATOR);
     if (p != NULL)
     {
@@ -507,7 +523,7 @@ static char *GetFullPath(char *base_filename, char *path)
     }
     else
     {
-        result = strdup(path);
+        result = M_Strdup(path);
     }
     free(basedir);
     free(path);
@@ -613,7 +629,7 @@ static boolean ReadSubstituteConfig(char *filename)
     FILE *fs;
     char *error;
     int linenum = 1;
-//    int old_subst_music_len;					// PSP-GCC v4.8.2 compiler warning
+//    int old_subst_music_len;
 
     fs = fopen(filename, "r");
 
@@ -622,7 +638,7 @@ static boolean ReadSubstituteConfig(char *filename)
         return false;
     }
 
-//    old_subst_music_len = subst_music_len;			// PSP-GCC v4.8.2 compiler warning
+//    old_subst_music_len = subst_music_len;
 
     while (!feof(fs))
     {
@@ -633,7 +649,7 @@ static boolean ReadSubstituteConfig(char *filename)
 
         if (error != NULL)
         {
-            fprintf(stderr, "%s:%i: Error: %s\n", filename, linenum, error);
+            C_Printf("%s:%i: Error: %s\n", filename, linenum, error);
         }
 
         ++linenum;
@@ -648,18 +664,23 @@ static boolean ReadSubstituteConfig(char *filename)
 
 static void LoadSubstituteConfigs(void)
 {
-    char *musicdir;
+    char *musicdir = NULL;
     char *path;
     unsigned int i;
-
+/*
     if (!strcmp(configdir, ""))
     {
-        musicdir = strdup("");
+        musicdir = M_Strdup("");
     }
     else
     {
         musicdir = M_StringJoin(configdir, "music", DIR_SEPARATOR_S, NULL);
     }
+*/
+    if(usb)
+        musicdir = "usb:/apps/wiistrife/";
+    else if(sd)
+        musicdir = "usb:/apps/wiistrife/";
 
     // Load all music packs. We always load all music substitution packs for
     // all games. Why? Suppose we have a Doom PWAD that reuses some music from
@@ -668,15 +689,27 @@ static void LoadSubstituteConfigs(void)
     for (i = 0; i < arrlen(subst_config_filenames); ++i)
     {
         path = M_StringJoin(musicdir, subst_config_filenames[i], NULL);
+//        path = "usb:/apps/wiistrife/strife-music.cfg";
         ReadSubstituteConfig(path);
         free(path);
     }
 
-    free(musicdir);
+    // [SVE]: try also cwd
+    if(*musicdir)
+    {    
+        for (i = 0; i < arrlen(subst_config_filenames); ++i)
+        {
+            path = M_Strdup(subst_config_filenames[i]);
+            ReadSubstituteConfig(path);
+            free(path);
+        }
+    }
+
+//    free(musicdir);
 
     if (subst_music_len > 0)
     {
-        printf("Loaded %i music substitutions from config files.\n",
+        C_Printf("Loaded %i music substitutions from\n config files.\n\n",
                subst_music_len);
     }
 }
@@ -685,7 +718,7 @@ static void LoadSubstituteConfigs(void)
 // be included in substitute configs.
 // Identifying music lumps by name is not feasible; some games (eg.
 // Heretic, Hexen) don't have a common naming pattern for music lumps.
-/*
+
 static boolean IsMusicLump(int lumpnum)
 {
     byte *data;
@@ -705,10 +738,10 @@ static boolean IsMusicLump(int lumpnum)
 
     return result;
 }
-*/
+
 // Dump an example config file containing checksums for all MIDI music
 // found in the WAD directory.
-/*
+
 static void DumpSubstituteConfig(char *filename)
 {
     sha1_context_t context;
@@ -758,19 +791,25 @@ static void DumpSubstituteConfig(char *filename)
     fprintf(fs, "\n");
     fclose(fs);
 
-    printf("Substitute MIDI config file written to %s.\n", filename);
+    C_Printf("Substitute MIDI config file written to %s.\n", filename);
+
     I_Quit();
 }
-*/
+
 // If the temp_timidity_cfg config variable is set, generate a "wrapper"
 // config file for Timidity to point to the actual config file. This
 // is needed to inject a "dir" command so that the patches are read
 // relative to the actual config file.
-/*
+
 static boolean WriteWrapperTimidityConfig(char *write_path)
 {
     char *p, *path;
     FILE *fstream;
+
+    if(usb)
+	timidity_cfg_path = "usb:/apps/wiistrife/";
+    else if(sd)
+	timidity_cfg_path = "sd:/apps/wiistrife/";
 
     if (!strcmp(timidity_cfg_path, ""))
     {
@@ -787,7 +826,7 @@ static boolean WriteWrapperTimidityConfig(char *write_path)
     p = strrchr(timidity_cfg_path, DIR_SEPARATOR);
     if (p != NULL)
     {
-        path = strdup(timidity_cfg_path);
+        path = M_Strdup(timidity_cfg_path);
         path[p - timidity_cfg_path] = '\0';
         fprintf(fstream, "dir %s\n", path);
         free(path);
@@ -804,7 +843,12 @@ void I_InitTimidityConfig(void)
     char *env_string;
     boolean success;
 
-    temp_timidity_cfg = M_TempFile("timidity.cfg");
+//    temp_timidity_cfg = M_TempFile("timidity.cfg");
+
+    if(usb)
+	temp_timidity_cfg = "usb:/apps/wiistrife/timidity.cfg";
+    else if(sd)
+	temp_timidity_cfg = "sd:/apps/wiistrife/timidity.cfg";
 
     if (snd_musicdevice == SNDDEVICE_GUS)
     {
@@ -837,10 +881,10 @@ static void RemoveTimidityConfig(void)
     if (temp_timidity_cfg != NULL)
     {
         remove(temp_timidity_cfg);
-        free(temp_timidity_cfg);
+//        free(temp_timidity_cfg);			// FIXME: WII CRASHES HERE
     }
 }
-*/
+
 // Shutdown music
 
 static void I_SDL_ShutdownMusic(void)
@@ -877,7 +921,6 @@ void TrackPositionCallback(int chan, void *stream, int len, void *udata)
 // Initialize music subsystem
 static boolean I_SDL_InitMusic(void)
 {
-/*
     int i;
 
     // SDL_mixer prior to v1.2.11 has a bug that causes crashes
@@ -900,21 +943,21 @@ static boolean I_SDL_InitMusic(void)
         }
     }
 #endif
-*/
+
     //!
     // @arg <output filename>
     //
     // Read all MIDI files from loaded WAD files, dump an example substitution
     // music config file to the specified filename and quit.
     //
-/*
+
     i = M_CheckParmWithArgs("-dumpsubstconfig", 1);
 
     if (i > 0)
     {
         DumpSubstituteConfig(myargv[i + 1]);
     }
-*/
+
     // If SDL_mixer is not initialized, we have to initialize it
     // and have the responsibility to shut it down later on.
 
@@ -926,12 +969,16 @@ static boolean I_SDL_InitMusic(void)
     {
         if (SDL_Init(SDL_INIT_AUDIO) < 0)
         {
-            fprintf(stderr, "Unable to set up sound.\n");
+            C_Printf("Unable to set up sound.\n");
         }
-        else if (Mix_OpenAudio(snd_samplerate, AUDIO_S16SYS, 2, 1024) < 0)
+        else if (Mix_OpenAudio(snd_samplerate, AUDIO_S16SYS, 2, 4096) < 0)
         {
+/*
             fprintf(stderr, "Error initializing SDL_mixer: %s\n",
                     Mix_GetError());
+*/
+	    C_Printf("couldn't open audio with desired format\n");
+
             SDL_QuitSubSystem(SDL_INIT_AUDIO);
         }
         else
@@ -946,7 +993,7 @@ static boolean I_SDL_InitMusic(void)
     // Once initialization is complete, the temporary Timidity config
     // file can be removed.
 
-//    RemoveTimidityConfig();
+    RemoveTimidityConfig();
 
     // If snd_musiccmd is set, we need to call Mix_SetMusicCMD to
     // configure an external music playback program.
@@ -1029,13 +1076,16 @@ static void I_SDL_PlaySong(void *handle, boolean looping)
 
     // Don't loop when playing substitute music, as we do it
     // ourselves instead.
+
+#if !defined(SVE_USE_RWOPS_MUSIC)
     if (playing_substitute && file_metadata.valid)
     {
-        loops = 1;
+//        loops = 1;		// FIXME: WTF ???
         SDL_LockAudio();
         current_track_pos = 0;  // start of track
         SDL_UnlockAudio();
     }
+#endif
 
     Mix_PlayMusic(current_track_music, loops);
 }
@@ -1091,6 +1141,15 @@ static void I_SDL_UnRegisterSong(void *handle)
     }
 
     Mix_FreeMusic(music);
+
+#if defined(SVE_USE_RWOPS_MUSIC)
+    rw_music_cache = NULL;
+    if(rw_music_data)
+    {
+        Z_Free(rw_music_data, "I_SDL_UnRegisterSong");
+        rw_music_data = NULL;
+    }
+#endif
 }
 
 // Determine whether memory block is a .mid file 
@@ -1106,7 +1165,7 @@ static boolean ConvertMus(byte *musdata, int len, char *filename)
     MEMFILE *outstream;
     void *outbuf;
     size_t outbuf_len;
-    int result = 0;
+    int result;
 
     instream = mem_fopen_read(musdata, len);
     outstream = mem_fopen_write();
@@ -1141,15 +1200,20 @@ static void *I_SDL_RegisterSong(void *data, int len)
     // See if we're substituting this MUS for a high-quality replacement.
     filename = GetSubstituteMusicFile(data, len);
 
-    if (filename != NULL)
-    {
+    if (filename != NULL)		// FIXME: ON THE WII, M_READFILE SOMETIMES CAUSES THE GAME...
+    {					// ...TO CRASH RANDOMLY WHENEVER THE MUSIC IS BEING CHANGED
+#if defined(SVE_USE_RWOPS_MUSIC)
+        int size = M_ReadFile(filename, (byte **)&rw_music_data);
+        rw_music_cache = SDL_RWFromMem(rw_music_data, size);
+        music = Mix_LoadMUS_RW(rw_music_cache);
+#else
         music = Mix_LoadMUS(filename);
-
+#endif
         if (music == NULL)
         {
             // Fall through and play MIDI normally, but print an error
             // message.
-            fprintf(stderr, "Failed to load substitute music file: %s: %s\n",
+            C_Printf("Failed to load substitute music file: %s: %s\n",
                     filename, Mix_GetError());
         }
         else
@@ -1157,7 +1221,11 @@ static void *I_SDL_RegisterSong(void *data, int len)
             // Read loop point metadata from the file so that we know where
             // to loop the music.
             playing_substitute = true;
+
+#if !defined(SVE_USE_RWOPS_MUSIC)
             ReadLoopPoints(filename, &file_metadata);
+#endif
+
             return music;
         }
     }
@@ -1188,7 +1256,7 @@ static void *I_SDL_RegisterSong(void *data, int len)
     {
         // Failed to load
 
-        fprintf(stderr, "Error loading midi: %s\n", Mix_GetError());
+        C_Printf("Error loading midi: %s\n", Mix_GetError());
     }
 
     // Remove the temporary MIDI file; however, when using an external
@@ -1264,6 +1332,7 @@ static void RestartCurrentTrack(void)
 // then we need to go back.
 static void I_SDL_PollMusic(void)
 {
+#if !defined(SVE_USE_RWOPS_MUSIC)
     if (playing_substitute && file_metadata.valid)
     {
         double end = (double) file_metadata.end_time
@@ -1281,6 +1350,7 @@ static void I_SDL_PollMusic(void)
             RestartCurrentTrack();
         }
     }
+#endif
 }
 
 static snddevice_t music_sdl_devices[] =

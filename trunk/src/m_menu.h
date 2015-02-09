@@ -33,7 +33,7 @@ typedef struct
     // 0 = no cursor here, 1 = ok, 2 = arrows ok
     short	status;
     
-    char	name[20];
+    char	*name; // [SVE]
     
     // choice = menu item #.
     // if status = 2,
@@ -44,10 +44,10 @@ typedef struct
     char	alphaKey;			
 
     // haleyjd 20141004: [SVE] mouse support
-    int    x;
-    int    y;
-    int    w;
-    int    h;
+    int		x;
+    int    	y;
+    int    	w;
+    int    	h;
 } menuitem_t;
 
 typedef struct menu_s
@@ -108,5 +108,6 @@ int M_StringWidth(char* string); // [SVE]
 
 extern int detailLevel;
 extern int screenblocks;
+extern int demosequence;
 
 #endif    

@@ -51,6 +51,9 @@
 #ifdef SHAREWARE
 extern boolean STRIFE_1_1_SHAREWARE;
 #endif
+
+extern boolean isdemoversion;
+
 //int passcard_was_dropped = 0;
 
 // a weapon is found with two clip loads,
@@ -516,9 +519,31 @@ void P_TouchSpecialThing(mobj_t* special, mobj_t* toucher)
         break;
 
     // box of missiles
+    case SPR_MSSD:
+	if(!isdemoversion)
+	{
+            if(!P_GiveAmmo(player, am_missiles, 5))
+                return;
+	}
+	else
+	{
+            if(!P_GiveAmmo(player, am_missiles, 5))
+                return;
+	}
+        break;
+
+    // box of missiles
     case SPR_MSSL:
-        if(!P_GiveAmmo(player, am_missiles, 5))
-            return;
+	if(!isdemoversion)
+	{
+            if(!P_GiveAmmo(player, am_missiles, 5))
+                return;
+	}
+	else
+	{
+            if(!P_GiveAmmo(player, am_missiles, 5))
+                return;
+	}
         break;
 
     // battery
@@ -635,14 +660,28 @@ void P_TouchSpecialThing(mobj_t* special, mobj_t* toucher)
         break;
 
     // 1 Gold
+    case SPR_COND:
+	if(!isdemoversion)
+	    P_GiveInventoryItem(player, SPR_COIN, MT_MONY_1);
+	else
+	    P_GiveInventoryItem(player, SPR_COND, MT_MONY_2);
+        break;
+
+    // 1 Gold
     case SPR_COIN:
-        P_GiveInventoryItem(player, SPR_COIN, MT_MONY_1);
+	if(!isdemoversion)
+	    P_GiveInventoryItem(player, SPR_COIN, MT_MONY_1);
+	else
+	    P_GiveInventoryItem(player, SPR_COND, MT_MONY_2);
         break;
 
     // 10 Gold
     case SPR_CRED:
         for(i = 0; i < 10; i++)
-            P_GiveInventoryItem(player, SPR_COIN, MT_MONY_1);
+	    if(!isdemoversion)
+		P_GiveInventoryItem(player, SPR_COIN, MT_MONY_1);
+	    else
+		P_GiveInventoryItem(player, SPR_COND, MT_MONY_2);
         break;
 
     // 25 Gold
@@ -652,19 +691,28 @@ void P_TouchSpecialThing(mobj_t* special, mobj_t* toucher)
         if(special->health < 0)
         {
             for(i = special->health; i != 0; i++)
-                P_GiveInventoryItem(player, SPR_COIN, MT_MONY_1);
+		if(!isdemoversion)
+		    P_GiveInventoryItem(player, SPR_COIN, MT_MONY_1);
+		else
+		    P_GiveInventoryItem(player, SPR_COND, MT_MONY_2);
         }
         else
         {
             for(i = 0; i < 25; i++)
-                P_GiveInventoryItem(player, SPR_COIN, MT_MONY_1);
+		if(!isdemoversion)
+		    P_GiveInventoryItem(player, SPR_COIN, MT_MONY_1);
+		else
+		    P_GiveInventoryItem(player, SPR_COND, MT_MONY_2);
         }
         break;
 
     // 50 Gold
     case SPR_CHST:
         for(i = 0; i < 50; i++)
-            P_GiveInventoryItem(player, SPR_COIN, MT_MONY_1);
+	    if(!isdemoversion)
+		P_GiveInventoryItem(player, SPR_COIN, MT_MONY_1);
+	    else
+		P_GiveInventoryItem(player, SPR_COND, MT_MONY_2);
         break;
 
     // Leather Armor
@@ -944,6 +992,7 @@ void P_KillMobj(mobj_t* source, mobj_t* target)
 
         case MT_PGUARD:
         case MT_CRUSADER:
+        case MT_CRUSADER_2:
             item = MT_ACELL;
             break;
 
@@ -1182,7 +1231,6 @@ void P_DamageMobj(mobj_t* target, mobj_t* inflictor, mobj_t* source, int damage)
            inflictor->type == MT_PFLAME)
         {
             temp = damage / 2;
-
             if(P_IsMobjBoss(target->type))
                 damage /= 2;
             else if(inflictor->type == MT_PFLAME)
@@ -1208,25 +1256,26 @@ void P_DamageMobj(mobj_t* target, mobj_t* inflictor, mobj_t* source, int damage)
                 target->momx += FixedMul(finecosine[ang], (12750*FRACUNIT) / target->info->mass);
                 target->momy += FixedMul(finesine[ang],   (12750*FRACUNIT) / target->info->mass);
                 target->reactiontime += 10;
-
+    
                 temp = P_AproxDistance(target->x - source->x, target->y - source->y);
                 temp /= target->info->mass;
-
+    
                 if(temp < 1)
                     temp = 1;
-
+    
                 target->momz = (source->z - target->z) / temp;
                 break;
 
+  
             case MT_POISARROW:
                 // don't affect robots
                 if(target->flags & MF_NOBLOOD)
                     return;
-
+    
                 // instant kill
                 damage = target->health + 10;
                 break;
-
+    
             default:
                 // Spectral retaliation, though this may in fact be unreachable
                 // since non-spectral inflictors are mostly filtered out.
@@ -1389,21 +1438,42 @@ void P_DamageMobj(mobj_t* target, mobj_t* inflictor, mobj_t* source, int damage)
     if(target->health <= 0)
     {
         // villsa [STRIFE] grenades hurt... OUCH
-        if(inflictor && inflictor->type == MT_HEGRENADE)
-            target->health = -target->info->spawnhealth;
-        else if(!(target->flags & MF_NOBLOOD))
-        {
-            // villsa [STRIFE] disintegration death
-            if(inflictor &&
-                (inflictor->type == MT_STRIFEPUFF3 || 
-                 inflictor->type == MT_L_LASER     || 
-                 inflictor->type == MT_TORPEDO     || 
-                 inflictor->type == MT_TORPEDOSPREAD))
+	if(!isdemoversion)
+	{
+            if(inflictor && inflictor->type == MT_HEGRENADE)
+                target->health = -target->info->spawnhealth;
+            else if(!(target->flags & MF_NOBLOOD))
             {
-                S_StartSound(target, sfx_dsrptr);
-                target->health = -6666;
+                // villsa [STRIFE] disintegration death
+                if (inflictor &&
+                   (inflictor->type == MT_STRIFEPUFF3 || 
+                    inflictor->type == MT_L_LASER     || 
+                    inflictor->type == MT_TORPEDO     || 
+                    inflictor->type == MT_TORPEDOSPREAD))
+                {
+                    S_StartSound(target, sfx_dsrptr);
+                    target->health = -6666;
+                }
             }
-        }
+	}
+	else
+	{
+            if(inflictor && inflictor->type == MT_HEGRENADE_2)
+                target->health = -target->info->spawnhealth;
+            else if(!(target->flags & MF_NOBLOOD))
+            {
+                // villsa [STRIFE] disintegration death
+                if (inflictor &&
+                   (inflictor->type == MT_STRIFEPUFF3 || 
+                    inflictor->type == MT_L_LASER_2   || 
+                    inflictor->type == MT_TORPEDO     || 
+                    inflictor->type == MT_TORPEDOSPREAD))
+                {
+                    S_StartSound(target, sfx_dsrptr);
+                    target->health = -6666;
+                }
+            }
+	}
 
         // villsa [STRIFE] flame death stuff
         if(!(target->flags & MF_NOBLOOD)
@@ -1436,7 +1506,7 @@ void P_DamageMobj(mobj_t* target, mobj_t* inflictor, mobj_t* source, int damage)
                 {
                     P_SetTarget(&curignitemobj, target);
                     numignitechains++;
-
+ 
                     if(numignitechains == 3)
                     {
 #ifdef _USE_STEAM_
@@ -1461,10 +1531,9 @@ void P_DamageMobj(mobj_t* target, mobj_t* inflictor, mobj_t* source, int damage)
 
             P_SetMobjState(target, S_BURN_00);  // 349
             S_StartSound(target, sfx_burnme);
-
+    
             return;
-        }
-        
+        }        
         P_KillMobj(source, target);
         return;
     }

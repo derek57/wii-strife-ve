@@ -26,6 +26,8 @@
 
 #include "info.h"
 
+#include "c_io.h"
+
 DEH_BEGIN_MAPPING(thing_mapping, mobjinfo_t)
   DEH_MAPPING("ID #",                doomednum)
   DEH_MAPPING("Initial frame",       spawnstate)
@@ -99,7 +101,7 @@ static void DEH_ThingParseLine(deh_context_t *context, char *line, void *tag)
         return;
     }
     
-//    printf("Set %s to %s for mobj\n", variable_name, value);
+    C_Printf("Set %s to %s for mobj\n", variable_name, value);
 
     // all values are integers
 

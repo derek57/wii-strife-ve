@@ -160,6 +160,17 @@ void R_Init (void);
 // Called by M_Responder.
 void R_SetViewSize (int blocks, int detail);
 
-fixed_t R_LerpCoord(fixed_t lerp, fixed_t oldpos, fixed_t newpos); // [SVE]
+// haleyjd 20140902: [SVE] interpolation
+typedef enum
+{
+    SEC_INTERPOLATE,
+    SEC_NORMAL
+} secinterpstate_e;
+
+fixed_t R_LerpCoord(fixed_t lerp, fixed_t oldpos, fixed_t newpos);
+angle_t R_LerpAngle(fixed_t lerp, angle_t astart, angle_t aend);
+fixed_t R_GetLerp(void);
+void R_interpolateViewPoint(player_t *player, fixed_t lerp);
+void R_SetSectorInterpolationState(secinterpstate_e state);
 
 #endif

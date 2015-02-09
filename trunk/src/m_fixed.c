@@ -33,7 +33,6 @@
 
 #include "m_fixed.h"
 
-
 int ABS(int a)
 {
     int b = a >> 31;

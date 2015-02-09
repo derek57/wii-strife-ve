@@ -25,6 +25,8 @@
 
 #include "m_saves.h"
 
+#include "c_io.h"
+
 //
 // ZONE MEMORY ALLOCATION
 //
@@ -342,16 +344,16 @@ Z_DumpHeap
 {
     memblock_t*	block;
 	
-    printf ("zone size: %i  location: %p\n",
+    C_Printf ("zone size: %i  location: %p\n",
 	    mainzone->size,mainzone);
     
-    printf ("tag range: %i to %i\n",
+    C_Printf ("tag range: %i to %i\n",
 	    lowtag, hightag);
 	
     for (block = mainzone->blocklist.next ; ; block = block->next)
     {
 	if (block->tag >= lowtag && block->tag <= hightag)
-	    printf ("block:%p    size:%7i    user:%p    tag:%3i\n",
+	    C_Printf ("block:%p    size:%7i    user:%p    tag:%3i\n",
 		    block, block->size, block->user, block->tag);
 		
 	if (block->next == &mainzone->blocklist)
@@ -361,13 +363,13 @@ Z_DumpHeap
 	}
 	
 	if ( (byte *)block + block->size != (byte *)block->next)
-	    printf ("ERROR: block size does not touch the next block\n");
+	    C_Printf ("ERROR: block size does not touch the next block\n");
 
 	if ( block->next->prev != block)
-	    printf ("ERROR: next block doesn't have proper back link\n");
+	    C_Printf ("ERROR: next block doesn't have proper back link\n");
 
 	if (block->tag == PU_FREE && block->next->tag == PU_FREE)
-	    printf ("ERROR: two consecutive free blocks\n");
+	    C_Printf ("ERROR: two consecutive free blocks\n");
     }
 }
 
@@ -505,7 +507,7 @@ void *Z_Calloc(int n1, int n2, int tag, void *user)
 //
 // haleyjd 20140816: [SVE] Necessary to remove static limits
 //
-void *Z_Realloc(void *ptr, int size, int tag, void *user)
+void *Z_Realloc(void *ptr, int size, int tag, void **user, char *func)
 {
     void *p;
     memblock_t *block, *newblock, *origblock;
@@ -518,14 +520,14 @@ void *Z_Realloc(void *ptr, int size, int tag, void *user)
     // also defer for a 0 byte request
     if(size == 0)
     {
-        Z_Free(ptr, "Z_Realloc -> ptr");
+        Z_Free(ptr, "Z_Realloc");
         return Z_Calloc(1, size, tag, user);
     }
 
     block = origblock = (memblock_t *)((byte *)ptr - header_size);
 
     if(block->id != ZONEID)
-        I_Error("Z_Realloc: reallocated a block without ZONEID");
+        I_Error("Z_Realloc: reallocated a block without ZONEID in function %s", func);
 
     origsize = block->size;
 
@@ -534,6 +536,7 @@ void *Z_Realloc(void *ptr, int size, int tag, void *user)
         *(block->user) = NULL;
 
     // detach from list before reallocation
+//    if((*block->prev = block->next))
     if((block->prev = block->next))
         block->next->prev = block->prev;
 
@@ -558,7 +561,7 @@ void *Z_Realloc(void *ptr, int size, int tag, void *user)
             size = block->size;
         }
         else
-            I_Error("Z_Realloc: failed on allocation of %u bytes", (unsigned int)size);
+            I_Error("Z_Realloc: failed on allocation of %u bytes in function %s", (unsigned int)size, func);
     }
 
     block->size = size;
@@ -572,12 +575,15 @@ void *Z_Realloc(void *ptr, int size, int tag, void *user)
     // set new user, if any
     block->user = user;
     if(user)
-        user = p;
+        *user = p;
 
     // reattach to list at possibly new address, new tag
     if((block->next = blockbytag[tag]))
+//        block->next->prev = &block->next;
         block->next->prev = block->next;
+
     blockbytag[tag] = block;
+//    block->prev = &blockbytag[tag];
     block->prev = blockbytag[tag];
 
     return p;

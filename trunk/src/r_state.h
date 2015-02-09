@@ -40,6 +40,9 @@ extern fixed_t*		textureheight;
 // needed for pre rendering (fracs)
 extern fixed_t*		spritewidth;
 
+// [SVE] svillarreal
+extern fixed_t*     	spriteheight;
+
 extern fixed_t*		spriteoffset;
 extern fixed_t*		spritetopoffset;
 
@@ -77,6 +80,7 @@ extern seg_t*		segs;
 
 extern int		numsectors;
 extern sector_t*	sectors;
+extern sectorinterp_t   *sectorinterps; // haleyjd [SVE]
 
 extern int		numsubsectors;
 extern subsector_t*	subsectors;
@@ -90,6 +94,13 @@ extern line_t*		lines;
 extern int		numsides;
 extern side_t*		sides;
 
+// [SVE] svillarreal
+extern int              numleafs;
+extern leaf_t*          leafs;
+
+extern lightGridInfo_t  lightgrid;
+extern float            sunlightdir[3];
+extern float            sunlightdir2d[2];
 
 //
 // POV data.
