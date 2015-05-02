@@ -28,13 +28,13 @@ int wii_main()
     fatInitDefault();
 
     //Determine SD or USB
-    fp2 = fopen("sd:/apps/wiistrife/pspstrife.wad", "rb");
+    fp2 = fopen("sd:/apps/wiistrife-ve/pspstrife.wad", "rb");
 
     if(fp2)
 	sd = true;
 
     if(!fp2)
-	fp2 = fopen("usb:/apps/wiistrife/pspstrife.wad", "rb");
+	fp2 = fopen("usb:/apps/wiistrife-ve/pspstrife.wad", "rb");
 
     if(fp2 && !sd)
 	usb = true;

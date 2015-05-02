@@ -2602,7 +2602,7 @@ void M_DrawGame(void)
 {
     if(!classicmode)
     {
-	V_DrawPatch (70, 20, W_CacheLumpName(DEH_String("M_GMESET"), PU_CACHE));
+	V_DrawPatch (70, 10, W_CacheLumpName(DEH_String("M_GMESET"), PU_CACHE));
 
 	M_WriteText(72, 30, DEH_String("AUTOMAP GRID"));
 	M_WriteText(72, 40, DEH_String("AUTOMAP ROTATION"));

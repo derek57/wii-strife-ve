@@ -678,9 +678,9 @@ static void LoadSubstituteConfigs(void)
     }
 */
     if(usb)
-        musicdir = "usb:/apps/wiistrife/";
+        musicdir = "usb:/apps/wiistrife-ve/";
     else if(sd)
-        musicdir = "usb:/apps/wiistrife/";
+        musicdir = "sd:/apps/wiistrife-ve/";
 
     // Load all music packs. We always load all music substitution packs for
     // all games. Why? Suppose we have a Doom PWAD that reuses some music from
@@ -689,7 +689,7 @@ static void LoadSubstituteConfigs(void)
     for (i = 0; i < arrlen(subst_config_filenames); ++i)
     {
         path = M_StringJoin(musicdir, subst_config_filenames[i], NULL);
-//        path = "usb:/apps/wiistrife/strife-music.cfg";
+//        path = "usb:/apps/wiistrife-ve/strife-music.cfg";
         ReadSubstituteConfig(path);
         free(path);
     }
@@ -807,9 +807,9 @@ static boolean WriteWrapperTimidityConfig(char *write_path)
     FILE *fstream;
 
     if(usb)
-	timidity_cfg_path = "usb:/apps/wiistrife/";
+	timidity_cfg_path = "usb:/apps/wiistrife-ve/";
     else if(sd)
-	timidity_cfg_path = "sd:/apps/wiistrife/";
+	timidity_cfg_path = "sd:/apps/wiistrife-ve/";
 
     if (!strcmp(timidity_cfg_path, ""))
     {
@@ -846,9 +846,9 @@ void I_InitTimidityConfig(void)
 //    temp_timidity_cfg = M_TempFile("timidity.cfg");
 
     if(usb)
-	temp_timidity_cfg = "usb:/apps/wiistrife/timidity.cfg";
+	temp_timidity_cfg = "usb:/apps/wiistrife-ve/timidity.cfg";
     else if(sd)
-	temp_timidity_cfg = "sd:/apps/wiistrife/timidity.cfg";
+	temp_timidity_cfg = "sd:/apps/wiistrife-ve/timidity.cfg";
 
     if (snd_musicdevice == SNDDEVICE_GUS)
     {

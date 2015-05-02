@@ -209,9 +209,9 @@ static boolean WriteTimidityConfig(char *path, gus_config_t *config)
     unsigned int i;
 
     if(usb)
-	gus_patch_path = "usb:/apps/wiistrife/gus";
+	gus_patch_path = "usb:/apps/wiistrife-ve/gus";
     else if(sd)
-	gus_patch_path = "sd:/apps/wiistrife/gus";
+	gus_patch_path = "sd:/apps/wiistrife-ve/gus";
 
     fstream = fopen(path, "w");
 
@@ -262,9 +262,9 @@ boolean GUS_WriteConfig(char *path)
     gus_config_t config;
 
     if(usb)
-	gus_patch_path = "usb:/apps/wiistrife/gus";
+	gus_patch_path = "usb:/apps/wiistrife-ve/gus";
     else if(sd)
-	gus_patch_path = "sd:/apps/wiistrife/gus";
+	gus_patch_path = "sd:/apps/wiistrife-ve/gus";
 
     if (!strcmp(gus_patch_path, ""))
     {

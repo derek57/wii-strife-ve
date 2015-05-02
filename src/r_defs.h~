@@ -39,7 +39,7 @@
 #include "v_patch.h"
 
 // [SVE] svillarreal
-//#include "rb_decal.h"
+#include "rb_decal.h"
 
 
 

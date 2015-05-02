@@ -655,9 +655,9 @@ void D_DoomLoop (void)
         G_BeginRecording ();
 
     if(usb)
-	debugfile = fopen("usb:/apps/wiistrife/debug.txt","w");
+	debugfile = fopen("usb:/apps/wiistrife-ve/debug.txt","w");
     else if(sd)
-	debugfile = fopen("sd:/apps/wiistrife/debug.txt","w");
+	debugfile = fopen("sd:/apps/wiistrife-ve/debug.txt","w");
 
     TryRunTics();
 
@@ -1747,17 +1747,17 @@ void D_DoomMain (void)
     {
 /*
 	if(!d_skipmovies)				// FIXME: Implement later for the WII ??
-	    I_AVStartVideoStream("usb:/apps/wiistrife/movies/outx.mpg");
+	    I_AVStartVideoStream("usb:/apps/wiistrife-ve/movies/outx.mpg");
 */
-	fprw = fopen("usb:/apps/wiistrife/pspstrife.wad","rb");
+	fprw = fopen("usb:/apps/wiistrife-ve/pspstrife.wad","rb");
     }
     else if(sd)
     {
 /*
 	if(!d_skipmovies)				// FIXME: Implement later for the WII ??
-	    I_AVStartVideoStream("sd:/apps/wiistrife/movies/output.mpg");
+	    I_AVStartVideoStream("sd:/apps/wiistrife-ve/movies/output.mpg");
 */
-	fprw = fopen("sd:/apps/wiistrife/pspstrife.wad","rb");
+	fprw = fopen("sd:/apps/wiistrife-ve/pspstrife.wad","rb");
     }
 
     if(fprw)
@@ -1846,7 +1846,7 @@ void D_DoomMain (void)
 	isdemoversion = false;
     }
 
-//    char voices = "usb:/apps/wiistrife/voices/voices.wad";
+//    char voices = "usb:/apps/wiistrife-ve/voices/voices.wad";
 
     extern char calculated_md5_string[33];
     extern char known_md5_string_voices_iwad[33];
@@ -1854,16 +1854,16 @@ void D_DoomMain (void)
     if(fsize != 9934413)
     {
 	if(usb)
-	    fpv = fopen("usb:/apps/wiistrife/voices/voices.wad","rb");
+	    fpv = fopen("usb:/apps/wiistrife-ve/voices/voices.wad","rb");
 	else if(sd)
-	    fpv = fopen("sd:/apps/wiistrife/voices/voices.wad","rb");
+	    fpv = fopen("sd:/apps/wiistrife-ve/voices/voices.wad","rb");
 
 	if(fpv)
 	{
 	    if(usb)
-		MD5_Check("usb:/apps/wiistrife/voices/voices.wad");
+		MD5_Check("usb:/apps/wiistrife-ve/voices/voices.wad");
 	    else if(sd)
-		MD5_Check("sd:/apps/wiistrife/voices/voices.wad");
+		MD5_Check("sd:/apps/wiistrife-ve/voices/voices.wad");
 
 	    if(strncmp(calculated_md5_string, known_md5_string_voices_iwad, 32) == 0)
 	    {
@@ -2348,18 +2348,18 @@ void D_DoomMain (void)
 
 		if(usb)
 		{
-		    D_AddFile("usb:/apps/wiistrife/IWAD/Reg/v12/strife1.wad");
-//		    D_AddFile("usb:/apps/wiistrife/PWAD/test.wad");
+		    D_AddFile("usb:/apps/wiistrife-ve/IWAD/Reg/v12/strife1.wad");
+//		    D_AddFile("usb:/apps/wiistrife-ve/PWAD/test.wad");
 		}
 		else if(sd)
-		    D_AddFile("sd:/apps/wiistrife/IWAD/Reg/v12/strife1.wad");
+		    D_AddFile("sd:/apps/wiistrife-ve/IWAD/Reg/v12/strife1.wad");
 
 		if(voices_wad_exists == 1 && (STRIFE_1_0_REGISTERED || STRIFE_1_X_REGISTERED))
 		{
 		    if(usb)
-			D_AddFile("usb:/apps/wiistrife/voices/voices.wad");
+			D_AddFile("usb:/apps/wiistrife-ve/voices/voices.wad");
 		    else if(sd)
-			D_AddFile("sd:/apps/wiistrife/voices/voices.wad");
+			D_AddFile("sd:/apps/wiistrife-ve/voices/voices.wad");
 		}
 		else
 		    disable_voices = 1;
@@ -2371,9 +2371,9 @@ void D_DoomMain (void)
 		if(voices_wad_exists == 1 && (STRIFE_1_0_REGISTERED || STRIFE_1_X_REGISTERED))
 		{
 		    if(usb)
-			D_AddFile("usb:/apps/wiistrife/voices/voices.wad");
+			D_AddFile("usb:/apps/wiistrife-ve/voices/voices.wad");
 		    else if(sd)
-			D_AddFile("sd:/apps/wiistrife/voices/voices.wad");
+			D_AddFile("sd:/apps/wiistrife-ve/voices/voices.wad");
 		}
 		else
 		    disable_voices = 1;
@@ -2408,7 +2408,10 @@ void D_DoomMain (void)
 //	    break;
 	}
     }
-    W_MergeFile("usb:/apps/wiistrife/pspstrife.wad");
+    if(usb)
+        W_MergeFile("usb:/apps/wiistrife-ve/pspstrife.wad");
+    else if(sd)
+        W_MergeFile("sd:/apps/wiistrife-ve/pspstrife.wad");
 
     HU_Init ();
 
@@ -2426,9 +2429,9 @@ void D_DoomMain (void)
     D_AddFile(iwadfile);
 
     if(usb)
-	D_AddFile("usb:/apps/wiistrife/pspstrife.wad");			// REQUIRED FOR SPECIAL PSP STUFF
+	D_AddFile("usb:/apps/wiistrife-ve/pspstrife.wad");	// REQUIRED FOR SPECIAL PSP STUFF
     else if(sd)
-	D_AddFile("sd:/apps/wiistrife/pspstrife.wad");			// REQUIRED FOR SPECIAL PSP STUFF
+	D_AddFile("sd:/apps/wiistrife-ve/pspstrife.wad");	// REQUIRED FOR SPECIAL PSP STUFF
 
     W_CheckCorrectIWAD(strife);		// DISABLED FOR PSP - sorry :-( I'LL TRY TO FIND A FIX
     modifiedgame = W_ParseCommandLine();

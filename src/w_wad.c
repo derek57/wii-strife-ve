@@ -703,9 +703,9 @@ void W_CheckSize(int wad)		// FOR THE PSP SOURCE PORT (TAKEN FROM PSPHEXEN BUT H
 	FILE *fprw;
 
 	if(usb)
-	    fprw = fopen("usb:/apps/wiistrife/pspstrife.wad", "r");
+	    fprw = fopen("usb:/apps/wiistrife-ve/pspstrife.wad", "r");
 	else if(sd)
-	    fprw = fopen("sd:/apps/wiistrife/pspstrife.wad", "r");
+	    fprw = fopen("sd:/apps/wiistrife-ve/pspstrife.wad", "r");
 
 	if (fprw == NULL)
 	    printf(" ");
@@ -725,9 +725,9 @@ void W_CheckSize(int wad)		// FOR THE PSP SOURCE PORT (TAKEN FROM PSPHEXEN BUT H
 	FILE *fprw;
 
 	if(usb)
-	    fprw = fopen("usb:/apps/wiistrife/voices/voices.wad", "r");
+	    fprw = fopen("usb:/apps/wiistrife-ve/voices/voices.wad", "r");
 	else if(sd)
-	    fprw = fopen("sd:/apps/wiistrife/voices/voices.wad", "r");
+	    fprw = fopen("sd:/apps/wiistrife-ve/voices/voices.wad", "r");
 
 	if (fprw == NULL)
 	    printf(" ");

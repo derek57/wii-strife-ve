@@ -2226,9 +2226,9 @@ static char *GetDefaultConfigDir(void)
 	    printf("FROM M_CONFIG.O: HOME-DIR IS: %s\n", homedir);
 */
 	if(usb)
-	    return strdup("usb:/apps/wiistrife/");
+	    return strdup("usb:/apps/wiistrife-ve/");
 	else if(sd)
-	    return strdup("sd:/apps/wiistrife/");
+	    return strdup("sd:/apps/wiistrife-ve/");
     }
 }
 
